@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, Security
 from dotenv import load_dotenv
 import os
 from fastapi_azure_auth.auth import MultiTenantAzureAuthorizationCodeBearer
+from app.routers.snowflake_oauth_integration import router as snowflake_oauth_router
 
 from .const import (
     OPEN_API_DESCRIPTION,
@@ -43,6 +44,8 @@ azure_scheme = MultiTenantAzureAuthorizationCodeBearer(
 )
 
 app.include_router(chats.router, dependencies=[Security(azure_scheme)])
+app.include_router(snowflake_oauth_router)
+
 
 @app.on_event('startup')
 async def load_config() -> None:
@@ -50,3 +53,4 @@ async def load_config() -> None:
     Load OpenID config on startup.
     """
     await azure_scheme.openid_config.load_config()
+
