@@ -11,7 +11,7 @@ from app.models.base_models.base import Base
 from app.models.maindb import *
 from app.models.admindb import *
 
-
+# from app.models.base_models.base import Base 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 load_dotenv()
@@ -20,7 +20,7 @@ config = context.config
 db_name = config.config_ini_section # active config ini section is the db name that we have chosen
 config.set_main_option(
     "sqlalchemy.url",
-    f'{os.environ[f"DATOX_DATABASE__{db_name}_DSN"]}'
+    f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}'
 )
 
 # Interpret the config file for Python logging.

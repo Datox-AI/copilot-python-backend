@@ -1,11 +1,14 @@
 from typing import Annotated, List
 from fastapi import Depends
-from sqlalchemy import UUID, desc, func, select
+from sqlalchemy import desc, func, select
+from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Session, aliased
 from app.backend.session import create_maindb_session
 
 from app.models.maindb import Chat, Message, MessageFile
 from app.schemas.chat import ChatResponse, ChatMapper
+
 
 class GetChat:
     def __init__(self, session: Annotated[Session, Depends(create_maindb_session)]) -> None:
