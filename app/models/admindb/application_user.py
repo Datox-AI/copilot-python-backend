@@ -5,7 +5,7 @@ from ..base_models import Base
 
 class ApplicationUser(Base):
     __table_args__ = ({'info': {'dbname': 'admin'}})
-    __tablename__ = 'application_users'    
+    __tablename__ = 'application_users'
     
     azure_object_id = Column(String, index=True, unique=True)
     first_name = Column(String, nullable=False)

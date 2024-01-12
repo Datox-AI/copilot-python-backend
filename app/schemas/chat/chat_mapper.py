@@ -9,7 +9,7 @@ class ChatMapper:
         return ChatResponse(
             id=chat.id,
             name=chat.name,
-            created=chat.created,
+            created=chat.created_at,
             pinned=chat.pinned,
             pinned_date=chat.pinned_date,
             type=chat.type,

@@ -1,5 +1,9 @@
 .venv/
+<<<<<<< HEAD
 env/
 __pycache__/
 SSL/
 .env
+=======
+__pycache__/
+>>>>>>> e26444a36e58f222100773c7b73ba5dd51956bbf
