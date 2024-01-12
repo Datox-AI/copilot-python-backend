@@ -34,7 +34,6 @@ class Message(BaseDelete):
         backref="prompts",
         remote_side=[BaseDelete.id],
         primaryjoin="Message.prompt_id==remote(foreign(Message.id))",
-        overlaps="replies,reply_to_message"
     )
     # prompt = relationship(
     #     'Message',

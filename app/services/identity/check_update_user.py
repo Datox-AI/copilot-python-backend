@@ -20,11 +20,14 @@ class CheckUpdateUser:
         
     async def invoke(self, model: CurrentUserRequest) -> CurrentUser:
         # Check if the tenant exists
-        print(self.session.execute(select(Tenant)).all(), " all")
+        # print(self.session.execute(select(Tenant)).scalars().last().azure_object_id, " all")
+        # print(model.tenant_id)
+        
             # print(row, " row")
         existing_tenant = self.session.execute(select(Tenant).where(Tenant.azure_object_id == model.tenant_id))
         # print(existing_tenant.scalars().all(), ' existsing tenatn')
         existing_tenant = existing_tenant.scalars().first()
+        print(existing_tenant)
         if not existing_tenant:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
