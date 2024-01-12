@@ -20,16 +20,16 @@ class BaseAudit(Base):
 def before_insert(mapper, connection, target):
     if isinstance(target, BaseAudit):
         now = datetime.utcnow()
-        user_id = None
-        target.created = now
+        user_id = "dd8dbb80-5b9c-490c-8610-ee6418997791"
+        target.created_at = now
         target.created_by = user_id
 
 def before_update(mapper, connection, target):
     if isinstance(target, BaseAudit):
         now = datetime.utcnow()
-        user_id = None
-        target.last_modified = now
-        target.last_modified_by = user_id
+        user_id = "dd8dbb80-5b9c-490c-8610-ee6418997791"
+        target.modified_at = now
+        target.modified_by = user_id
 
 def setup_audit_listeners():
     event.listen(BaseAudit, 'before_insert', before_insert)
