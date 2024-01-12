@@ -1,5 +1,5 @@
 from sqlalchemy import Column, String, Boolean, DateTime, Enum, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, remote, foreign, backref
 from sqlalchemy.dialects.postgresql import UUID
 
 from ..base_models import BaseDelete
@@ -22,7 +22,26 @@ class Message(BaseDelete):
     prompt_id = Column(UUID(as_uuid=True), ForeignKey('messages.id'), nullable=True)
 
     chat = relationship("Chat", back_populates="messages")
-    reply_to_message = relationship('Message', remote_side=[id], uselist=False)
-    prompt = relationship("Message", remote_side=[id], uselist=False)
+    reply_to_message = relationship(
+        'Message',
+        backref="replies",
+        remote_side=[BaseDelete.id],
+        primaryjoin="Message.reply_to_id==remote(foreign(Message.id))",
+    )
+    
+    prompt_message = relationship(
+        'Message',
+        backref="prompts",
+        remote_side=[BaseDelete.id],
+        primaryjoin="Message.prompt_id==remote(foreign(Message.id))",
+        overlaps="replies,reply_to_message"
+    )
+    # prompt = relationship(
+    #     'Message',
+    #     # remote_side = [text],
+    #     uselist=False
+    # )
+    # reply_to_message = relationship('Message', remote_side=[BaseDelete.id], foreign_keys=[reply_to_id], uselist=False)
+    # prompt = relationship("Message", remote_side=[BaseDelete.id], foreign_keys=[prompt_id], uselist=False)
     message_files = relationship("MessageFile", back_populates="message")
     message_sharepoint_documents = relationship("MessageSharepointDocument", back_populates="message")

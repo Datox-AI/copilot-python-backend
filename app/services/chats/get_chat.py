@@ -1,6 +1,7 @@
 from typing import Annotated, List
 from fastapi import Depends
-from sqlalchemy import UUID, desc, func, select
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session, aliased
 from app.backend.session import create_maindb_session
 
