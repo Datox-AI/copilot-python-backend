@@ -1,14 +1,9 @@
 import datetime
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
-<<<<<<< HEAD
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import UUID
 
-=======
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import select
->>>>>>> e26444a36e58f222100773c7b73ba5dd51956bbf
 from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 

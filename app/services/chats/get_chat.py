@@ -1,15 +1,7 @@
-<<<<<<< HEAD
-from typing import Annotated, List
-from fastapi import Depends
-from sqlalchemy import desc, func, select
-from sqlalchemy.dialects.postgresql import UUID
-
-=======
 from typing import Annotated, List, Optional
 from fastapi import Depends, HTTPException
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import desc, func, select
->>>>>>> e26444a36e58f222100773c7b73ba5dd51956bbf
 from sqlalchemy.orm import Session, aliased
 from app.backend.session import create_maindb_session
 from app.models.admindb.application_user import ApplicationUser

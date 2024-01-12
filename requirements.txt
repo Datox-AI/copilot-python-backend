@@ -12,11 +12,7 @@ click==8.1.7
 colorama==0.4.6
 cryptography==41.0.7
 dataclasses-json==0.6.3
-<<<<<<< HEAD
 -e git+ssh://git@github.com/datoxdev/copilot-python-backend.git@92a6c2a30122d3250b89380af48d95dbfcdfbea6#egg=Datox_Copilot
-=======
--e git+ssh://git@github.com/datoxdev/copilot-python-backend.git@e53000534be776a175889c98667d660e14cfacd1#egg=Datox_Copilot
->>>>>>> e26444a36e58f222100773c7b73ba5dd51956bbf
 distro==1.9.0
 dnspython==2.4.2
 ecdsa==0.18.0
