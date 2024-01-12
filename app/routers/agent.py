@@ -9,7 +9,7 @@ from fastapi import (
     status
     )
 from app.schemas.agent.agent_request import AgentRequest
-from app.socket.connection import ConnectionManager
+from app.mysocket.connection import ConnectionManager
 from dotenv import load_dotenv
 from fastapi.responses import HTMLResponse
 import urllib
@@ -69,11 +69,20 @@ async def websocket_endpoint(websocket: WebSocket):
     connection_url = f"snowflake://{snowflake_data['account']}/{snowflake_data['database']}/{snowflake_data['schema']}?warehouse={snowflake_data['warehouse']}&authenticator=oauth&token={urllib.parse.quote(snowflake_data['oauth_token'])}"
     # initiating an agent
     agent = DataAnalyticAgent(sf_connection_url=connection_url)
-    await websocket.send_json(
-        {
-            "message": "Agent is ready!"
-        }
-    )
+
+    # try:
+    #     await websocket.send_json(
+    #         {
+    #             "message": "Agent is ready!"
+    #         }
+    #     )
+    # except Exception as e:
+    #     await websocket.send_json(
+    #         {
+    #             "message": "Agent is fucked!",
+    #             "error_msg": e
+    #         }
+    #     )
     try:
         while True:
             user_input = await websocket.receive_text()

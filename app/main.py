@@ -1,36 +1,22 @@
 from fastapi import (
     Depends,
     FastAPI, 
-    Security,
-    Cookie,
     Depends,
     FastAPI,
-    Query,
-    WebSocket,
-    WebSocketException,
-    status
 )
-from fastapi.responses import HTMLResponse
-from typing import Annotated
-
-from dotenv import load_dotenv
-import os
-from fastapi_azure_auth.auth import MultiTenantAzureAuthorizationCodeBearer
-from typing import Annotated
 from fastapi import Depends, FastAPI
-from app.schemas.identity.current_user import CurrentUser
+import uvicorn
+from dotenv import load_dotenv
 
 from .const import (
     OPEN_API_DESCRIPTION,
     OPEN_API_TITLE,
 )
-
 from .version import __version__
-from app.models.base_models import setup_audit_listeners
 from app.routers import (
-    chats, agent
+    chats,
+    agent
 )
-
 from app.shared.auth import (
     azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID, current_user
 )
@@ -44,7 +30,7 @@ app = FastAPI(
         'usePkceWithAuthorizationCodeGrant': True,
         'clientId': AZURE_AD_FRONTEND_CLIENT_ID,
     },
-    dependencies=[Depends(current_user)]
+    # dependencies=[Depends(current_user)]
 )
 
 @app.on_event("startup")
@@ -55,3 +41,9 @@ async def load_config() -> None:
     await azure_scheme.openid_config.load_config()
     
 app.include_router(chats.router)
+app.include_router(agent.router)
+
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="localhost", port=7202, ssl_certfile="./SSL/fullchain.pem", ssl_keyfile="./SSL/localhost.key")

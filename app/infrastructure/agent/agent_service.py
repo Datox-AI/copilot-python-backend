@@ -9,7 +9,8 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine import create_engine
-
+from sqlalchemy.exc import SQLAlchemyError
+import urllib
 
 from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
 from app.infrastructure.agent.prompts.tool_prompts import  sql_db_query_description, sql_db_schema_description
@@ -17,6 +18,7 @@ from app.infrastructure.agent.database_tools import QuerySaveSQLDataBaseTool, Cu
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.output_parser import CustomOutputParser
 from app.infrastructure.agent.helpers import count_tokens
+from sqlalchemy.engine import Engine
 
 load_dotenv()
 # os.environ[""]
@@ -29,15 +31,11 @@ load_dotenv()
 
 class DataAnalyticAgent:
 
-    def __init__(self, sf_connection_url: str):
+    def __init__(self, engine: Engine):
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name="gpt-4-32k", 
-            model_name="gpt-4-32k", 
             temperature=0
         )
-        # setting up database connection with Snowflake
-        engine = create_engine(sf_connection_url)
-
         self.db = CustomSQLDatabase(engine, view_support=True)
         # getting agent tools
         agent_tools, agent_tool_names = self._get_sqldb_tools()
@@ -98,3 +96,23 @@ class DataAnalyticAgent:
             }
         )
         return agent_response
+
+
+class AgentEngine:
+    def __init__(self, snowlfake_account: str, db_name: str, scheme: str, warehouse: str, oauth_token: str):
+        parsed_token = urllib.parse.quote(oauth_token)
+        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+            snowlfake_account,
+            db_name,
+            scheme,
+            warehouse,
+            parsed_token
+        )
+
+        # setting up database connection with Snowflake
+        engine = create_engine(snowflake_connection_url)
+        try:
+            con = engine.connect()
+            con.close()
+        except SQLAlchemyError as e:
+            raise e
