@@ -6,7 +6,7 @@ cffi==1.16.0
 click==8.1.7
 colorama==0.4.6
 cryptography==41.0.7
--e git+https://github.com/datoxdev/copilot-python-backend.git@dc98284883ee088b6f3dd7207a52ccb5a945a2e4#egg=Datox_Copilot
+#-e git+https://github.com/datoxdev/copilot-python-backend.git@dc98284883ee088b6f3dd7207a52ccb5a945a2e4#egg=Datox_Copilot
 dnspython==2.4.2
 ecdsa==0.18.0
 email-validator==2.1.0.post1

@@ -2,7 +2,7 @@ from fastapi import Depends, FastAPI, Security
 from dotenv import load_dotenv
 import os
 from fastapi_azure_auth.auth import MultiTenantAzureAuthorizationCodeBearer
-from app.routers.snowflake_oauth_integration import router as snowflake_oauth_router
+from app.routers.snow_router import router as snowflake_oauth_router
 
 from .const import (
     OPEN_API_DESCRIPTION,
