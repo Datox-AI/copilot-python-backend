@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Security, status
 from uuid import UUID
 from typing import Annotated, List
+from app.schemas.identity.current_user import CurrentUser
 from app.services.chats import (
     CreateChat,
     DeleteChat,
     GetChat
 )
 from app.schemas.chat import ChatResponse, CreateChatRequest
-from app.shared.auth import multi_auth, azure_scheme
+from app.shared.auth import current_user
 from fastapi_azure_auth.user import User
 
 router = APIRouter(prefix="/chats")
@@ -27,6 +28,6 @@ async def delete_chat(chat_id: UUID, delete_chat_service: Annotated[DeleteChat, 
     await delete_chat_service.invoke(chat_id)
     return {"message": "Chat deleted successfully."}
 
-@router.get("/user",  response_model=User)
-async def get_uesr(user: Annotated[User, Depends(azure_scheme)]):
+@router.get("/user",  response_model=CurrentUser)
+async def get_uesr(user: Annotated[User, Depends(current_user)]):
     return user

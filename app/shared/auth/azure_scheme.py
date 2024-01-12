@@ -24,9 +24,7 @@ azure_scheme = MultiTenantAzureAuthorizationCodeBearer(
 async def multi_auth(
     azure_auth: Annotated[User, Depends(azure_scheme)],
     checkUpdateUser: Annotated[CheckUpdateUser, Depends()]
-) -> CurrentUser:
-    print("herer")
-    
+) -> CurrentUser:    
     if not azure_auth:
         raise InvalidAuth('You must either provide a valid bearer token or API key')
 

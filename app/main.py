@@ -14,7 +14,7 @@ from app.routers import (
 )
 
 from app.shared.auth import (
-    azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID, multi_auth, current_user
+    azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID, current_user
 )
 
 app = FastAPI(
@@ -26,6 +26,7 @@ app = FastAPI(
         'usePkceWithAuthorizationCodeGrant': True,
         'clientId': AZURE_AD_FRONTEND_CLIENT_ID,
     },
+    dependencies=[Depends(current_user)]
 )
 
 @app.on_event("startup")
@@ -35,4 +36,4 @@ async def load_config() -> None:
     """
     await azure_scheme.openid_config.load_config()
     
-app.include_router(chats.router, dependencies=[Depends(current_user)])
+app.include_router(chats.router)

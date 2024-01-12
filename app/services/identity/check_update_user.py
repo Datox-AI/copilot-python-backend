@@ -32,7 +32,7 @@ class CheckUpdateUser:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
         # Check if the user exists
-        user = await self.session.execute(select(ApplicationUser).where(ApplicationUser.azure_object_id == model.azure_object_id))
+        user = self.session.execute(select(ApplicationUser).where(ApplicationUser.azure_object_id == model.azure_object_id))
         user = user.scalars().first()
         
         name_parts = model.name.split()
@@ -42,43 +42,43 @@ class CheckUpdateUser:
         if not user:
             # Create new user if not exists
             user = ApplicationUser(
-                AzureObjectId=model.azure_object_id,
-                TenantId=existing_tenant.Id,
-                FirstName=first_name,
-                LastName=last_name,
-                Id=uuid.uuid4()
+                azure_object_id=model.azure_object_id,
+                tenant_id=existing_tenant.id,
+                first_name=first_name,
+                last_name=last_name,
+                id=uuid.uuid4()
             )
             self.session.add(user)
-        elif user.TenantId != existing_tenant.Id:
+        elif user.tenant_id != existing_tenant.id:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
-        await self.session.commit()
+        self.session.commit()
 
         # Manage roles
         default_roles = ["Admin", "User"]
         for role_name in default_roles:
-            role = await self.session.execute(select(Role).where(Role.Name == role_name))
+            role = self.session.execute(select(Role).where(Role.name == role_name))
             role = role.scalars().first()
             if not role:
-                role = Role(Id=uuid.uuid4(), Name=role_name)
+                role = Role(id=uuid.uuid4(), name=role_name)
                 self.session.add(role)
 
-        await self.session.commit()
+        self.session.commit()
 
         for role_name in model.roles:
             if role_name in default_roles:
-                role = await self.session.execute(select(Role).where(Role.Name == role_name))
+                role = self.session.execute(select(Role).where(Role.name == role_name))
                 role = role.scalars().first()
-                if not any(user_role.RoleId == role.Id for user_role in user.UserRoles):
-                    user_role = UserRole(UserId=user.Id, RoleId=role.Id)
+                if not any(user_role.role_id == role.id for user_role in user.user_roles):
+                    user_role = UserRole(user_id=user.id, role_id=role.id)
                     self.session.add(user_role)
 
-        await self.session.commit()
+        self.session.commit()
 
         return CurrentUser(
-            CurrentRoles=model.roles,
-            CurrentTenantId=user.tenant_id,
-            CurrentUserAzureObjectId=user.azure_object_id,
-            CurrentUserId=user.id,
-            CurrentUserName=model.name
+            roles=model.roles,
+            tenant_id=user.tenant_id,
+            azure_object_id=user.azure_object_id,
+            user_id=user.id,
+            user_name=model.name
         )
