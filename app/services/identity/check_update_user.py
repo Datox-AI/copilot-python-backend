@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.backend.session import create_admindb_session
+from app.backend.session import create_admindb_session, create_maindb_session
 from app.models.admindb import (
     Tenant, 
     ApplicationUser,
@@ -15,19 +15,16 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.identity.current_user_request import CurrentUserRequest
 
 class CheckUpdateUser:
-    def __init__(self, session: Annotated[Session, Depends(create_admindb_session)]) -> None:
+    def __init__(self, 
+                 session: Annotated[Session, Depends(create_admindb_session)],
+                 session2: Annotated[Session, Depends(create_maindb_session)]) -> None:
         self.session = session
+        self.session2 = session2
         
-    async def invoke(self, model: CurrentUserRequest) -> CurrentUser:
-        # Check if the tenant exists
-        # print(self.session.execute(select(Tenant)).scalars().last().azure_object_id, " all")
-        # print(model.tenant_id)
-        
-            # print(row, " row")
+    def invoke(self, model: CurrentUserRequest) -> CurrentUser:
         existing_tenant = self.session.execute(select(Tenant).where(Tenant.azure_object_id == model.tenant_id))
         # print(existing_tenant.scalars().all(), ' existsing tenatn')
         existing_tenant = existing_tenant.scalars().first()
-        print(existing_tenant)
         if not existing_tenant:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
@@ -47,11 +44,14 @@ class CheckUpdateUser:
                 first_name=first_name,
                 last_name=last_name,
                 id=uuid.uuid4()
-            )
-            self.session.add(user)
+            )            
+            self.session.add(user)            
         elif user.tenant_id != existing_tenant.id:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
+        self.session.info["user_id"] = user.id
+        self.session2.info["user_id"] = user.id
+        
         self.session.commit()
 
         # Manage roles

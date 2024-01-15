@@ -1,5 +1,5 @@
 from typing import Annotated
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from app.schemas.identity.current_user import CurrentUser
 
 from .const import (
@@ -8,7 +8,6 @@ from .const import (
 )
 
 from .version import __version__
-from app.models.base_models import setup_audit_listeners
 from app.routers import (
     chats
 )
