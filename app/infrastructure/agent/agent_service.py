@@ -31,12 +31,12 @@ load_dotenv()
 
 class DataAnalyticAgent:
 
-    def __init__(self, engine: Engine):
+    def __init__(self, snowflake_engine: Engine):
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name="gpt-4-32k", 
             temperature=0
         )
-        self.db = CustomSQLDatabase(engine, view_support=True)
+        self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         # getting agent tools
         agent_tools, agent_tool_names = self._get_sqldb_tools()
         # Custom prompt template
@@ -98,21 +98,47 @@ class DataAnalyticAgent:
         return agent_response
 
 
-class AgentEngine:
-    def __init__(self, snowlfake_account: str, db_name: str, scheme: str, warehouse: str, oauth_token: str):
-        parsed_token = urllib.parse.quote(oauth_token)
-        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
-            snowlfake_account,
-            db_name,
-            scheme,
-            warehouse,
-            parsed_token
-        )
+class AgentSnowflakeEngineManager:
+    def __init__(self):
+        self.engine = None
 
-        # setting up database connection with Snowflake
+    def validate_snowflake_data(self, snowflake_data):
+        required_keys = ['account', 'database', 'schema', 'warehouse', 'oauth_token']
+        missing_keys = [key for key in required_keys if key not in snowflake_data]
+
+        if missing_keys:
+            return False, f"Missing required Snowflake data: {', '.join(missing_keys)}"
+        return True, ""
+
+    def create_engine(self, snowflake_data):
+        is_valid, error_message = self.validate_snowflake_data(snowflake_data)
+        if not is_valid:
+            return False, error_message
+
+        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+            snowflake_data["account"],
+            snowflake_data["database"],
+            snowflake_data["schema"],
+            snowflake_data["warehouse"],
+            urllib.parse.quote(snowflake_data["oauth_token"])
+        )        
         engine = create_engine(snowflake_connection_url)
         try:
             con = engine.connect()
             con.close()
+            self.engine = engine
+            return True, ""
+        
         except SQLAlchemyError as e:
-            raise e
+            return False, f"{e.orig}"
+
+
+    def is_engine_alive(self):
+        if self.engine:
+            try:
+                # This is a simple way to check if the connection is alive
+                with self.engine.connect():
+                    return True
+            except SQLAlchemyError:
+                return False
+        return False
