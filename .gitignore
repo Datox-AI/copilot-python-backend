@@ -3,3 +3,4 @@ env/
 __pycache__/
 SSL/
 .env
+migrations/.DS_Store
