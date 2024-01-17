@@ -1,5 +1,8 @@
+import json
 from fastapi import WebSocket
 from typing import List, Dict
+
+from app.schemas.message import MessageResponse
 
 
 class ConnectionManager:
@@ -10,33 +13,34 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+    async def disconnect(
+        self, websocket: WebSocket, code: int = 1000, reason: str = None
+    ):
+        try:
+            await websocket.close(code=code, reason=reason)
+        except Exception as e:
+            print(f"closing socket raised an error: {e}")
+            pass
+        finally:
+            self.active_connections.remove(websocket)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_text(message)
-    
-    
+
     async def send_connection_error_message(self, message: str, websocket: WebSocket):
-        await websocket.send_json(
-            {
-                "status": "error",
-                "message": message
-            }
-        )
+        await websocket.send_json({"status": "error", "message": message})
+
     async def send_connection_success_message(self, websocket: WebSocket):
         await websocket.send_json(
-            {
-                "status": "success",
-                "message": "Engine is connected succesfully"
-            }
+            {"status": "success", "message": "Engine is connected succesfully"}
         )
 
-    async def send_agent_response(self, response: Dict, websocket: WebSocket):
-                
+    async def send_agent_response(
+        self, response: MessageResponse, websocket: WebSocket
+    ):
         await websocket.send_json(
             {
-                "output": response["output"], 
-                "followup_questions": response["followup_questions"]
+                "output": response["output"],
+                "followup_questions": response["followup_questions"],
             }
         )

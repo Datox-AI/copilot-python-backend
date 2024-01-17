@@ -3,9 +3,10 @@ from langchain.chains.llm import LLMChain
 from langchain_community.chat_models import AzureChatOpenAI
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.memory import ConversationTokenBufferMemory
+
 # from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-import os 
+import os
 from dotenv import load_dotenv
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine import create_engine
@@ -13,8 +14,14 @@ from sqlalchemy.exc import SQLAlchemyError
 import urllib
 
 from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
-from app.infrastructure.agent.prompts.tool_prompts import  sql_db_query_description, sql_db_schema_description
-from app.infrastructure.agent.database_tools import QuerySaveSQLDataBaseTool, CustomSQLDatabase
+from app.infrastructure.agent.prompts.tool_prompts import (
+    sql_db_query_description,
+    sql_db_schema_description,
+)
+from app.infrastructure.agent.database_tools import (
+    QuerySaveSQLDataBaseTool,
+    CustomSQLDatabase,
+)
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.output_parser import CustomOutputParser
 from app.infrastructure.agent.helpers import count_tokens
@@ -30,11 +37,9 @@ load_dotenv()
 
 
 class DataAnalyticAgent:
-
     def __init__(self, snowflake_engine: Engine):
         self.llm_chat_model = AzureChatOpenAI(
-            deployment_name="gpt-4-32k", 
-            temperature=0
+            deployment_name="gpt-4-32k", temperature=0
         )
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         # getting agent tools
@@ -46,36 +51,36 @@ class DataAnalyticAgent:
             query_and_save_tool=agent_tools[-1].name,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
-            input_variables=["input", "intermediate_steps", "history", "message_id"]
+            input_variables=["input", "intermediate_steps", "history", "message_id"],
         )
         # customr ouput parser
         output_parser = CustomOutputParser()
-        # simple chain and single action agent 
+        # simple chain and single action agent
         llm_chain = LLMChain(llm=self.llm_chat_model, prompt=prompt)
         single_action_agent = LLMSingleActionAgent(
             llm_chain=llm_chain,
             output_parser=output_parser,
             stop=["\nObservation:"],
-            allowed_tools=agent_tool_names
-        )    
+            allowed_tools=agent_tool_names,
+        )
         memory = ConversationTokenBufferMemory(
             memory_key="history",
             # chat_memory=message_history,
             llm=self.llm_chat_model,
-            max_token=5000, 
-            output_key="output", 
+            max_token=5000,
+            output_key="output",
             input_key="input",
-            return_messages=True
+            return_messages=True,
         )
 
         self.agent_executor = AgentExecutor.from_agent_and_tools(
-            agent=single_action_agent, 
-            tools=agent_tools, 
-            verbose=True, 
+            agent=single_action_agent,
+            tools=agent_tools,
+            verbose=True,
             memory=memory,
-            return_intermediate_steps=True
+            return_intermediate_steps=True,
         )
-    
+
     def _get_sqldb_tools(self):
         toolkit = SQLDatabaseToolkit(db=self.db, llm=self.llm_chat_model, temperature=0)
         query_and_save_tool = QuerySaveSQLDataBaseTool(db=self.db)
@@ -87,13 +92,9 @@ class DataAnalyticAgent:
 
         return tools, tool_names
 
-        
     async def invoke(self, user_query):
         agent_response = self.agent_executor.invoke(
-            {
-                "input": user_query,
-                "message_id": "test"
-            }
+            {"input": user_query, "message_id": "test"}
         )
         return agent_response
 
@@ -103,7 +104,7 @@ class AgentSnowflakeEngineManager:
         self.engine = None
 
     def validate_snowflake_data(self, snowflake_data):
-        required_keys = ['account', 'database', 'schema', 'warehouse', 'oauth_token']
+        required_keys = ["account", "database", "schema", "warehouse", "oauth_token"]
         missing_keys = [key for key in required_keys if key not in snowflake_data]
 
         if missing_keys:
@@ -115,23 +116,24 @@ class AgentSnowflakeEngineManager:
         if not is_valid:
             return False, error_message
 
-        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
-            snowflake_data["account"],
-            snowflake_data["database"],
-            snowflake_data["schema"],
-            snowflake_data["warehouse"],
-            urllib.parse.quote(snowflake_data["oauth_token"])
-        )        
+        snowflake_connection_url = (
+            "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+                snowflake_data["account"],
+                snowflake_data["database"],
+                snowflake_data["schema"],
+                snowflake_data["warehouse"],
+                urllib.parse.quote(snowflake_data["oauth_token"]),
+            )
+        )
         engine = create_engine(snowflake_connection_url)
         try:
             con = engine.connect()
             con.close()
             self.engine = engine
             return True, ""
-        
+
         except SQLAlchemyError as e:
             return False, f"{e.orig}"
-
 
     def is_engine_alive(self):
         if self.engine:

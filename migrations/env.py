@@ -11,16 +11,17 @@ from app.models.base_models.base import Base
 from app.models.maindb import *
 from app.models.admindb import *
 
-# from app.models.base_models.base import Base 
+# from app.models.base_models.base import Base
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 load_dotenv()
 config = context.config
 
-db_name = config.config_ini_section # active config ini section is the db name that we have chosen
+db_name = (
+    config.config_ini_section
+)  # active config ini section is the db name that we have chosen
 config.set_main_option(
-    "sqlalchemy.url",
-    f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}'
+    "sqlalchemy.url", f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}'
 )
 
 # Interpret the config file for Python logging.
@@ -62,7 +63,8 @@ def run_migrations_offline() -> None:
 
     with context.begin_transaction():
         context.run_migrations()
-            
+
+
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
 
@@ -77,23 +79,34 @@ def run_migrations_online() -> None:
     )
 
     def include_object(object, name, type_, reflected, compare_to):
-        if type_ == 'foreign_key_constraint' and compare_to and (
-                compare_to.elements[0].target_fullname == db_name + '.' +
-                object.elements[0].target_fullname or
-                db_name + '.' + compare_to.elements[0].target_fullname == object.elements[0].target_fullname):
+        if (
+            type_ == "foreign_key_constraint"
+            and compare_to
+            and (
+                compare_to.elements[0].target_fullname
+                == db_name + "." + object.elements[0].target_fullname
+                or db_name + "." + compare_to.elements[0].target_fullname
+                == object.elements[0].target_fullname
+            )
+        ):
             return False
-        if type_ == 'table':
-            db = object.info.get('dbname')
+        if type_ == "table":
+            db = object.info.get("dbname")
             if db == db_name or db is None:
                 return True
-        elif object.table.info.get('dbname') == db_name or object.table.info.get('dbname') is None:
+        elif (
+            object.table.info.get("dbname") == db_name
+            or object.table.info.get("dbname") is None
+        ):
             return True
         else:
             return False
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata, include_object=include_object
+            connection=connection,
+            target_metadata=target_metadata,
+            include_object=include_object,
         )
 
         with context.begin_transaction():

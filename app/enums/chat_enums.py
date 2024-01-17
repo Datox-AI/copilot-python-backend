@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ChatType(Enum):
     Analytics = 0
     FileSearch = 1
@@ -11,6 +12,7 @@ class ChatType(Enum):
             ChatType.FileSearch: "Used for file search-based chats",
         }
         return descriptions[self]
+
 
 class ChatModel(Enum):
     GPT3 = 1

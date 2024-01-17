@@ -9,7 +9,7 @@ class BaseDelete(BaseAudit):
     """
     Base Delete Model Class for Soft Deletion.
     """
-    
+
     __abstract__ = True
     is_deleted = Column(Boolean, default=False)
     deleted_at = Column(DateTime, nullable=True)

@@ -1,9 +1,11 @@
-from app.schemas.base import BaseSchema    
+from app.schemas.base import BaseSchema
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 
 from app.enums import ChatType
+from app.schemas.message import MessageResponse
+
 
 class ChatResponse(BaseSchema):
     id: UUID
@@ -15,3 +17,11 @@ class ChatResponse(BaseSchema):
     messages_count: int
     files_count: int
     last_message: Optional[datetime] = None
+
+
+class ChatHistoryResponse(BaseSchema):
+    id: UUID
+    name: str
+    created: datetime
+    type: ChatType
+    messages: List[MessageResponse]

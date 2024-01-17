@@ -12,6 +12,6 @@ class Base(DeclarativeBase):
     """
     Base Model Class for Common Attributes.
     """
-    
+
     __abstract__ = True
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
