@@ -1,17 +1,18 @@
-from langchain.agents import Tool, AgentExecutor, LLMSingleActionAgent
+from uuid import UUID
+import urllib
+from dotenv import load_dotenv
+
+from langchain.agents import AgentExecutor, LLMSingleActionAgent
 from langchain.chains.llm import LLMChain
 from langchain_community.chat_models import AzureChatOpenAI
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.memory import ConversationTokenBufferMemory
-
-# from langchain.memory.chat_message_histories import StreamlitChatMessageHistory
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-import os
-from dotenv import load_dotenv
+
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.engine import create_engine
 from sqlalchemy.exc import SQLAlchemyError
-import urllib
+from sqlalchemy.orm import Session
 
 from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
 from app.infrastructure.agent.prompts.tool_prompts import (
@@ -24,24 +25,26 @@ from app.infrastructure.agent.database_tools import (
 )
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.output_parser import CustomOutputParser
+from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
 from app.infrastructure.agent.helpers import count_tokens
-from sqlalchemy.engine import Engine
+from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
+
 
 load_dotenv()
-# os.environ[""]
-
-# os.environ["OPENAI_API_TYPE"] = config("OPENAI_API_TYPE")
-# os.environ["OPENAI_API_BASE"] = config("OPENAI_API_BASE")
-# os.environ["OPENAI_API_VERSION"] = config("OPENAI_API_VERSION")
-# os.environ["OPENAI_API_KEY"] = config("OPENAI_API_KEY")
 
 
 class DataAnalyticAgent:
-    def __init__(self, snowflake_engine: Engine):
+
+    def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
+        
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name="gpt-4-32k", temperature=0
         )
+        # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
+        self.azure_blob_storage_manager = AzureBlobStorageManager()
+        self.db.initiate_blob_storage_manager(blob_manager=self.azure_blob_storage_manager)
+
         # getting agent tools
         agent_tools, agent_tool_names = self._get_sqldb_tools()
         # Custom prompt template
@@ -63,9 +66,10 @@ class DataAnalyticAgent:
             stop=["\nObservation:"],
             allowed_tools=agent_tool_names,
         )
+        message_history = CustomChatMessageHistory(chat_id=chat_id, db_session=db_session)
         memory = ConversationTokenBufferMemory(
             memory_key="history",
-            # chat_memory=message_history,
+            chat_memory=message_history,
             llm=self.llm_chat_model,
             max_token=5000,
             output_key="output",
@@ -78,7 +82,7 @@ class DataAnalyticAgent:
             tools=agent_tools,
             verbose=True,
             memory=memory,
-            return_intermediate_steps=True,
+            # return_intermediate_steps=True,
         )
 
     def _get_sqldb_tools(self):
@@ -92,11 +96,26 @@ class DataAnalyticAgent:
 
         return tools, tool_names
 
-    async def invoke(self, user_query):
-        agent_response = self.agent_executor.invoke(
-            {"input": user_query, "message_id": "test"}
-        )
-        return agent_response
+    async def invoke(self, user_query: str, message_id: UUID):
+        is_agent_response_valid = True
+        try:
+            message_id_str = message_id.hex
+            agent_response = self.agent_executor.invoke(
+                {"input": user_query, "message_id": message_id_str}
+            )
+            # deleting all files that are saved except the last one
+
+            if agent_response["stored_file_id"] is not None:
+                self.azure_blob_storage_manager.delete_extra_files(message_id=message_id_str, store_id=agent_response["stored_file_id"])
+                agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+        except Exception as e:
+            is_agent_response_valid = False
+            agent_response = None
+
+        return agent_response, is_agent_response_valid
+
+
+
 
 
 class AgentSnowflakeEngineManager:

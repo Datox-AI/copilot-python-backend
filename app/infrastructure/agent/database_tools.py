@@ -9,9 +9,16 @@ from app.infrastructure.agent.helpers import count_tokens
 from app.infrastructure.agent.prompts.tool_prompts import (
     query_and_save_tool_description,
 )
+from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
+import uuid
 
 
 class CustomSQLDatabase(SQLDatabase):
+    
+    def initiate_blob_storage_manager(self, blob_manager: AzureBlobStorageManager):
+        # it is just preventing from initiatin blob manager over and over. Make sure to run this before running the agent
+        self.blob_manager = blob_manager
+
     def run_and_save(
         self,
         command: str,
@@ -24,17 +31,9 @@ class CustomSQLDatabase(SQLDatabase):
         If the statement returns no rows, an empty string is returned.
         """
         result = self._execute(command, fetch)
-        # generating file path with random string
-        random_string = "".join(
-            random.choice(string.ascii_lowercase + string.digits) for _ in range(15)
-        )
-        message_folder_path = os.path.join("stored_data", message_id)
-        if not os.path.exists(message_folder_path):
-            os.mkdir(message_folder_path)
-        full_file_path = os.path.join(message_folder_path, f"{random_string}.csv")
-        # saving the result
-        pd.DataFrame(result).to_csv(full_file_path, index=False)
-
+        # uploading the result
+        df = pd.DataFrame(result)
+        stored_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
         # Convert columns values to string to avoid issues with sqlalchemy
         # truncating text
         res = [
@@ -53,9 +52,9 @@ class CustomSQLDatabase(SQLDatabase):
                     )
                     for r in first_ten_rows
                 ]
-                return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {random_string}"
+                return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {stored_id}"
 
-            return f"Data: {res}\nStored ID: {random_string}"
+            return f"Data: {res}\nStored ID: {stored_id}"
 
     def run_and_save_no_throw(
         self,

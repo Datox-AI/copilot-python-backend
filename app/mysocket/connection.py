@@ -24,10 +24,8 @@ class ConnectionManager:
         finally:
             self.active_connections.remove(websocket)
 
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
 
-    async def send_connection_error_message(self, message: str, websocket: WebSocket):
+    async def send_error_message(self, message: str, websocket: WebSocket):
         await websocket.send_json({"status": "error", "message": message})
 
     async def send_connection_success_message(self, websocket: WebSocket):
@@ -42,5 +40,7 @@ class ConnectionManager:
             {
                 "output": response["output"],
                 "followup_questions": response["followup_questions"],
+                "stored_file_id": response["stored_file_id"],
+                "sql_query": response["sql_query"]
             }
         )

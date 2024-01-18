@@ -69,19 +69,8 @@ class GetChat:
             ChatMapper.map_to_chat_list_response(chat, 0, 0, last_message)
             for chat, messages_count, files_count, last_message in result.unique()
         ]
-        print(list_chats[0].model_dump_json(), " list chats")
         return list_chats
-
-        # for chat, messages_count, files_count, last_message in result.unique():
-        #     print(user_id, " userid")
-        #     print(chat)
-        #     print(messages_count)
-        #     print(files_count)
-        #     print(last_message)
-
-        #     print(" ------")
-        #     mapped = ChatMapper.map_to_chat_list_response(chat, messages_count, files_count, last_message)
-        #     print(mapped, " --mapped")
+    
 
     def get_chat_history(self, chat_id: UUID) -> ChatHistoryResponse:
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()

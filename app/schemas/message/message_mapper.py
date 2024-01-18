@@ -12,3 +12,4 @@ class MessageMapper:
             text=message.text,
             role=message.role,
         )
+    

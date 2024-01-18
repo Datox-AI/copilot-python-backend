@@ -3,8 +3,7 @@ from fastapi import (
     FastAPI,
 )
 import uvicorn
-from dotenv import load_dotenv
-
+import os 
 from .const import (
     OPEN_API_DESCRIPTION,
     OPEN_API_TITLE,
@@ -12,6 +11,7 @@ from .const import (
 from .version import __version__
 from app.routers import chats, agent
 from app.shared.auth import azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID, current_user
+
 
 app = FastAPI(
     title=OPEN_API_TITLE,

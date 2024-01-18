@@ -29,7 +29,7 @@ class CustomOutputParser(AgentOutputParser):
                 return_values={
                     "output": final_answer,
                     "sql_query": sql_query,
-                    "stored_id": stored_id,
+                    "stored_file_id": stored_id,
                     "followup_questions": followup_questions,
                 },
                 log=llm_output,

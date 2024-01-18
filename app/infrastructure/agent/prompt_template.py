@@ -41,5 +41,6 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         formatted = self.template.format(**kwargs)
         # counting tokens
         # record_token_record(reset=True)
+        print(formatted, " formatted")
         count_tokens(input=formatted, agent_step="Prompting")
         return [SystemMessage(content=formatted)]

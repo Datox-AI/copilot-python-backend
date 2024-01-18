@@ -106,6 +106,7 @@ async def validate_azure_token(
     except JWTError as error:
         error_message = AzureTokenErrorMessagesEnum.unable_to_validate
     except Exception as error:
+        print(error)
         # Extra failsafe in case of a bug in a future version of the jwt library
         error_message = AzureTokenErrorMessagesEnum.unknown_error
     finally:

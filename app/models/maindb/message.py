@@ -19,6 +19,9 @@ class Message(BaseDelete):
     role = Column(Enum(MessageRole))
     follow_up_questions = Column(String, nullable=True)
     search_query = Column(String, nullable=True)
+    sql_query = Column(String, nullable=True)
+    stored_file_id = Column(String, nullable=True)
+
     reply_to_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
     prompt_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
 
@@ -37,13 +40,6 @@ class Message(BaseDelete):
         primaryjoin="Message.prompt_id==remote(foreign(Message.id))",
         overlaps="replies,reply_to_message",
     )
-    # prompt = relationship(
-    #     'Message',
-    #     # remote_side = [text],
-    #     uselist=False
-    # )
-    # reply_to_message = relationship('Message', remote_side=[BaseDelete.id], foreign_keys=[reply_to_id], uselist=False)
-    # prompt = relationship("Message", remote_side=[BaseDelete.id], foreign_keys=[prompt_id], uselist=False)
     message_files = relationship("MessageFile", back_populates="message")
     message_sharepoint_documents = relationship(
         "MessageSharepointDocument", back_populates="message"
