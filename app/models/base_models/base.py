@@ -3,7 +3,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import Column
 from sqlalchemy.sql import func
 import uuid
-# from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.ext.declarative import declarative_base
 
 DeclarativeBase = declarative_base()

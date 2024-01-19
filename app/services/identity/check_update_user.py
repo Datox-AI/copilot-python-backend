@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.backend.session import create_admindb_session, create_maindb_session
+from app.backend.session import create_admindb_session
 from app.models.admindb import (
     Tenant, 
     ApplicationUser,
@@ -15,11 +15,8 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.identity.current_user_request import CurrentUserRequest
 
 class CheckUpdateUser:
-    def __init__(self, 
-                 session: Annotated[Session, Depends(create_admindb_session)],
-                 session2: Annotated[Session, Depends(create_maindb_session)]) -> None:
+    def __init__(self, session: Annotated[Session, Depends(create_admindb_session)]) -> None:
         self.session = session
-        self.session2 = session2
         
     def invoke(self, model: CurrentUserRequest) -> CurrentUser:
         existing_tenant = self.session.execute(select(Tenant).where(Tenant.azure_object_id == model.tenant_id))
@@ -48,9 +45,6 @@ class CheckUpdateUser:
             self.session.add(user)            
         elif user.tenant_id != existing_tenant.id:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
-
-        self.session.info["user_id"] = user.id
-        self.session2.info["user_id"] = user.id
         
         self.session.commit()
 

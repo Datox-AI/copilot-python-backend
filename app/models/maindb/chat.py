@@ -13,5 +13,5 @@ class Chat(BaseDelete):
     pinned = Column(Boolean, default=False)
     pinned_date = Column(DateTime, nullable=True)
     chat_model = Column(Enum(ChatModel), default=ChatModel.GPT3)
-    
+
     messages = relationship("Message", back_populates="chat", lazy='joined')

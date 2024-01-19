@@ -36,3 +36,4 @@ async def load_config() -> None:
     await azure_scheme.openid_config.load_config()
     
 app.include_router(chats.router)
+
