@@ -37,8 +37,6 @@ def construct_authorization_url():
     }
     return f"{AUTHORIZATION_ENDPOINT}?{urlencode(params)}"
 
-
-
 # Endpoint to initialize OAuth configuration
 def init_oauth_logic(config: OAuthConfig):
     global SNOWFLAKE_ACCOUNT, OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET, AUTHORIZATION_ENDPOINT, TOKEN_ENDPOINT, REDIRECT_URI
@@ -50,6 +48,7 @@ def init_oauth_logic(config: OAuthConfig):
     REDIRECT_URI = config.redirect_uri
     authorization_url = construct_authorization_url()
     return {"authorization_url": authorization_url}
+
 
 # Callback endpoint for OAuth flow
 
@@ -173,6 +172,7 @@ def select_schema_logic(token: str, db_name: str, schema_name: str):
         ctx.close()
 
 
+
 # Endpoint to list tables of a specific schema in a Snowflake database
 
 def get_tables_logic(token: str, db_name: str, schema_name: str):
@@ -254,8 +254,4 @@ def preview_data_logic(token: str, db_name: str, schema_name: str, table_or_view
     finally:
         cursor.close()
         ctx.close()
-
-
-
-
 
