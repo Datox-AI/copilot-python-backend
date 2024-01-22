@@ -4,20 +4,22 @@ from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
 from sqlalchemy.exc import SQLAlchemyError
 import pandas as pd
 from typing import Union, Literal
-import random, string, os, tiktoken, time
-from app.infrastructure.agent.helpers import count_tokens
 from app.infrastructure.agent.prompts.tool_prompts import (
     query_and_save_tool_description,
 )
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
+from app.infrastructure.agent.helpers import TokenCounter
 import uuid
 
 
 class CustomSQLDatabase(SQLDatabase):
-    
-    def initiate_blob_storage_manager(self, blob_manager: AzureBlobStorageManager):
-        # it is just preventing from initiatin blob manager over and over. Make sure to run this before running the agent
+    def initiate_blob_storage_manager_and_token_counter(
+        self, blob_manager: AzureBlobStorageManager, token_counter: TokenCounter
+    ):
+        # it is just preventing from initiating blob manager over and over. Make sure to run this before running the agent
+        # and I added token counter to the same method
         self.blob_manager = blob_manager
+        self.token_counter = token_counter
 
     def run_and_save(
         self,
@@ -43,7 +45,9 @@ class CustomSQLDatabase(SQLDatabase):
         if not res:
             return ""
         else:
-            if not count_tokens(input=str(res), agent_step="query_run"):
+            if not self.token_counter.count_tokens(
+                input=str(res), agent_step="sql_query_run"
+            ):
                 first_ten_rows = result[:10]
                 res = [
                     tuple(

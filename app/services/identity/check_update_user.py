@@ -17,7 +17,6 @@ class CheckUpdateUser:
         self.session = session
 
     async def invoke(self, model: CurrentUserRequest) -> CurrentUser:
-
         existing_tenant = self.session.execute(
             select(Tenant).where(Tenant.azure_object_id == model.tenant_id)
         )

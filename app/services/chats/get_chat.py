@@ -70,7 +70,6 @@ class GetChat:
             for chat, messages_count, files_count, last_message in result.unique()
         ]
         return list_chats
-    
 
     def get_chat_history(self, chat_id: UUID) -> ChatHistoryResponse:
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()

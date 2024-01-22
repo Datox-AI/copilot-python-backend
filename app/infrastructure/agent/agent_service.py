@@ -26,7 +26,7 @@ from app.infrastructure.agent.database_tools import (
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.output_parser import CustomOutputParser
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
-from app.infrastructure.agent.helpers import count_tokens
+from app.infrastructure.agent.helpers import TokenCounter
 from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
 
 
@@ -34,17 +34,17 @@ load_dotenv()
 
 
 class DataAnalyticAgent:
-
     def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
-        
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name="gpt-4-32k", temperature=0
         )
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         self.azure_blob_storage_manager = AzureBlobStorageManager()
-        self.db.initiate_blob_storage_manager(blob_manager=self.azure_blob_storage_manager)
-
+        token_counter = TokenCounter()
+        self.db.initiate_blob_storage_manager_and_token_counter(
+            blob_manager=self.azure_blob_storage_manager, token_counter=token_counter
+        )
         # getting agent tools
         agent_tools, agent_tool_names = self._get_sqldb_tools()
         # Custom prompt template
@@ -52,6 +52,7 @@ class DataAnalyticAgent:
             template=sql_helper_prompt_template,
             tools=agent_tools,
             query_and_save_tool=agent_tools[-1].name,
+            token_counter=token_counter,
             # This omits the `agent_scratchpad`, `tools`, and `tool_names` variables because those are generated dynamically
             # This includes the `intermediate_steps` variable because that is needed
             input_variables=["input", "intermediate_steps", "history", "message_id"],
@@ -66,7 +67,9 @@ class DataAnalyticAgent:
             stop=["\nObservation:"],
             allowed_tools=agent_tool_names,
         )
-        message_history = CustomChatMessageHistory(chat_id=chat_id, db_session=db_session)
+        message_history = CustomChatMessageHistory(
+            chat_id=chat_id, db_session=db_session
+        )
         memory = ConversationTokenBufferMemory(
             memory_key="history",
             chat_memory=message_history,
@@ -98,24 +101,23 @@ class DataAnalyticAgent:
 
     async def invoke(self, user_query: str, message_id: UUID):
         is_agent_response_valid = True
-        try:
-            message_id_str = message_id.hex
-            agent_response = self.agent_executor.invoke(
-                {"input": user_query, "message_id": message_id_str}
-            )
-            # deleting all files that are saved except the last one
+        message_id_str = message_id.hex
+        agent_response = self.agent_executor.invoke(
+            {"input": user_query, "message_id": message_id_str}
+        )
+        # deleting all files that are saved except the last one
 
-            if agent_response["stored_file_id"] is not None:
-                self.azure_blob_storage_manager.delete_extra_files(message_id=message_id_str, store_id=agent_response["stored_file_id"])
-                agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
-        except Exception as e:
-            is_agent_response_valid = False
-            agent_response = None
+        if agent_response["stored_file_id"] is not None:
+            self.azure_blob_storage_manager.delete_extra_files(
+                message_id=message_id_str, store_id=agent_response["stored_file_id"]
+            )
+            agent_response[
+                "stored_file_id"
+            ] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+            # is_agent_response_valid = False
+            # agent_response = None
 
         return agent_response, is_agent_response_valid
-
-
-
 
 
 class AgentSnowflakeEngineManager:

@@ -42,14 +42,13 @@ class MessageService:
 
         return message_response_json
 
-
     def create_agent_response(
-            self, 
-            message_id: UUID,
-            agent_final_output: str,
-            sql_query: str,
-            stored_file_id: str,
-            follow_up_questions: str
+        self,
+        message_id: UUID,
+        agent_final_output: str,
+        sql_query: str,
+        stored_file_id: str,
+        follow_up_questions: str,
     ):
         new_agent_message = Message(
             id=message_id,
@@ -59,8 +58,7 @@ class MessageService:
             role=MessageRole.Assistant,
             follow_up_questions=follow_up_questions,
             stored_file_id=stored_file_id,
-            sql_query=sql_query
+            sql_query=sql_query,
         )
-        self.session.add(new_agent_message) 
+        self.session.add(new_agent_message)
         self.session.commit()
-            

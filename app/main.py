@@ -3,7 +3,7 @@ from fastapi import (
     FastAPI,
 )
 import uvicorn
-import os 
+import os
 from .const import (
     OPEN_API_DESCRIPTION,
     OPEN_API_TITLE,

@@ -2,12 +2,11 @@ from langchain.agents import AgentOutputParser
 from langchain.schema import AgentAction, AgentFinish
 from typing import Union
 import re, ast
-from app.infrastructure.agent.helpers import count_tokens
 
 
 class CustomOutputParser(AgentOutputParser):
     def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
-        count_tokens(input=llm_output, agent_step="final output")
+        # count_tokens(input=llm_output, agent_step="final output")
 
         # Check if agent should finish
         # if "Observation:" in llm_output:
@@ -20,9 +19,7 @@ class CustomOutputParser(AgentOutputParser):
             sql_query = matches.group(2).strip() if matches.group(2) else None
             stored_id = matches.group(3).strip() if matches.group(3) else None
             followup_questions = matches.group(4).strip() if matches.group(4) else None
-            # followup_questions = followup_questions_text.split(" || ")
-            if sql_query:
-                final_answer = f"{final_answer}\n\nSQL query I created is:\n{sql_query}"
+
             return AgentFinish(
                 # Return values is generally always a dictionary with a single `output` key
                 # It is not recommended to try anything else at the moment :)

@@ -2,7 +2,9 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import SystemMessage
 from langchain.tools import BaseTool
 from typing import List
-from app.infrastructure.agent.helpers import count_tokens
+
+from app.infrastructure.agent.helpers import TokenCounter
+
 
 
 # Set up a prompt template
@@ -12,6 +14,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
     # The list of tools available
     tools: List[BaseTool]
     query_and_save_tool: str
+    token_counter: TokenCounter
 
     def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
@@ -23,6 +26,7 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
             for history_message in history_messages:
                 history_text += f"{history_message.type}: {history_message.content}\n"
             kwargs["history"] = history_text
+        print(kwargs["history"], " -------- history")
 
         intermediate_steps = kwargs.pop("intermediate_steps")
         thoughts = ""
@@ -40,7 +44,5 @@ class CustomPromptTemplate(BaseChatPromptTemplate):
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
         formatted = self.template.format(**kwargs)
         # counting tokens
-        # record_token_record(reset=True)
-        print(formatted, " formatted")
-        count_tokens(input=formatted, agent_step="Prompting")
+        self.token_counter.count_tokens(input=formatted, agent_step="prompting")
         return [SystemMessage(content=formatted)]

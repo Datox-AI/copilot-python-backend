@@ -28,18 +28,20 @@ class Message(BaseDelete):
     chat = relationship("Chat", back_populates="messages")
     reply_to_message = relationship(
         "Message",
-        backref="replies",
+        backref=backref("replies", overlaps="prompts,prompt_message"),
         remote_side=[BaseDelete.id],
         primaryjoin="Message.reply_to_id==remote(foreign(Message.id))",
+        overlaps="prompts,prompt_message",
     )
 
     prompt_message = relationship(
         "Message",
-        backref="prompts",
+        backref=backref("prompts", overlaps="replies,reply_to_message"),
         remote_side=[BaseDelete.id],
         primaryjoin="Message.prompt_id==remote(foreign(Message.id))",
         overlaps="replies,reply_to_message",
     )
+
     message_files = relationship("MessageFile", back_populates="message")
     message_sharepoint_documents = relationship(
         "MessageSharepointDocument", back_populates="message"

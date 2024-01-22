@@ -30,10 +30,10 @@ class ChatMapper:
     def map_to_chat_history_response(chat: Chat):
         message_responses = [
             MessageResponse(
-                id=message.id, 
+                id=message.id,
                 chat_id=message.chat_id,
                 text=message.text,
-                role=message.role
+                role=message.role,
             )
             for message in chat.messages
         ]
