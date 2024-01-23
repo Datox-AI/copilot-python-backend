@@ -20,6 +20,7 @@ config = context.config
 db_name = (
     config.config_ini_section
 )  # active config ini section is the db name that we have chosen
+print(os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"], " versss----")
 config.set_main_option(
     "sqlalchemy.url", f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}'
 )
@@ -54,6 +55,7 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
+    print(url, " rererere")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -72,6 +74,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
+    print(" rererere")
+
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix="sqlalchemy.",

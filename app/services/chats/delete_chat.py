@@ -18,7 +18,7 @@ class DeleteChat:
 
     async def invoke(self, chat_id: UUID) -> None:
         # Asynchronously fetch the chat
-        result = await self.session.execute(
+        result = self.session.execute(
             select(Chat).where(Chat.id == chat_id, Chat.is_deleted == False)
         )
         chat = result.scalars().first()
@@ -31,7 +31,7 @@ class DeleteChat:
 
         # Mark the chat as deleted
         chat.is_deleted = True
-        chat.deleted_at = datetime.utcnow()
+        chat.deleted_at = datetime.datetime.utcnow()
 
         self.session.add(chat)
-        await self.session.commit()
+        self.session.commit()
