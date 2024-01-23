@@ -1,11 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Response, Security, status
 from uuid import UUID
 from typing import Annotated, List
+from app.schemas.chat.chat_request import UpdateChatRequest
 from app.schemas.identity.current_user import CurrentUser
-from app.services.chats import CreateChat, DeleteChat, GetChat
+from app.services.chats import (
+    CreateChat,
+    DeleteChat,
+    GetChat
+)
 from app.schemas.chat import ChatResponse, CreateChatRequest, ChatHistoryResponse
+from app.services.chats.generate_chat_name import GenerateChatName
+from app.services.chats.update_chat import UpdateChat
 from app.shared.auth import current_user
-from fastapi_azure_auth.user import User
 
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
 
@@ -38,15 +44,23 @@ async def create_chat(
 
 
 @router.delete("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_chat(
-    chat_id: UUID, delete_chat_service: Annotated[DeleteChat, Depends()]
-):
-    await delete_chat_service.invoke(chat_id)
+async def delete_chat(chat_id: UUID, delete_chat_service: Annotated[DeleteChat, Depends()]):
+    delete_chat_service.invoke(chat_id)
     return {"message": "Chat deleted successfully."}
 
-
-@router.get("/chat-history/{chat_id}", response_model=ChatHistoryResponse)
-async def get_chat_history(
-    chat_id: UUID, get_chat_service: Annotated[GetChat, Depends()]
+@router.put("/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_chat(
+    chat_id: UUID, 
+    request: UpdateChatRequest, 
+    update_chat_service: Annotated[UpdateChat, Depends()]
 ):
-    return get_chat_service.get_chat_history(chat_id=chat_id)
+    if chat_id != request.id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mismatched chat ID")
+
+    update_chat_service.invoke(request)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.put("/{chat_id}/generate-name", response_model=str, status_code=status.HTTP_200_OK)
+async def generate_chat_name(chat_id: UUID, generate_chat_name_service: Annotated[GenerateChatName, Depends()]):
+    generated_name = generate_chat_name_service.invoke(chat_id)
+    return generated_name

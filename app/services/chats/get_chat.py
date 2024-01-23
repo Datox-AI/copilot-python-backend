@@ -40,9 +40,9 @@ class GetChat:
         subquery = (
             select(
                 Message.chat_id,
-                func.count(Message.id).label("messages_count"),
-                func.count(MessageFileAlias.id).label("files_count"),
-                func.max(Message.created_at).label("last_message"),
+                func.coalesce(func.count(Message.id), 0).label("messages_count"),
+                func.coalesce(func.count(MessageFileAlias.id), 0).label("files_count"),
+                func.max(Message.created_at).label("last_message")
             )
             .outerjoin(MessageFileAlias, Message.message_files)
             .group_by(Message.chat_id)
@@ -50,26 +50,18 @@ class GetChat:
         )
 
         result = self.session.execute(
-            select(
-                Chat,
-                subquery.c.messages_count,
-                subquery.c.files_count,
-                subquery.c.last_message,
-            )
+            select(Chat, func.coalesce(subquery.c.messages_count, 0), func.coalesce(subquery.c.files_count, 0), subquery.c.last_message)
             .outerjoin(subquery, Chat.id == subquery.c.chat_id)
             .where(Chat.created_by == user_id, Chat.is_deleted == False)
-            .order_by(
-                desc(Chat.pinned),
-                Chat.pinned_date if Chat.pinned else func.max(),
-                desc(Chat.created_at),
-            )
-        )
+            .order_by(desc(Chat.pinned), 
+                      Chat.pinned_date if Chat.pinned else func.max(),
+                      desc(Chat.created_at))
+        ).unique()
 
-        list_chats = [
-            ChatMapper.map_to_chat_list_response(chat, 0, 0, last_message)
-            for chat, messages_count, files_count, last_message in result.unique()
+        return [
+            ChatMapper.map_to_chat_response(chat, messages_count, files_count, last_message)
+            for chat, messages_count, files_count, last_message in result
         ]
-        return list_chats
 
     def get_chat_history(self, chat_id: UUID) -> ChatHistoryResponse:
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()

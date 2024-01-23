@@ -3,8 +3,13 @@ from typing import Annotated
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.backend.session import create_admindb_session
-from app.models.admindb import Tenant, ApplicationUser, Role, UserRole
+from app.backend.session import create_admindb_session, create_maindb_session
+from app.models.admindb import (
+    Tenant, 
+    ApplicationUser,
+    Role,
+    UserRole
+)
 
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.identity.current_user_request import CurrentUserRequest
@@ -49,6 +54,9 @@ class CheckUpdateUser:
         elif user.tenant_id != existing_tenant.id:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
+        self.session.info["user_id"] = user.id
+        self.session2.info["user_id"] = user.id
+        
         self.session.commit()
 
         # Manage roles

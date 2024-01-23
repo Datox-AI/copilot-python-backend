@@ -23,8 +23,7 @@ class CreateChat:
         new_chat = Chat(
             id=uuid.uuid4(),
             name="New Chat",
-            type=model.type,
-            created_by=self.user.user_id,
+            type=model.type
         )
 
         self.session.add(new_chat)

@@ -1,7 +1,7 @@
 from typing import Annotated
 from dotenv import load_dotenv
 import os
-from fastapi import Depends, Request
+from fastapi import Depends
 
 from fastapi_azure_auth import MultiTenantAzureAuthorizationCodeBearer
 from fastapi_azure_auth.exceptions import InvalidAuth
@@ -10,10 +10,13 @@ from fastapi_azure_auth.user import User
 from app.schemas.identity import CurrentUser, CurrentUserRequest
 from app.services.identity import CheckUpdateUser
 
+from ..context import current_user_id
+
 load_dotenv(override=True)
 
 AZURE_AD_CLIENT_ID = os.getenv("AZURE_AD_CLIENT_ID")
 AZURE_AD_FRONTEND_CLIENT_ID = os.getenv("AZURE_AD_FRONTEND_CLIENT_ID")
+
 
 azure_scheme = MultiTenantAzureAuthorizationCodeBearer(
     app_client_id=AZURE_AD_CLIENT_ID,
@@ -43,7 +46,8 @@ async def multi_auth(
         name=user_name,
         roles=roles,
     )
-    current_user = await checkUpdateUser.invoke(currentUserRequest)
+    current_user = checkUpdateUser.invoke(currentUserRequest)
+    current_user_id.set(current_user.user_id)
     return current_user
 
 
