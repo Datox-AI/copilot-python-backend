@@ -1,11 +1,12 @@
 import uuid
 from typing import Annotated
+
 from fastapi import Depends
 from sqlalchemy.orm import Session
-from app.backend.session import create_maindb_session
 
+from app.backend.session import create_maindb_session
 from app.models.maindb import Chat
-from app.schemas.chat import CreateChatRequest, ChatResponse, ChatMapper
+from app.schemas.chat import ChatMapper, ChatResponse, CreateChatRequest
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
@@ -20,11 +21,7 @@ class CreateChat:
         self.user = user
 
     def invoke(self, model: CreateChatRequest) -> ChatResponse:
-        new_chat = Chat(
-            id=uuid.uuid4(),
-            name="New Chat",
-            type=model.type
-        )
+        new_chat = Chat(id=uuid.uuid4(), name="New Chat", type=model.type)
 
         self.session.add(new_chat)
         self.session.commit()

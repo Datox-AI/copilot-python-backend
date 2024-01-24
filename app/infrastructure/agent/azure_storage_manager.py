@@ -1,8 +1,9 @@
 import os
-from dotenv import load_dotenv
-from azure.storage.blob import BlobServiceClient
-import pandas as pd
 import uuid
+
+import pandas as pd
+from azure.storage.blob import BlobServiceClient
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -12,21 +13,15 @@ class AzureBlobStorageManager:
         # initiating blob service client
         az_storage_connection_string = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
         az_storage_agent_container_name = os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"]
-        blob_service_client = BlobServiceClient.from_connection_string(
-            az_storage_connection_string
-        )
+        blob_service_client = BlobServiceClient.from_connection_string(az_storage_connection_string)
 
-        self.container_client = blob_service_client.get_container_client(
-            container=az_storage_agent_container_name
-        )
+        self.container_client = blob_service_client.get_container_client(container=az_storage_agent_container_name)
 
     def upload_csv(self, df: pd.DataFrame, message_id: str):
         store_id = uuid.uuid4().hex
         file_full_name = f"{message_id}_{store_id}.csv"
         # uploading
-        self.container_client.upload_blob(
-            name=file_full_name, data=df.to_csv(index=False), overwrite=True
-        )
+        self.container_client.upload_blob(name=file_full_name, data=df.to_csv(index=False), overwrite=True)
 
         return store_id
 

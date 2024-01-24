@@ -1,13 +1,14 @@
 import json
+from typing import Dict, List
+
 from fastapi import WebSocket
-from typing import List, Dict
 
 from app.schemas.message import MessageResponse
 
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -32,13 +33,9 @@ class ConnectionManager:
         await websocket.send_json({"status": "error", "message": message})
 
     async def send_connection_success_message(self, websocket: WebSocket):
-        await websocket.send_json(
-            {"status": "success", "message": "Engine is connected succesfully"}
-        )
+        await websocket.send_json({"status": "success", "message": "Engine is connected succesfully"})
 
-    async def send_agent_response(
-        self, response: MessageResponse, websocket: WebSocket
-    ):
+    async def send_agent_response(self, response: MessageResponse, websocket: WebSocket):
         await websocket.send_json(
             {
                 "output": response["output"],
