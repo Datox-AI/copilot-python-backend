@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Security, status
 from uuid import UUID
 from typing import Annotated, List
+from pydantic import ValidationError
 from app.schemas.chat.chat_request import UpdateChatRequest
 from app.schemas.identity.current_user import CurrentUser
 from app.services.chats import (

@@ -24,6 +24,7 @@ class ChatMapper:
             messages_count=messages_count,
             files_count=files_count,
             last_message=last_message,
+            snowflake_data=chat.snowflake_data
         )
 
     @staticmethod
