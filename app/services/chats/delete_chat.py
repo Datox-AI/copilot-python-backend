@@ -1,14 +1,16 @@
 from datetime import datetime
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import UUID
+
 from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 
 from app.models.maindb import Chat
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
+
 
 class DeleteChat:
     def __init__(self, session: Annotated[Session, Depends(create_maindb_session)], user: Annotated[CurrentUser, Depends(current_user)]) -> None:
@@ -25,7 +27,7 @@ class DeleteChat:
         if not chat:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Chat with ID {chat_id} not found."
+                detail=f"Chat with ID {chat_id} not found.",
             )
 
         # Mark the chat as deleted

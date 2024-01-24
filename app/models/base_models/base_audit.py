@@ -6,11 +6,12 @@ from app.shared.context import current_user_id
 
 from .base import Base
 
+
 class BaseAudit(Base):
     """
     Base Audit Model Class for Common Audit Attributes.
     """
-    
+
     __abstract__ = True
     created_at = Column(DateTime, default=func.now(), nullable=False)
     created_by = Column(UUID(as_uuid=True), nullable=True)

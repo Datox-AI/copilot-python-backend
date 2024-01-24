@@ -26,6 +26,7 @@ AdminDbSessionFactory = sessionmaker(
     expire_on_commit=False,
 )
 
+
 def create_maindb_session() -> Iterator[Session]:
     """Create new main database session.
 

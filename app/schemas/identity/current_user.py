@@ -1,6 +1,7 @@
 from typing import Optional, List
 from pydantic import BaseModel, UUID4
 
+
 class CurrentUser(BaseModel):
     user_id: Optional[UUID4]
     tenant_id: Optional[UUID4]

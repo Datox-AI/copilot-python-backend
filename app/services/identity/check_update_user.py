@@ -14,24 +14,29 @@ from app.models.admindb import (
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.identity.current_user_request import CurrentUserRequest
 
+
 class CheckUpdateUser:
-    def __init__(self, 
-                 session: Annotated[Session, Depends(create_admindb_session)],
-                 session2: Annotated[Session, Depends(create_maindb_session)]) -> None:
+    def __init__(
+        self, session: Annotated[Session, Depends(create_admindb_session)]
+    ) -> None:
         self.session = session
-        self.session2 = session2
-        
-    def invoke(self, model: CurrentUserRequest) -> CurrentUser:
-        existing_tenant = self.session.execute(select(Tenant).where(Tenant.azure_object_id == model.tenant_id))
-        # print(existing_tenant.scalars().all(), ' existsing tenatn')
+
+    async def invoke(self, model: CurrentUserRequest) -> CurrentUser:
+        existing_tenant = self.session.execute(
+            select(Tenant).where(Tenant.azure_object_id == model.tenant_id)
+        )
         existing_tenant = existing_tenant.scalars().first()
         if not existing_tenant:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
         # Check if the user exists
-        user = self.session.execute(select(ApplicationUser).where(ApplicationUser.azure_object_id == model.azure_object_id))
+        user = self.session.execute(
+            select(ApplicationUser).where(
+                ApplicationUser.azure_object_id == model.azure_object_id
+            )
+        )
         user = user.scalars().first()
-        
+
         name_parts = model.name.split()
         first_name = name_parts[0]
         last_name = name_parts[1] if len(name_parts) > 1 else ""
@@ -43,9 +48,9 @@ class CheckUpdateUser:
                 tenant_id=existing_tenant.id,
                 first_name=first_name,
                 last_name=last_name,
-                id=uuid.uuid4()
-            )            
-            self.session.add(user)            
+                id=uuid.uuid4(),
+            )
+            self.session.add(user)
         elif user.tenant_id != existing_tenant.id:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
@@ -69,7 +74,9 @@ class CheckUpdateUser:
             if role_name in default_roles:
                 role = self.session.execute(select(Role).where(Role.name == role_name))
                 role = role.scalars().first()
-                if not any(user_role.role_id == role.id for user_role in user.user_roles):
+                if not any(
+                    user_role.role_id == role.id for user_role in user.user_roles
+                ):
                     user_role = UserRole(user_id=user.id, role_id=role.id)
                     self.session.add(user_role)
 
@@ -80,5 +87,5 @@ class CheckUpdateUser:
             tenant_id=user.tenant_id,
             azure_object_id=user.azure_object_id,
             user_id=user.id,
-            user_name=model.name
+            user_name=model.name,
         )

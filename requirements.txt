@@ -12,7 +12,7 @@ click==8.1.7
 colorama==0.4.6
 cryptography==41.0.7
 dataclasses-json==0.6.3
--e git+ssh://git@github.com/datoxdev/copilot-python-backend.git@e53000534be776a175889c98667d660e14cfacd1#egg=Datox_Copilot
+Datox-Copilot==1.0.0
 distro==1.9.0
 dnspython==2.4.2
 ecdsa==0.18.0
@@ -50,7 +50,7 @@ psycopg2==2.9.9
 pyasn1==0.5.1
 pycparser==2.21
 pydantic==2.5.3
-pydantic-extra-types==2.2.0
+pydantic-extra-types==2.4.1
 pydantic-settings==2.1.0
 pydantic_core==2.14.6
 PyJWT==2.8.0
