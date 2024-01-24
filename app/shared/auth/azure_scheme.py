@@ -46,7 +46,7 @@ async def multi_auth(
         name=user_name,
         roles=roles,
     )
-    current_user = checkUpdateUser.invoke(currentUserRequest)
+    current_user = await checkUpdateUser.invoke(currentUserRequest)
     current_user_id.set(current_user.user_id)
     return current_user
 

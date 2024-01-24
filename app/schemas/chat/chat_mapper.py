@@ -8,7 +8,7 @@ from app.schemas.message import MessageResponse
 
 class ChatMapper:
     @staticmethod
-    def map_to_chat_list_response(
+    def map_to_chat_response(
         chat: Chat,
         messages_count: int,
         files_count: int,

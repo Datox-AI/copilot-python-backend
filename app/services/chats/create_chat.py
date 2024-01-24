@@ -29,4 +29,4 @@ class CreateChat:
         self.session.add(new_chat)
         self.session.commit()
 
-        return ChatMapper.map_to_chat_list_response(new_chat, 0, 0)
+        return ChatMapper.map_to_chat_response(new_chat, 0, 0)
