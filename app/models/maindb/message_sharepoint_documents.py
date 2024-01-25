@@ -4,11 +4,12 @@ from sqlalchemy.orm import relationship
 
 from ..base_models import BaseAudit
 
-class MessageSharepointDocument(BaseAudit):
-    __table_args__ = ({ 'info': { 'dbname': 'main' }})
-    __tablename__ = 'message_sharepoint_documents'
 
-    message_id = Column(UUID(as_uuid=True), ForeignKey('messages.id'), nullable=False)
+class MessageSharepointDocument(BaseAudit):
+    __table_args__ = {"info": {"dbname": "main"}}
+    __tablename__ = "message_sharepoint_documents"
+
+    message_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=False)
     document_id = Column(String, nullable=False)
     item_name = Column(String, nullable=False)
     item_path = Column(String, nullable=False)
