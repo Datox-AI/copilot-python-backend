@@ -1,13 +1,14 @@
 from typing import List
 from uuid import UUID
+
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
-from sqlalchemy.orm import Session
 from langchain_core.messages.ai import AIMessage
 from langchain_core.messages.human import HumanMessage
+from sqlalchemy.orm import Session
 
-from app.models.maindb.message import Message
 from app.enums.message_enums import MessageRole
+from app.models.maindb.message import Message
 
 
 class CustomChatMessageHistory(BaseChatMessageHistory):
@@ -32,9 +33,7 @@ class CustomChatMessageHistory(BaseChatMessageHistory):
             elif row.role == MessageRole.Assistant:
                 agent_message = row.text
                 if row.sql_query:
-                    agent_message = (
-                        f"{agent_message}\n\nSQL query I created: {row.sql_query}"
-                    )
+                    agent_message = f"{agent_message}\n\nSQL query I created: {row.sql_query}"
 
                 old_messages.append(AIMessage(content=agent_message))
 

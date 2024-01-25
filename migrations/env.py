@@ -17,13 +17,9 @@ from app.models.admindb import *
 load_dotenv()
 config = context.config
 
-db_name = (
-    config.config_ini_section
-)  # active config ini section is the db name that we have chosen
+db_name = config.config_ini_section  # active config ini section is the db name that we have chosen
 print(os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"], " versss----")
-config.set_main_option(
-    "sqlalchemy.url", f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}'
-)
+config.set_main_option("sqlalchemy.url", f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}')
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -87,10 +83,8 @@ def run_migrations_online() -> None:
             type_ == "foreign_key_constraint"
             and compare_to
             and (
-                compare_to.elements[0].target_fullname
-                == db_name + "." + object.elements[0].target_fullname
-                or db_name + "." + compare_to.elements[0].target_fullname
-                == object.elements[0].target_fullname
+                compare_to.elements[0].target_fullname == db_name + "." + object.elements[0].target_fullname
+                or db_name + "." + compare_to.elements[0].target_fullname == object.elements[0].target_fullname
             )
         ):
             return False
@@ -98,10 +92,7 @@ def run_migrations_online() -> None:
             db = object.info.get("dbname")
             if db == db_name or db is None:
                 return True
-        elif (
-            object.table.info.get("dbname") == db_name
-            or object.table.info.get("dbname") is None
-        ):
+        elif object.table.info.get("dbname") == db_name or object.table.info.get("dbname") is None:
             return True
         else:
             return False

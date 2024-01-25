@@ -1,4 +1,4 @@
-from sqlalchemy import Column, event, DateTime
+from sqlalchemy import Column, DateTime, event
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 
@@ -18,14 +18,16 @@ class BaseAudit(Base):
     modified_at = Column(DateTime, default=func.now(), onupdate=func.now())
     modified_by = Column(UUID(as_uuid=True), nullable=True)
 
-@event.listens_for(BaseAudit, "before_insert", propagate=True)    
+
+@event.listens_for(BaseAudit, "before_insert", propagate=True)
 def before_insert(mapper, connection, target):
     if isinstance(target, BaseAudit):
         user_id = current_user_id.get()
         target.created_by = user_id
 
+
 @event.listens_for(BaseAudit, "before_update", propagate=True)
 def before_update(mapper, connection, target):
     if isinstance(target, BaseAudit):
         user_id = current_user_id.get()
-        target.modified_by = user_id 
+        target.modified_by = user_id
