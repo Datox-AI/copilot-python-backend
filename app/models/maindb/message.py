@@ -1,9 +1,10 @@
-from sqlalchemy import Column, String, Boolean, DateTime, Enum, ForeignKey
-from sqlalchemy.orm import relationship, remote, foreign, backref
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import backref, foreign, relationship, remote
+
+from app.enums.message_enums import MessageRole, MessageStatus
 
 from ..base_models import BaseDelete
-from app.enums.message_enums import MessageRole, MessageStatus
 
 
 class Message(BaseDelete):
@@ -43,6 +44,4 @@ class Message(BaseDelete):
     )
 
     message_files = relationship("MessageFile", back_populates="message")
-    message_sharepoint_documents = relationship(
-        "MessageSharepointDocument", back_populates="message"
-    )
+    message_sharepoint_documents = relationship("MessageSharepointDocument", back_populates="message")

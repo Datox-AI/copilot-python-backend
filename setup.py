@@ -2,7 +2,7 @@
 
 # setup(name="Datox Copilot", version="1.0", packages=find_packages())
 #!/usr/bin/env python
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="Datox Copilot",
@@ -98,7 +98,7 @@ setup(
         "uvicorn==0.25.0",
         "watchfiles==0.21.0",
         "websockets==12.0",
-        "yarl==1.9.4"
+        "yarl==1.9.4",
     ],
     # entry_points='''
     # [console_scripts]

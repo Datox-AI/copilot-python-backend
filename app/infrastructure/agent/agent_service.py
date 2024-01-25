@@ -1,43 +1,32 @@
-from uuid import UUID
 import urllib
+from uuid import UUID
+
 from dotenv import load_dotenv
-
 from langchain.agents import AgentExecutor, LLMSingleActionAgent
+from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.chains.llm import LLMChain
-from langchain_community.chat_models import AzureChatOpenAI
-from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.memory import ConversationTokenBufferMemory
-from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-
-from sqlalchemy.engine.base import Engine
+from langchain_community.chat_models import AzureChatOpenAI
 from sqlalchemy.engine import create_engine
+from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
-from app.infrastructure.agent.prompts.tool_prompts import (
-    sql_db_query_description,
-    sql_db_schema_description,
-)
-from app.infrastructure.agent.database_tools import (
-    QuerySaveSQLDataBaseTool,
-    CustomSQLDatabase,
-)
-from app.infrastructure.agent.prompt_template import CustomPromptTemplate
-from app.infrastructure.agent.output_parser import CustomOutputParser
-from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
-from app.infrastructure.agent.helpers import TokenCounter
 from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
-
+from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
+from app.infrastructure.agent.database_tools import CustomSQLDatabase, QuerySaveSQLDataBaseTool
+from app.infrastructure.agent.helpers import TokenCounter
+from app.infrastructure.agent.output_parser import CustomOutputParser
+from app.infrastructure.agent.prompt_template import CustomPromptTemplate
+from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
+from app.infrastructure.agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
 
 load_dotenv()
 
 
 class DataAnalyticAgent:
     def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
-        self.llm_chat_model = AzureChatOpenAI(
-            deployment_name="gpt-4-32k", temperature=0
-        )
+        self.llm_chat_model = AzureChatOpenAI(deployment_name="gpt-4-32k", temperature=0)
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         self.azure_blob_storage_manager = AzureBlobStorageManager()
@@ -67,9 +56,7 @@ class DataAnalyticAgent:
             stop=["\nObservation:"],
             allowed_tools=agent_tool_names,
         )
-        message_history = CustomChatMessageHistory(
-            chat_id=chat_id, db_session=db_session
-        )
+        message_history = CustomChatMessageHistory(chat_id=chat_id, db_session=db_session)
         memory = ConversationTokenBufferMemory(
             memory_key="history",
             chat_memory=message_history,
@@ -102,18 +89,14 @@ class DataAnalyticAgent:
     async def invoke(self, user_query: str, message_id: UUID):
         is_agent_response_valid = True
         message_id_str = message_id.hex
-        agent_response = self.agent_executor.invoke(
-            {"input": user_query, "message_id": message_id_str}
-        )
+        agent_response = self.agent_executor.invoke({"input": user_query, "message_id": message_id_str})
         # deleting all files that are saved except the last one
 
         if agent_response["stored_file_id"] is not None:
             self.azure_blob_storage_manager.delete_extra_files(
                 message_id=message_id_str, store_id=agent_response["stored_file_id"]
             )
-            agent_response[
-                "stored_file_id"
-            ] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+            agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
             # is_agent_response_valid = False
             # agent_response = None
 
@@ -137,14 +120,12 @@ class AgentSnowflakeEngineManager:
         if not is_valid:
             return False, error_message
 
-        snowflake_connection_url = (
-            "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
-                snowflake_data["account"],
-                snowflake_data["database"],
-                snowflake_data["schema"],
-                snowflake_data["warehouse"],
-                urllib.parse.quote(snowflake_data["oauth_token"]),
-            )
+        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+            snowflake_data["account"],
+            snowflake_data["database"],
+            snowflake_data["schema"],
+            snowflake_data["warehouse"],
+            urllib.parse.quote(snowflake_data["oauth_token"]),
         )
         engine = create_engine(snowflake_connection_url)
         try:
