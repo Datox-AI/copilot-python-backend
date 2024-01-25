@@ -1,5 +1,8 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
+# *.pyc
+
 *.py[cod]
 *$py.class
 
@@ -280,7 +283,5 @@ Datox_Copilot.egg-info/
 !.envs/.local/
 SSL/
 commands.txt
-
-
 .idea
 .idea/*

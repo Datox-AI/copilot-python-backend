@@ -4,6 +4,9 @@ from fastapi import (
 )
 import uvicorn
 import os
+from fastapi_azure_auth.auth import MultiTenantAzureAuthorizationCodeBearer
+from app.routers.snow_router import router as snowflake_oauth_router
+
 from .const import (
     OPEN_API_DESCRIPTION,
     OPEN_API_TITLE,
@@ -26,17 +29,17 @@ app = FastAPI(
 )
 
 
-@app.on_event("startup")
+
+@app.on_event('startup')
 async def load_config() -> None:
     """
     Load OpenID config on startup.
     """
     await azure_scheme.openid_config.load_config()
 
-
 app.include_router(chats.router)
 app.include_router(agent.router)
-
+app.include_router(snowflake_oauth_router)
 
 if __name__ == "__main__":
     uvicorn.run(
