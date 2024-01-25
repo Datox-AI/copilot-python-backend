@@ -34,8 +34,13 @@ async def agent_endpoint(
     await manager.connect(websocket=websocket)
     # checking token
     if token:
-        user, error_message = await validate_azure_token(token, check_update_user=check_update_user)
+        user, error_message = await validate_azure_token(
+            token, check_update_user=check_update_user
+        )
+        print(error_message, " errrr")
         if user:
+            #checking chat_id validity
+            # is_chat_valid = 
             # initiating agent and message service classes
             agent_engine_manager = AgentSnowflakeEngineManager()
             message_service = MessageService(user=user, chat_id=chat_id, session=maindb_session)

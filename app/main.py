@@ -46,6 +46,6 @@ if __name__ == "__main__":
         "main:app",
         host="localhost",
         port=7202,
-        ssl_certfile="./SSL/fullchain.pem",
-        ssl_keyfile="./SSL/localhost.key",
+        ssl_certfile="./SSL/domain.crt",
+        ssl_keyfile="./SSL/domain.key",
     )

@@ -6,7 +6,7 @@ from app.enums import AzureTokenErrorMessagesEnum
 from dotenv import load_dotenv
 from app.services.identity import CheckUpdateUser
 from app.schemas.identity import CurrentUser, CurrentUserRequest
-
+import pprint
 import os, asyncio
 from fastapi_azure_auth.openid_config import OpenIdConfig
 from fastapi_azure_auth.user import User
@@ -27,7 +27,9 @@ async def validate_azure_token(
     try:
         # Extract header information of the token.
         header: dict[str, str] = jwt.get_unverified_header(token=access_token) or {}
+        print(header, " header")
         claims: dict[str, Any] = jwt.get_unverified_claims(token=access_token) or {}
+        print(claims, " claims")
     except:
         error_message = AzureTokenErrorMessagesEnum.invalid_token
         return user, error_message

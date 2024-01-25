@@ -58,3 +58,10 @@ async def update_chat(
 async def generate_chat_name(chat_id: UUID, generate_chat_name_service: Annotated[GenerateChatName, Depends()]):
     generated_name = generate_chat_name_service.invoke(chat_id)
     return generated_name
+
+
+@router.get("/chat-history/{chat_id}", response_model=ChatHistoryResponse)
+async def get_chat_history(
+    chat_id: UUID, get_chat_service: Annotated[GetChat, Depends()]
+):
+    return get_chat_service.get_chat_history(chat_id=chat_id)

@@ -45,8 +45,6 @@ class CheckUpdateUser:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
         self.session.info["user_id"] = user.id
-        self.session2.info["user_id"] = user.id
-
         self.session.commit()
 
         # Manage roles
