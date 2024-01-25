@@ -1,18 +1,22 @@
+import ast
+import re
+from typing import Union
+
 from langchain.agents import AgentOutputParser
 from langchain.schema import AgentAction, AgentFinish
-from typing import Union
-import re, ast
 
 
 class CustomOutputParser(AgentOutputParser):
-    def parse(self, llm_output: str) -> Union[AgentAction, AgentFinish]:
+    def parse(self, llm_output: str) -> AgentAction | AgentFinish:
         # count_tokens(input=llm_output, agent_step="final output")
 
         # Check if agent should finish
         # if "Observation:" in llm_output:
         # observation_text = llm_output.split("Observation:")[-1].strip().split("Final Answer")[0]
         if "Final Answer: " in llm_output:
-            final_answer_pattern = r"Final Answer: (.*?)(?:\SQL query: (.*?))?(?:\nStored ID: (.*?))?(?:\nFollowup Questions: (.*))?$"
+            final_answer_pattern = (
+                r"Final Answer: (.*?)(?:\SQL query: (.*?))?(?:\nStored ID: (.*?))?(?:\nFollowup Questions: (.*))?$"
+            )
 
             matches = re.search(final_answer_pattern, llm_output, re.DOTALL)
             final_answer = matches.group(1).strip()

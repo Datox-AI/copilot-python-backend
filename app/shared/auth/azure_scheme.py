@@ -1,8 +1,8 @@
-from typing import Annotated
-from dotenv import load_dotenv
 import os
-from fastapi import Depends
+from typing import Annotated
 
+from dotenv import load_dotenv
+from fastapi import Depends
 from fastapi_azure_auth import MultiTenantAzureAuthorizationCodeBearer
 from fastapi_azure_auth.exceptions import InvalidAuth
 from fastapi_azure_auth.user import User
@@ -51,7 +51,5 @@ async def multi_auth(
     return current_user
 
 
-def current_user(
-    current_user: Annotated[CurrentUser, Depends(multi_auth)]
-) -> CurrentUser:
+def current_user(current_user: Annotated[CurrentUser, Depends(multi_auth)]) -> CurrentUser:
     return current_user

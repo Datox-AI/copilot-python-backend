@@ -1,39 +1,29 @@
 import uuid
 from typing import Annotated
+
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.backend.session import create_admindb_session, create_maindb_session
-from app.models.admindb import (
-    Tenant, 
-    ApplicationUser,
-    Role,
-    UserRole
-)
 
+from app.backend.session import create_admindb_session, create_maindb_session
+from app.models.admindb import ApplicationUser, Role, Tenant, UserRole
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.identity.current_user_request import CurrentUserRequest
 
 
 class CheckUpdateUser:
-    def __init__(
-        self, session: Annotated[Session, Depends(create_admindb_session)]
-    ) -> None:
+    def __init__(self, session: Annotated[Session, Depends(create_admindb_session)]) -> None:
         self.session = session
 
     async def invoke(self, model: CurrentUserRequest) -> CurrentUser:
-        existing_tenant = self.session.execute(
-            select(Tenant).where(Tenant.azure_object_id == model.tenant_id)
-        )
+        existing_tenant = self.session.execute(select(Tenant).where(Tenant.azure_object_id == model.tenant_id))
         existing_tenant = existing_tenant.scalars().first()
         if not existing_tenant:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
         # Check if the user exists
         user = self.session.execute(
-            select(ApplicationUser).where(
-                ApplicationUser.azure_object_id == model.azure_object_id
-            )
+            select(ApplicationUser).where(ApplicationUser.azure_object_id == model.azure_object_id)
         )
         user = user.scalars().first()
 
@@ -55,7 +45,6 @@ class CheckUpdateUser:
             raise HTTPException(401, "Tenant is not recognized or authorized.")
 
         self.session.info["user_id"] = user.id
-        
         self.session.commit()
 
         # Manage roles
@@ -73,9 +62,7 @@ class CheckUpdateUser:
             if role_name in default_roles:
                 role = self.session.execute(select(Role).where(Role.name == role_name))
                 role = role.scalars().first()
-                if not any(
-                    user_role.role_id == role.id for user_role in user.user_roles
-                ):
+                if not any(user_role.role_id == role.id for user_role in user.user_roles):
                     user_role = UserRole(user_id=user.id, role_id=role.id)
                     self.session.add(user_role)
 

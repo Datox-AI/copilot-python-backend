@@ -105,10 +105,8 @@ def run_migrations_online() -> None:
             type_ == "foreign_key_constraint"
             and compare_to
             and (
-                compare_to.elements[0].target_fullname
-                == db_name + "." + object.elements[0].target_fullname
-                or db_name + "." + compare_to.elements[0].target_fullname
-                == object.elements[0].target_fullname
+                compare_to.elements[0].target_fullname == db_name + "." + object.elements[0].target_fullname
+                or db_name + "." + compare_to.elements[0].target_fullname == object.elements[0].target_fullname
             )
         ):
             return False
@@ -116,10 +114,7 @@ def run_migrations_online() -> None:
             db = object.info.get("dbname")
             if db == db_name or db is None:
                 return True
-        elif (
-            object.table.info.get("dbname") == db_name
-            or object.table.info.get("dbname") is None
-        ):
+        elif object.table.info.get("dbname") == db_name or object.table.info.get("dbname") is None:
             return True
         else:
             return False

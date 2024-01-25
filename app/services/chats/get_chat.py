@@ -1,13 +1,14 @@
 from typing import Annotated, List, Optional
+
 from fastapi import Depends, HTTPException
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import desc, func, select
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session, aliased
+
 from app.backend.session import create_maindb_session
 from app.models.admindb.application_user import ApplicationUser
-
 from app.models.maindb import Chat, Message, MessageFile
-from app.schemas.chat import ChatResponse, ChatHistoryResponse, ChatMapper
+from app.schemas.chat import ChatHistoryResponse, ChatMapper, ChatResponse
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
@@ -21,13 +22,11 @@ class GetChat:
         self.session = session
         self.user = user
 
-    def get_chat_list(self, user_id: Optional[UUID] = None) -> List[ChatResponse]:
+    def get_chat_list(self, user_id: UUID | None = None) -> list[ChatResponse]:
         if not user_id:
             user_id = self.user.user_id
         elif user_id != self.user.user_id:
-            result = self.session.execute(
-                select(ApplicationUser).where(ApplicationUser.id == user_id)
-            )
+            result = self.session.execute(select(ApplicationUser).where(ApplicationUser.id == user_id))
             user = result.scalars().first()
 
             if user is None:
@@ -42,7 +41,7 @@ class GetChat:
                 Message.chat_id,
                 func.coalesce(func.count(Message.id), 0).label("messages_count"),
                 func.coalesce(func.count(MessageFileAlias.id), 0).label("files_count"),
-                func.max(Message.created_at).label("last_message")
+                func.max(Message.created_at).label("last_message"),
             )
             .outerjoin(MessageFileAlias, Message.message_files)
             .group_by(Message.chat_id)
@@ -50,12 +49,15 @@ class GetChat:
         )
 
         result = self.session.execute(
-            select(Chat, func.coalesce(subquery.c.messages_count, 0), func.coalesce(subquery.c.files_count, 0), subquery.c.last_message)
+            select(
+                Chat,
+                func.coalesce(subquery.c.messages_count, 0),
+                func.coalesce(subquery.c.files_count, 0),
+                subquery.c.last_message,
+            )
             .outerjoin(subquery, Chat.id == subquery.c.chat_id)
             .where(Chat.created_by == user_id, Chat.is_deleted == False)
-            .order_by(desc(Chat.pinned), 
-                      Chat.pinned_date if Chat.pinned else func.max(),
-                      desc(Chat.created_at))
+            .order_by(desc(Chat.pinned), Chat.pinned_date if Chat.pinned else func.max(), desc(Chat.created_at))
         ).unique()
 
         return [

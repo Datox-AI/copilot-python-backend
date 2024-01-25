@@ -1,15 +1,15 @@
-from langchain_community.utilities import SQLDatabase
-from langchain.utilities.sql_database import truncate_word
-from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
-from sqlalchemy.exc import SQLAlchemyError
+import uuid
+from typing import Literal, Union
+
 import pandas as pd
-from typing import Union, Literal
-from app.infrastructure.agent.prompts.tool_prompts import (
-    query_and_save_tool_description,
-)
+from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
+from langchain.utilities.sql_database import truncate_word
+from langchain_community.utilities import SQLDatabase
+from sqlalchemy.exc import SQLAlchemyError
+
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
 from app.infrastructure.agent.helpers import TokenCounter
-import uuid
+from app.infrastructure.agent.prompts.tool_prompts import query_and_save_tool_description
 
 
 class CustomSQLDatabase(SQLDatabase):
@@ -38,23 +38,14 @@ class CustomSQLDatabase(SQLDatabase):
         stored_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
         # Convert columns values to string to avoid issues with sqlalchemy
         # truncating text
-        res = [
-            tuple(truncate_word(c, length=self._max_string_length) for c in r.values())
-            for r in result
-        ]
+        res = [tuple(truncate_word(c, length=self._max_string_length) for c in r.values()) for r in result]
         if not res:
             return ""
         else:
-            if not self.token_counter.count_tokens(
-                input=str(res), agent_step="sql_query_run"
-            ):
+            if not self.token_counter.count_tokens(input=str(res), agent_step="sql_query_run"):
                 first_ten_rows = result[:10]
                 res = [
-                    tuple(
-                        truncate_word(c, length=self._max_string_length)
-                        for c in r.values()
-                    )
-                    for r in first_ten_rows
+                    tuple(truncate_word(c, length=self._max_string_length) for c in r.values()) for r in first_ten_rows
                 ]
                 return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {stored_id}"
 
@@ -64,7 +55,7 @@ class CustomSQLDatabase(SQLDatabase):
         self,
         command: str,
         message_id: str,
-        fetch: Union[Literal["all"], Literal["one"]] = "all",
+        fetch: Literal["all"] | Literal["one"] = "all",
     ) -> str:
         """Execute a SQL command and return a string representing the results.
 
