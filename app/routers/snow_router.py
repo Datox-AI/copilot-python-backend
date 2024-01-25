@@ -88,4 +88,4 @@ def get_columns(token: str, db_name: str, schema_name: str, table_or_view_name: 
 @router.get("/preview/{db_name}/{schema_name}/{table_or_view_name}")
 def preview_data(token: str, db_name: str, schema_name: str, table_or_view_name: str):
     return {"data_preview": preview_data_logic(token, db_name, schema_name, table_or_view_name)}
-   
+

@@ -1,1 +1,12 @@
 .venv/
+env/
+.env
+__pycache__/
+SSL/
+.env
+migrations/.DS_Store
+Datox_Copilot.egg-info/
+dist/
+build/
+commands.txt
+.github/
