@@ -36,7 +36,10 @@ print(db_dsn)
 config.set_main_option(
     "sqlalchemy.url", db_dsn
 )
-
+config_name = os.environ["ALEMBIC_CONFIG"]
+script_location = config.get_section_option(config_name, "script_location")
+config.set_main_option("script_location", script_location)
+print(script_location, " scripti")
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -89,6 +92,7 @@ def run_migrations_online() -> None:
 
     """
     print(" rererere")
+    
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),

@@ -16,7 +16,7 @@ class Chat(BaseDelete):
     pinned_date = Column(DateTime, nullable=True)
     chat_model = Column(Enum(ChatModel), default=ChatModel.GPT3_16K)
     snowflake_data_id = Column(UUID(as_uuid=True), ForeignKey('chat_snowflake_data.id'), nullable=True)
-    
+
     snowflake_data = relationship("ChatSnowflakeData", back_populates="chat", uselist=False)
     messages = relationship("Message", back_populates="chat", lazy="joined")
 
