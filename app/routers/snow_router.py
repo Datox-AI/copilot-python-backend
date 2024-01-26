@@ -3,7 +3,7 @@ from urllib.parse import urlencode
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Annotated
 from pydantic import BaseModel
-from app.schemas.snowflake_integration.snowflake_request import OAuthConfig
+from app.schemas.snowintegration import OAuthConfig
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
 
 

@@ -14,13 +14,16 @@ class ChatMapper:
         files_count: int,
         last_message: Optional[datetime] = None,
     ) -> ChatResponse:
-        snowflake_data_response = ChatSnowflakeData(
-            id=chat.snowflake_data.id,
-            snowflake_account=chat.snowflake_data.snowflake_account,
-            database_name=chat.snowflake_data.database_name,
-            snowflake_schema=chat.snowflake_data.schema,
-            warehouse=chat.snowflake_data.warehouse,
-        )
+        if chat.snowflake_data:
+            snowflake_data_response = ChatSnowflakeData(
+                id=chat.snowflake_data.id,
+                snowflake_account=chat.snowflake_data.snowflake_account,
+                database_name=chat.snowflake_data.database_name,
+                snowflake_schema=chat.snowflake_data.schema,
+                warehouse=chat.snowflake_data.warehouse,
+            )
+        else:
+            snowflake_data_response = None
         return ChatResponse(
             id=chat.id,
             name=chat.name,

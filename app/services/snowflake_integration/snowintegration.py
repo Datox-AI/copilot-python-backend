@@ -1,4 +1,3 @@
-from snowflake.connector import ProgrammingError, OperationalError, InterfaceError
 from typing import Annotated
 
 from fastapi import Depends
@@ -14,12 +13,20 @@ from app.models.maindb.snowflake_identifier import SnowflakeIdentifier
 from app.backend.session import create_maindb_session
 from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
-
+from app.schemas.snowintegration import OAuthConfig
 
 app = FastAPI()
 
 
-REDIRECT_URI = "https://copilot.datox.ai/integration/2" 
+# Global variables for OAuth and Snowflake details
+# OAUTH_CLIENT_ID = 'your_oauth_client_id'  # Replace with your OAuth client ID
+# OAUTH_CLIENT_SECRET = 'your_oauth_client_secret'  # Replace with your OAuth client secret
+# AUTHORIZATION_ENDPOINT = 'your_authorization_endpoint'  # Replace with your authorization endpoint
+# TOKEN_ENDPOINT = 'your_token_endpoint'  # Replace with your token endpoint
+# SNOWFLAKE_ACCOUNT = 'your_snowflake_account'  # Replace with your Snowflake account
+REDIRECT_URI = "https://copilot.datox.ai/integration/2"  # Replace with your redirect URI
+# SELECTED_WAREHOUSE = None  # Variable to store the selected data warehouse
+
 
 
 class SnowflakeIntegrationService:
@@ -99,16 +106,13 @@ class SnowflakeIntegrationService:
 
     # Creates a connection to Snowflake
     def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
-        try:
-            ctx = snowflake.connector.connect(
-                account=snowflake_account,
-                authenticator='oauth',
-                token=oauth_token
-            )
-            return ctx
-        except Exception:
-            return False
-
+        
+        ctx = snowflake.connector.connect(
+            account=snowflake_account,
+            authenticator='oauth',
+            token=oauth_token
+        )
+        return ctx
 
     # Endpoint to list data warehouses
     def list_data_warehouses_logic(self, token: str):
