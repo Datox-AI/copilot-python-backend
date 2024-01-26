@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import (
     FastAPI,
@@ -5,7 +6,7 @@ from fastapi import (
 )
 from fastapi_pagination import add_pagination
 from fastapi.middleware.cors import CORSMiddleware
-
+from dotenv import load_dotenv
 
 from app.routers.snow_router import router as snowflake_oauth_router
 from app.routers import chats, agent
@@ -16,9 +17,8 @@ from .const import (
     OPEN_API_TITLE,
 )
 from .version import __version__
-
-
  
+load_dotenv()
  
 app = FastAPI(
     title=OPEN_API_TITLE,
@@ -35,13 +35,7 @@ app = FastAPI(
 add_pagination(app)
 
 # Adding CORS middleware
-origins = [
-    "http://localhost:3000",
-    "http://localhost:3000/",
-    "https://localhost:3000",
-    "https://localhost:3000/",
-]
-
+origins = os.environ["ALLOWED_ORIGINS"].split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
