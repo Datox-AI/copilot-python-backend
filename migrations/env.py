@@ -36,10 +36,7 @@ print(db_dsn)
 config.set_main_option(
     "sqlalchemy.url", db_dsn
 )
-config_name = os.environ["ALEMBIC_CONFIG"]
-script_location = config.get_section_option(config_name, "script_location")
-config.set_main_option("script_location", script_location)
-print(script_location, " scripti")
+
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
@@ -70,7 +67,6 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    print(url, " rererere")
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -90,9 +86,7 @@ def run_migrations_online() -> None:
     In this scenario we need to create an Engine
     and associate a connection with the context.
 
-    """
-    print(" rererere")
-    
+    """    
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
@@ -112,7 +106,8 @@ def run_migrations_online() -> None:
             return False
         if type_ == "table":
             db = object.info.get("dbname")
-            if db == db_name or db is None:
+            if db in db_name or db is None:
+                
                 return True
         elif object.table.info.get("dbname") == db_name or object.table.info.get("dbname") is None:
             return True

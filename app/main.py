@@ -13,9 +13,11 @@ from .const import (
 )
 from .version import __version__
 from app.routers import chats, agent
-from app.shared.auth import azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID, current_user
+from app.shared.auth import azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID
 
-
+from fastapi.middleware.cors import CORSMiddleware
+ 
+ 
 app = FastAPI(
     title=OPEN_API_TITLE,
     description=OPEN_API_DESCRIPTION,
@@ -28,6 +30,21 @@ app = FastAPI(
     # dependencies=[Depends(current_user)]
 )
 
+# Adding CORS middleware
+origins = [
+    "http://localhost:3000",
+    "http://localhost:3000/",
+    "https://localhost:3000",
+    "https://localhost:3000/",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event('startup')
