@@ -27,7 +27,7 @@ SNOWFLAKE_ACCOUNT = 'your_snowflake_account'  # Replace with your Snowflake acco
 REDIRECT_URI = "https://copilot.datox.ai/integration/2"  # Replace with your redirect URI
 SELECTED_WAREHOUSE = None  # Variable to store the selected data warehouse
 
-# Constructs the URL for OAuth authorization
+# Constructs the URL for OAuth authorization 
 def construct_authorization_url():
     params = {
         "response_type": "code",
@@ -51,7 +51,6 @@ def init_oauth_logic(config: OAuthConfig):
 
 
 # Callback endpoint for OAuth flow
-
 async def oauth_callback_logic(code: str):
     if not code:
         raise HTTPException(status_code=400, detail="Authorization code not provided")
@@ -106,6 +105,7 @@ def list_data_warehouses_logic(token: str):
 
 # Endpoint to select a data warehouse
 def select_warehouse_logic(token: str, warehouse_name: str):
+    # TODO  add save warehouse to DB model 
     global SELECTED_WAREHOUSE
     SELECTED_WAREHOUSE = warehouse_name
     return {"message": f"Data warehouse '{warehouse_name}' selected"}
@@ -146,6 +146,7 @@ def get_schemas_logic(token: str, db_name: str):
 
 # Endpoint to select a schema and check separately for the existence of tables and views
 def select_schema_logic(token: str, db_name: str, schema_name: str):
+    # TODO add saving to DB method 
     global SELECTED_SCHEMA
     SELECTED_SCHEMA = schema_name
 

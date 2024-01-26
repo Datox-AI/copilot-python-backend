@@ -44,12 +44,12 @@ async def oauth_callback(code: str):
 # Endpoint to list data warehouses
 @router.get("/data_warehouses")
 def list_data_warehouses(token: str):
-    return list_data_warehouses_logic (token)
+    return list_data_warehouses_logic(token)
 
 # Endpoint to select a data warehouse
 @router.post("/select_warehouse")
 def select_warehouse(token: str, warehouse_name: str):
-    return select_warehouse_logic (token, warehouse_name)
+    return select_warehouse_logic(token, warehouse_name)
 
 # Modified endpoint to list databases using the selected data warehouse
 @router.get("/databases")

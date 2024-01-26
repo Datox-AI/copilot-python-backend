@@ -1,10 +1,4 @@
 import tiktoken
-from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from app.infrastructure.agent.prompts.tool_prompts import (
-    sql_db_query_description,
-    sql_db_schema_description,
-)
-
 
 class TokenCounter:
     def __init__(self, max_token: int = 32768):
