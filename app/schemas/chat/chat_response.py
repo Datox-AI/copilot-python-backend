@@ -35,5 +35,3 @@ class ChatHistoryResponse(BaseSchema):
     type: ChatType
     snowflake_data: Optional[ChatSnowflakeData] = None
     messages: List[MessageResponse]
-
-
