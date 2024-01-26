@@ -2,6 +2,8 @@ from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, Security, status
+from fastapi_pagination import Page
+from fastapi_pagination.ext.sqlalchemy import paginate
 
 from app.schemas.chat import ChatHistoryResponse, ChatResponse, CreateChatRequest
 from app.schemas.chat.chat_request import UpdateChatRequest
@@ -16,10 +18,10 @@ router = APIRouter(prefix="/api/chats", tags=["Chats"])
 
 @router.get("/", response_model=list[ChatResponse])
 async def get_chats(get_chat_service: Annotated[GetChat, Depends()]):
-    return get_chat_service.get_chat_list()
+    return paginate(get_chat_service.get_chat_list())
 
 
-@router.get("/{user_id}", response_model=list[ChatResponse])
+@router.get("/{user_id}", response_model=List[ChatResponse])
 async def get_chats_for_user(
     user_id: UUID,
     get_chat_service: Annotated[GetChat, Depends()],

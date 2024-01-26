@@ -18,10 +18,9 @@ from urllib.parse import urlparse
 from alembic import context
 from dotenv import load_dotenv
 
-from app.models.base_models.base import Base
+from app.models.base_models.base_audit import Base
 from app.models.maindb import *
 from app.models.admindb import *
-
 
 load_dotenv()
 config = context.config
@@ -30,6 +29,7 @@ db_name = (
     config.config_ini_section
 )
     
+
   # active config ini section is the db name that we have chosen
 db_dsn = os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]
 print(db_dsn)
@@ -107,7 +107,6 @@ def run_migrations_online() -> None:
         if type_ == "table":
             db = object.info.get("dbname")
             if db in db_name or db is None:
-                
                 return True
         elif object.table.info.get("dbname") == db_name or object.table.info.get("dbname") is None:
             return True
