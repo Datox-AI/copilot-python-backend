@@ -10,7 +10,9 @@ __pycache__/
 *.so
 
 # Local migrations
-migrations/
+migrations/admin_local
+migrations/main_local
+
 
 # Distribution / packaging
 .Python

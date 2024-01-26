@@ -107,10 +107,3 @@ async def agent_endpoint(
     else:
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
-
-
-
-# curl -X 'GET' \
-#   'https://127.0.0.1:7202/api/chats/' \
-#   -H 'accept: application/json' \
-#   -H 'Authorization: Bearer 

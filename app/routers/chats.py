@@ -1,7 +1,7 @@
 from typing import Annotated, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Security, status
+from fastapi import APIRouter, Depends, HTTPException, Response, Query, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 
@@ -16,9 +16,12 @@ from app.shared.auth import current_user
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
 
 
-@router.get("/", response_model=list[ChatResponse])
-async def get_chats(get_chat_service: Annotated[GetChat, Depends()]):
-    return paginate(get_chat_service.get_chat_list())
+@router.get("", response_model=List[ChatResponse])
+async def get_chats(
+    get_chat_service: Annotated[GetChat, Depends()],
+    chat_type: str = None
+):
+    return get_chat_service.get_chat_list(chat_type=chat_type)
 
 
 @router.get("/{user_id}", response_model=List[ChatResponse])
@@ -32,7 +35,7 @@ async def get_chats_for_user(
     return get_chat_service.get_chat_list(user_id)
 
 
-@router.post("/", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
 async def create_chat(request: CreateChatRequest, create_chat_service: Annotated[CreateChat, Depends()]):
     if request is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request")

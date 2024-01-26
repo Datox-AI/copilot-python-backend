@@ -37,6 +37,7 @@ class DataAnalyticAgentWebsocketValidator:
             return is_valid
         if self.chat_obj.type != ChatType.DataAnalytics:
             self.error_message = f"Chat object under {self.chat_id} id does not have {ChatType.DataAnalytics.value} chat type"
+            return is_valid
         #checking token        
         self.validated_user, token_error_message = await validate_azure_token(
             access_token=self.token, check_update_user=self.check_update_user
