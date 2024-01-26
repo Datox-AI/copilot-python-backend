@@ -20,8 +20,8 @@ class CreateChatRequest(BaseSchema):
     def check_snowflake_data(self):
         chat_type = self.type
         snowflake_data = self.snowflake_data
-        if chat_type== ChatType.Analytics and not snowflake_data:
-            raise ValueError('snowflake_data is required for Analytics chat type')
+        if chat_type== ChatType.DataAnalytics and not snowflake_data:
+            raise ValueError('snowflake_data is required for DataAnalytics chat type')
         return self
     
 

@@ -11,7 +11,7 @@ from app.models.maindb import Chat, Message, MessageFile
 from app.schemas.chat import ChatHistoryResponse, ChatMapper, ChatResponse
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
-
+from app.enums.chat_enums import ChatType
 
 class GetChat:
     def __init__(
@@ -22,7 +22,9 @@ class GetChat:
         self.session = session
         self.user = user
 
-    def get_chat_list(self, user_id: UUID | None = None) -> list[ChatResponse]:
+    def get_chat_list(self, chat_type: str = None, user_id: UUID | None = None) -> list[ChatResponse]:
+        # checking chat type
+        # if chat_type =
         if not user_id:
             user_id = self.user.user_id
         elif user_id != self.user.user_id:
@@ -47,8 +49,8 @@ class GetChat:
             .group_by(Message.chat_id)
             .subquery()
         )
-
-        result = self.session.execute(
+        # Base query
+        query = (
             select(
                 Chat,
                 func.coalesce(subquery.c.messages_count, 0),
@@ -58,7 +60,12 @@ class GetChat:
             .outerjoin(subquery, Chat.id == subquery.c.chat_id)
             .where(Chat.created_by == user_id, Chat.is_deleted == False)
             .order_by(desc(Chat.pinned), Chat.pinned_date if Chat.pinned else func.max(), desc(Chat.created_at))
-        ).unique()
+        )
+        # Filter by chat_type if provided
+        if chat_type is not None and chat_type in (item.value for item in ChatType.__members__.values()):
+            query = query.where(Chat.type == chat_type)
+
+        result = self.session.execute(query).unique()
 
         return [
             ChatMapper.map_to_chat_response(chat, messages_count, files_count, last_message)

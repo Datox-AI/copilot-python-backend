@@ -4,6 +4,7 @@ from enum import Enum
 class ChatType(Enum):
     Analytics = "Analytics"
     FileSearch = "FileSearch"
+    DataAnalytics = "DataAnalytics"
 
     @property
     def description(self):
