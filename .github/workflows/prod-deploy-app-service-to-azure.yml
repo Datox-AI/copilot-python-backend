@@ -1,0 +1,30 @@
+name: Deploy Copilot Python Backend to Azure App Service
+
+on:
+    push:
+      branches: [ main ]
+    pull_request:
+      branches: [ main ]
+  
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Container Registry Login
+        uses: Azure/docker-login@v1
+        with:
+          # Container registry server url
+          login-server: ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}
+          # Container registry username
+          username: ${{ secrets.DOCKER_REGISTRY_SERVER_USERNAME }}
+          # Container registry password
+          password: ${{ secrets.DOCKER_REGISTRY_SERVER_PASSWORD }}
+
+      - name: Build and Push the Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+          docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+  
