@@ -25,6 +25,6 @@ jobs:
 
       - name: Build and Push the Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+          docker build . -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
           docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
   
