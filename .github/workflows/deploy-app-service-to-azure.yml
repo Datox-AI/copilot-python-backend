@@ -2,9 +2,9 @@ name: Deploy Copilot Python Backend to Azure App Service
 
 on:
     push:
-      branches: [ main ]
+      branches: [ feature/deploy-acr-to-app-service ]
     pull_request:
-      branches: [ main ]
+      branches: [ feature/deploy-acr-to-app-service ]
   
 jobs:
   build:
