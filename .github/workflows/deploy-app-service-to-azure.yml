@@ -23,11 +23,11 @@ jobs:
       
       - name: Build and Push the Docker image to ACR
         run: |
-            docker build . \ 
+            docker build
               --build-arg DATOX_DATABASE__MAIN_DSN=${{ secrets.DATOX_DATABASE__MAIN_DSN }} 
               --build-arg DATOX_DATABASE__ADMIN_DSN=${{ secrets.DATOX_DATABASE__ADMIN_DSN }}
               --build-arg ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} 
-              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
             docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}          
   
   production:
