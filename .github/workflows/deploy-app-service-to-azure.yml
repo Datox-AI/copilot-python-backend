@@ -5,7 +5,7 @@ on:
       branches: [ feature/deploy-acr-to-app-service ]
     pull_request:
       branches: [ feature/deploy-acr-to-app-service ]
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       
       - name: Build and Push the Docker image to ACR
         run: |
-            docker build . -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+            docker build --build-arg DATOX_DATABASE__MAIN_DSN=${{ secrets.DATOX_DATABASE__MAIN_DSN }} --build-arg DATOX_DATABASE__ADMIN_DSN=${{ secrets.DATOX_DATABASE__ADMIN_DSN }} -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
             docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}          
   
   production:
