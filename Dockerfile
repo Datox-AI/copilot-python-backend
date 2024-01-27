@@ -11,7 +11,8 @@ COPY ./app /code/app
 COPY ./.env /code/.env
 COPY ./migrations /code/migrations
 COPY ./alembic.ini /code/alembic.ini
-COPY ./SSL /code/SSL
+# only for local tests
+# COPY ./SSL /code/SSL
 
 RUN alembic -n admin upgrade head
 RUN alembic -n main upgrade head
