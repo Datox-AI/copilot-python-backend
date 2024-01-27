@@ -23,7 +23,11 @@ jobs:
       
       - name: Build and Push the Docker image to ACR
         run: |
-            docker build --build-arg DATOX_DATABASE__MAIN_DSN=${{ secrets.DATOX_DATABASE__MAIN_DSN }} --build-arg DATOX_DATABASE__ADMIN_DSN=${{ secrets.DATOX_DATABASE__ADMIN_DSN }} -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
+            docker build \
+            --build-arg DATOX_DATABASE__MAIN_DSN=${{ secrets.DATOX_DATABASE__MAIN_DSN }} \
+            --build-arg DATOX_DATABASE__ADMIN_DSN=${{ secrets.DATOX_DATABASE__ADMIN_DSN }} \ 
+            -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
+            
             docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}          
   
   production:
@@ -37,4 +41,4 @@ jobs:
         with:
           app-name: 'test2CopilotFastAPi'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: 'test2datoxcopilotsite.azurecr.io/test2datoxcopilotsite:v2'
+          images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}'
