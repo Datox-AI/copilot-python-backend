@@ -1,30 +1,41 @@
-name: Deploy Copilot Python Backend to Azure App Service
+name: Deploy Copilot Python Backend to Azure App Service Action
 
 on:
     push:
       branches: [ main ]
     pull_request:
       branches: [ main ]
-  
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    name: Build and Push the Docker image to ACR
+    
     steps:
       - uses: actions/checkout@v3
 
       - name: Azure Container Registry Login
         uses: Azure/docker-login@v1
         with:
-          # Container registry server url
           login-server: ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}
-          # Container registry username
           username: ${{ secrets.DOCKER_REGISTRY_SERVER_USERNAME }}
-          # Container registry password
           password: ${{ secrets.DOCKER_REGISTRY_SERVER_PASSWORD }}
-
-      - name: Build and Push the Docker image
+      
+      - name: Build and Push the Docker image to ACR
         run: |
-          docker build . -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
-          docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}
+            docker build --build-arg DATOX_DATABASE__MAIN_DSN=${{ secrets.DATOX_DATABASE__MAIN_DSN }} --build-arg DATOX_DATABASE__ADMIN_DSN=${{ secrets.DATOX_DATABASE__ADMIN_DSN }} --build-arg ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} --build-arg AZURE_AD_INSTANCE=${{ secrets.AZURE_AD_INSTANCE }} --build-arg AZURE_AD_DOMAIN=${{ secrets.AZURE_AD_DOMAIN }} --build-arg AZURE_AD_TENANT_ID=${{ secrets.AZURE_AD_TENANT_ID }} --build-arg AZURE_AD_CLIENT_ID=${{ secrets.AZURE_AD_CLIENT_ID }} --build-arg AZURE_AD_FRONTEND_CLIENT_ID=${{ secrets.AZURE_AD_FRONTEND_CLIENT_ID }} --build-arg AZURE_STORAGE_CONNECTION_STRING=${{ secrets.AZURE_STORAGE_CONNECTION_STRING }} --build-arg AZURE_STORAGE_DA_AGENT_CONTAINER=${{ secrets.AZURE_STORAGE_DA_AGENT_CONTAINER }} --build-arg AZURE_OPENAI_ENDPOINT=${{ secrets.AZURE_OPENAI_ENDPOINT }} --build-arg OPENAI_API_VERSION=${{ secrets.OPENAI_API_VERSION }} --build-arg AZURE_OPENAI_API_KEY=${{ secrets.AZURE_OPENAI_API_KEY }} -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
+            docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}          
   
+  production:
+    runs-on: ubuntu-latest
+  
+    needs: build
+    environment: prod 
+    name: Pull and Deploy Prod App Service
+    steps:
+      - uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'NewCopilotWebApi'
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}'
+            
