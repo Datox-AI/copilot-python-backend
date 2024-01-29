@@ -23,20 +23,18 @@ async def validate_azure_token(
     check_update_user: Annotated[CheckUpdateUser, Depends()],
 ):
     user = False
-    error_message = AzureTokenErrorMessagesEnum.default
+    error_message = AzureTokenErrorMessagesEnum.default.value
     try:
         # Extract header information of the token.
         header: dict[str, str] = jwt.get_unverified_header(token=access_token) or {}
-        print(header, " header")
         claims: dict[str, Any] = jwt.get_unverified_claims(token=access_token) or {}
-        print(claims, " claims")
     except:
-        error_message = AzureTokenErrorMessagesEnum.invalid_token
+        error_message = AzureTokenErrorMessagesEnum.invalid_token.value
         return user, error_message
     # checking if user is guest
     user_is_guest = is_guest(claims=claims)
     if user_is_guest:
-        error_message = AzureTokenErrorMessagesEnum.guest_user
+        error_message = AzureTokenErrorMessagesEnum.guest_user.value
         return user, error_message
     # creating openidConfig
     openid_config = OpenIdConfig(
@@ -102,14 +100,13 @@ async def validate_azure_token(
             user = await check_update_user.invoke(currentUserRequest)
 
     except JWTClaimsError as error:
-        error_message = AzureTokenErrorMessagesEnum.invalid_claims
+        error_message = AzureTokenErrorMessagesEnum.invalid_claims.value
     except ExpiredSignatureError as error:
-        error_message = AzureTokenErrorMessagesEnum.signature_expired
+        error_message = AzureTokenErrorMessagesEnum.signature_expired.value
     except JWTError as error:
-        error_message = AzureTokenErrorMessagesEnum.unable_to_validate
+        error_message = AzureTokenErrorMessagesEnum.unable_to_validate.value
     except Exception as error:
-        print(error)
         # Extra failsafe in case of a bug in a future version of the jwt library
-        error_message = AzureTokenErrorMessagesEnum.unknown_error
+        error_message = AzureTokenErrorMessagesEnum.unknown_error.value
     finally:
         return user, error_message

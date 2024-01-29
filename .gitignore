@@ -9,6 +9,11 @@ __pycache__/
 # C extensions
 *.so
 
+# Local migrations
+migrations/admin_local
+migrations/main_local
+
+
 # Distribution / packaging
 .Python
 build/
