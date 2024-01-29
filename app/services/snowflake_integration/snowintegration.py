@@ -336,17 +336,12 @@ class SnowflakeIntegrationService:
         except InterfaceError as if_err:
             print(f"Interface error: {if_err}")
             raise HTTPException(status_code=500, detail="Interface error when trying to connect to Snowflake")
-        except DatabaseError as db_err:
-            print(f"Database connection error: {db_err}")
-            raise HTTPException(status_code=500, detail="Database connection error occurred")
         except Exception as e:
             print(f"Unexpected error: {e}")
             raise HTTPException(status_code=500, detail="Unexpected error occurred")
         finally:
             if 'conn' in locals() and conn is not None:
                 conn.close()
-
-
     # Endpoint to list tables of a specific schema in a Snowflake database
     def get_tables_logic(self, token: str, db_name: str, schema_name: str):
         try:
