@@ -13,7 +13,7 @@ from app.models.maindb.message import Message
 from app.mysocket.connection import ConnectionManager
 from app.services.chats import GetChat
 from app.services.identity import CheckUpdateUser
-from app.services.messages import MessageService
+from app.services.messages import MessageCreateService
 from app.shared.auth import azure_scheme, multi_auth
 from app.shared.auth.azure_scheme_for_socket import validate_azure_token
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
@@ -49,7 +49,7 @@ async def agent_endpoint(
         chat_obj = validator.chat_obj
         # initiating services
         agent_engine_manager = AgentSnowflakeEngineManager()
-        message_service = MessageService(user=user, chat_id=chat_id, session=maindb_session)
+        message_service = MessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
         # default connection engine error
         connection_error_message = "Engine is not connected"
         try:

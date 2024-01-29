@@ -16,4 +16,3 @@ class SnowflakeIdentifier(BaseAudit):
     warehouse = Column(String, nullable=True)
  
 
-

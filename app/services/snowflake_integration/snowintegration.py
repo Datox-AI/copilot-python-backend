@@ -10,11 +10,13 @@ from snowflake.connector.errors import DatabaseError, ProgrammingError, Interfac
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 import datetime
+
 from app.models.maindb.snowflake_identifier import SnowflakeIdentifier
 from app.backend.session import create_maindb_session
 from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.snowintegration import OAuthConfig
+from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
+
 
 app = FastAPI()
 
@@ -35,7 +37,10 @@ class SnowflakeIntegrationService:
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
-        print(self.user.user_id, " ---- user id")
+        existing_snowflake_identfier_obj = self._get_snowflake_identifier_obj()        
+        if existing_snowflake_identfier_obj:
+            raise HTTPException(status_code=400, detail="User has already snowflake identifier")
+        
         snowflake_identfier_obj = SnowflakeIdentifier(
             user_id=self.user.user_id,
             account_identifier=config.account_identifier,
@@ -57,9 +62,15 @@ class SnowflakeIntegrationService:
 
         return {"authorization_url": authorization_url}
 
+    def get_oauth_logic(self):
+        existing_snowflake_identfier_obj = self._get_snowflake_identifier_obj()        
+        if not existing_snowflake_identfier_obj:
+            raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
+        return SnowflakeOauthMapper.map_to_chat_response(existing_snowflake_identfier_obj)
+
     def _get_snowflake_identifier_obj(self):
         snowflake_identifier_obj = self.session.query(SnowflakeIdentifier).filter(
-            SnowflakeIdentifier.user_id == self.user.id
+            SnowflakeIdentifier.user_id == self.user.user_id
         ).first()
         return snowflake_identifier_obj
 
