@@ -1,5 +1,5 @@
 import uuid, json
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import Annotated
 
@@ -27,6 +27,9 @@ class MessageGetService:
         self.chat_id = chat_id
     
     def get_messages(self, chat_id: UUID):
+        chat_obj = self.session.query(Chat).filter(Chat.id==chat_id).first()
+        if not chat_obj:
+            raise HTTPException(status_code=400, detail=f"Chat object under chat id: {chat_id} does not exist")
         message_objs = self.session.query(Message).filter(Message.chat_id==chat_id)
 
         return [MessageMapper.map_to_message_response(message_obj) for message_obj in message_objs]

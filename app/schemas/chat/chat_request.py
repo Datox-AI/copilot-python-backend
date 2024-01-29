@@ -27,5 +27,13 @@ class CreateChatRequest(BaseSchema):
 
 class UpdateChatRequest(BaseSchema):
     id: UUID
-    name: str
-    pinned: bool
+    name: str | None
+    pinned: bool | None
+
+
+class UpdateChatSnowflakeDataRequest(BaseSchema):
+    chat_id: UUID
+    snowflake_account: str | None
+    database_name: str | None
+    snowflake_schema: str | None
+    warehouse: str | None
