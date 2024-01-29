@@ -1,19 +1,17 @@
 from typing import Annotated
-
-from fastapi import Depends
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from urllib.parse import urlencode
+
 import httpx
 import snowflake.connector
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.models.maindb.snowflake_identifier import SnowflakeIdentifier
 from app.backend.session import create_maindb_session
-from app.shared.auth.azure_scheme import current_user
+from app.models.maindb.snowflake_identifier import SnowflakeIdentifier
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig
+from app.shared.auth.azure_scheme import current_user
 
 app = FastAPI()
 
@@ -28,16 +26,14 @@ REDIRECT_URI = "https://copilot.datox.ai/integration/2"  # Replace with your red
 # SELECTED_WAREHOUSE = None  # Variable to store the selected data warehouse
 
 
-
 class SnowflakeIntegrationService:
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
         user: Annotated[CurrentUser, Depends(current_user)],
-
     ) -> None:
         self.session = session
-        self.user = user 
+        self.user = user
 
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
@@ -57,7 +53,7 @@ class SnowflakeIntegrationService:
         params = {
             "response_type": "code",
             "client_id": config.client_id,
-            "redirect_uri": REDIRECT_URI, 
+            "redirect_uri": REDIRECT_URI,
             "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
@@ -70,26 +66,24 @@ class SnowflakeIntegrationService:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
         try:
             token_response = await self.exchange_code_for_token(code)
-            if 'access_token' not in token_response:
+            if "access_token" not in token_response:
                 raise HTTPException(status_code=400, detail="Access token not in response")
         except Exception as e:
             print(f"Error in exchange_code_for_token: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
-        access_token = token_response['access_token']
+        access_token = token_response["access_token"]
         return {"access_token": access_token}
 
-
     def _get_snowflake_identifier_obj(self):
-        snowflake_identifier_obj = self.session.query(SnowflakeIdentifier).filter(
-            SnowflakeIdentifier.user_id == self.user.id
-        ).first()
+        snowflake_identifier_obj = (
+            self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.id).first()
+        )
         return snowflake_identifier_obj
-    
 
     # Exchanges an authorization code for an access token
     async def exchange_code_for_token(self, code: str):
         snowflake_identfier_obj = await self._get_snowflake_identifier_obj()
-         
+
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 snowflake_identfier_obj.token_endpoint,
@@ -98,20 +92,15 @@ class SnowflakeIntegrationService:
                     "code": code,
                     "redirect_uri": REDIRECT_URI,
                     "client_id": snowflake_identfier_obj.client_id,
-                    "client_secret": snowflake_identfier_obj.client_secret
-                }
+                    "client_secret": snowflake_identfier_obj.client_secret,
+                },
             )
             response.raise_for_status()
             return response.json()
 
     # Creates a connection to Snowflake
     def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
-        
-        ctx = snowflake.connector.connect(
-            account=snowflake_account,
-            authenticator='oauth',
-            token=oauth_token
-        )
+        ctx = snowflake.connector.connect(account=snowflake_account, authenticator="oauth", token=oauth_token)
         return ctx
 
     # Endpoint to list data warehouses
@@ -128,11 +117,10 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             ctx.close()
-            
+
     # Endpoint to select a data warehouse
     def select_warehouse_logic(token: str, warehouse_name: str):
         return {"message": f"Data warehouse '{warehouse_name}' selected"}
-
 
     # Modified endpoint to list databases using the selected data warehouse
     def list_databases_logic(self, token: str):
@@ -150,7 +138,6 @@ class SnowflakeIntegrationService:
             cursor.close()
             conn.close()
 
-
     def get_schemas_logic(self, token: str, db_name: str):
         snowflake_identfier_obj = self._get_snowflake_identifier_obj()
         if not snowflake_identfier_obj.warehouse:
@@ -166,7 +153,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             ctx.close()
-
 
     # Endpoint to select a schema and check separately for the existence of tables and views
     def select_schema_logic(self, token: str, db_name: str, schema_name: str):
@@ -184,15 +170,10 @@ class SnowflakeIntegrationService:
             cursor.execute(f"SHOW VIEWS IN {db_name}.{schema_name}")
             views_status = len(cursor.fetchall()) > 0
 
-            return {
-                "message": f"Schema '{schema_name}' selected",
-                "tables": tables_status,
-                "views": views_status
-            }
+            return {"message": f"Schema '{schema_name}' selected", "tables": tables_status, "views": views_status}
         finally:
             cursor.close()
             ctx.close()
-
 
     # Endpoint to list tables of a specific schema in a Snowflake database
     def get_tables_logic(self, token: str, db_name: str, schema_name: str):
@@ -210,7 +191,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             ctx.close()
-
 
     # Endpoint to list views of a specific schema in a Snowflake database
 
@@ -269,8 +249,9 @@ class SnowflakeIntegrationService:
             # Fetch data and format rows
             data_preview = []
             for row in cursor.fetchall():
-                formatted_row = {col_name: (value if value is not None else "{none}")
-                                for col_name, value in zip(column_names, row)}
+                formatted_row = {
+                    col_name: (value if value is not None else "{none}") for col_name, value in zip(column_names, row)
+                }
                 data_preview.append(formatted_row)
 
             return {"data_preview": data_preview}

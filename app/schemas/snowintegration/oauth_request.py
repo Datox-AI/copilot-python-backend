@@ -1,5 +1,6 @@
 from app.schemas.base import BaseSchema
 
+
 # Pydantic model for OAuth configuration
 class OAuthConfig(BaseSchema):
     account_identifier: str

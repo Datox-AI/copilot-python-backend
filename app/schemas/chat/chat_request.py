@@ -1,5 +1,6 @@
 from uuid import UUID
-from pydantic import root_validator, model_validator, ValidationError
+
+from pydantic import ValidationError, model_validator, root_validator
 
 from app.enums import ChatType
 from app.schemas.base import BaseSchema
@@ -16,14 +17,14 @@ class CreateChatRequest(BaseSchema):
     type: ChatType
     snowflake_data: CreateChatSnowlfakeData | None = None
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def check_snowflake_data(self):
         chat_type = self.type
         snowflake_data = self.snowflake_data
-        if chat_type== ChatType.DataAnalytics and not snowflake_data:
-            raise ValueError('snowflake_data is required for DataAnalytics chat type')
+        if chat_type == ChatType.DataAnalytics and not snowflake_data:
+            raise ValueError("snowflake_data is required for DataAnalytics chat type")
         return self
-    
+
 
 class UpdateChatRequest(BaseSchema):
     id: UUID

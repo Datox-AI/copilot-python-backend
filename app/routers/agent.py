@@ -18,7 +18,6 @@ from app.shared.auth import azure_scheme, multi_auth
 from app.shared.auth.azure_scheme_for_socket import validate_azure_token
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
 
-
 load_dotenv()
 
 router = APIRouter(prefix="/agent")
@@ -34,12 +33,9 @@ async def agent_endpoint(
     token: str = Query(...),
 ):
     await manager.connect(websocket=websocket)
-    # validating token, and chat_id 
+    # validating token, and chat_id
     validator = DataAnalyticAgentWebsocketValidator(
-        chat_id=chat_id, 
-        token=token, 
-        maindb_session=maindb_session, 
-        check_update_user=check_update_user
+        chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
     )
     is_valid = await validator.validate()
     print(validator.error_message, " ---error")
@@ -59,7 +55,9 @@ async def agent_endpoint(
                     await manager.send_error_message(message=connection_error_message, websocket=websocket)
                     # await websocket.send_json({"status": connection_error_message})
                     snowflake_token_data = await websocket.receive_json()
-                    is_valid, error_message = agent_engine_manager.create_engine(snowflake_token_data=snowflake_token_data, chat_obj=chat_obj)
+                    is_valid, error_message = agent_engine_manager.create_engine(
+                        snowflake_token_data=snowflake_token_data, chat_obj=chat_obj
+                    )
                     if not is_valid:
                         connection_error_message = f"Failed to establish database connection: {error_message}"
                         continue
@@ -73,7 +71,7 @@ async def agent_endpoint(
                         )
                     except Exception as e:
                         print(e, "   agent error")
-                        error_message = "Agent failed" 
+                        error_message = "Agent failed"
                         await manager.disconnect(websocket=websocket, reason=error_message, code=1007)
                         break
                     # notifying front end about connection is succesful
@@ -106,4 +104,3 @@ async def agent_endpoint(
             await manager.disconnect(websocket=websocket, closed=True)
     else:
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
-
