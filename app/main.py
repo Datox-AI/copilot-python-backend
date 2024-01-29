@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
 from app.routers.snow_router import router as snowflake_oauth_router
-from app.routers import chats, agent
+from app.routers import chats, agent, messages
 from app.shared.auth import azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID
 
 from .const import (
@@ -46,6 +46,7 @@ app.add_middleware(
 # Adding routers
 app.include_router(chats.router)
 app.include_router(agent.router)
+app.include_router(messages.router)
 app.include_router(snowflake_oauth_router)
 
 

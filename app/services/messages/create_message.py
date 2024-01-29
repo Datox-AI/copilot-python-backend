@@ -14,7 +14,7 @@ from uuid import UUID
 
 
 
-class MessageService:
+class MessageCreateService:
     def __init__(
         self,
         user: CurrentUser,
