@@ -21,10 +21,19 @@ def init_oauth(
     return snow_integration_service.init_oauth_logic(config)
 
 @router.get("/get_oauth")
-def init_oauth(
+def get_oauth(
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
     return snow_integration_service.get_oauth_logic()
+
+@router.put("/update_oauth")
+def get_oauth(
+    config: OAuthConfig, 
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    return snow_integration_service.update_oauth_logic(config)
+
+
 
 
 @router.get("/callback")
