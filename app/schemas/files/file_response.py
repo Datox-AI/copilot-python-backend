@@ -8,6 +8,7 @@ from app.schemas.base import BaseSchema
 class FilesDetailResponse(BaseSchema):
     id: UUID
     filename: str
+    blob_name: str
     created: datetime
     file_extension: str
 

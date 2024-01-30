@@ -8,5 +8,9 @@ class FileMapper:
         file: File,
     ) -> FilesDetailResponse:
         return FilesDetailResponse(
-            id=file.id, name=file.file_name, created=file.created_at, file_extension=file.file_extension
+            id=file.id,
+            filename=file.file_name,
+            blob_name=file.blob_name,
+            created=file.created_at,
+            file_extension=file.file_extension,
         )

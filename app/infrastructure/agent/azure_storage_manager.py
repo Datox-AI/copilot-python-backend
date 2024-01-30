@@ -35,9 +35,15 @@ class AzureBlobStorageManager:
     def upload_file(self, file: UploadFile) -> str:
         file_id = str(uuid.uuid4())
         blob_client = self.container_client.get_blob_client(blob=file_id)
-        blob_client.upload_blob(file.file)
+        metadata = {"media_type": file.content_type}
+        blob_client.upload_blob(file.file, metadata=metadata)
         return file_id
 
-    def download_file(self, file_id: str):
-        blob_client = self.container_client.get_blob_client(blob=file_id)
-        return blob_client.download_blob().readall()
+    def download_file(self, file_id: uuid.UUID):
+        blob_client = self.container_client.get_blob_client(blob=str(file_id))
+        properties = blob_client.get_blob_properties()
+        media_type = properties.metadata.get("media_type", "application/pdf")
+
+        stream = blob_client.download_blob().readall()
+
+        return stream, media_type

@@ -1,6 +1,6 @@
 import os
 from typing import Annotated
-
+from uuid import UUID
 from fastapi import Depends, UploadFile
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
 
-class FileUploadService:
+class FileService:
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
@@ -31,3 +31,6 @@ class FileUploadService:
         self.session.add(file_obj)
         self.session.commit()
         return FileMapper.map_to_file_response(file_obj)
+
+    def download_file(self, file_id: UUID):
+        return self.blob_service.download_file(file_id=file_id)
