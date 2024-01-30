@@ -6,11 +6,11 @@ from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 
 from app.schemas.chat import ChatHistoryResponse, ChatResponse, CreateChatRequest
-from app.schemas.chat.chat_request import UpdateChatRequest
+from app.schemas.chat.chat_request import UpdateChatRequest, UpdateChatSnowflakeDataRequest
 from app.schemas.identity.current_user import CurrentUser
 from app.services.chats import CreateChat, DeleteChat, GetChat
 from app.services.chats.generate_chat_name import GenerateChatName
-from app.services.chats.update_chat import UpdateChat
+from app.services.chats.update_chat import UpdateChat, UpdateChatSnowflakeData
 from app.shared.auth import current_user
 
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
@@ -53,6 +53,19 @@ async def update_chat(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mismatched chat ID")
 
     update_chat_service.invoke(request)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/snowflake-data/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def update_chat(
+    chat_id: UUID,
+    request: UpdateChatSnowflakeDataRequest,
+    update_chat_snowflake_data_service: Annotated[UpdateChatSnowflakeData, Depends()],
+):
+    if chat_id != request.chat_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mismatched chat ID")
+
+    update_chat_snowflake_data_service.invoke(request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

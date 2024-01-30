@@ -20,9 +20,21 @@ def init_oauth(config: OAuthConfig, snow_integration_service: Annotated[Snowflak
     return snow_integration_service.init_oauth_logic(config)
 
 
+@router.get("/get_oauth")
+def init_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+    return snow_integration_service.get_oauth_logic()
+
+
 @router.get("/callback")
 async def oauth_callback(code: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return await snow_integration_service.oauth_callback_logic(code)
+
+
+@router.post("/refresh_token")
+async def refresh_access_token(
+    refresh_token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    return await snow_integration_service.refresh_access_token_logic(refresh_token)
 
 
 # Endpoint to list data warehouses

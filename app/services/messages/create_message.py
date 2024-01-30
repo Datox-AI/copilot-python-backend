@@ -14,7 +14,7 @@ from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
 
 
-class MessageService:
+class MessageCreateService:
     def __init__(
         self,
         user: CurrentUser,
