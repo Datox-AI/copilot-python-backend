@@ -68,6 +68,31 @@ class SnowflakeIntegrationService:
             raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
         return SnowflakeOauthMapper.map_to_chat_response(existing_snowflake_identfier_obj)
 
+
+    def update_oauth_logic(self, config):
+        existing_snowflake_identfier_obj = self._get_snowflake_identifier_obj()        
+        if not existing_snowflake_identfier_obj:
+            raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
+        authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
+
+        existing_snowflake_identfier_obj.account_identifier = config.account_identifier
+        existing_snowflake_identfier_obj.client_id = config.client_id
+        existing_snowflake_identfier_obj.client_secret = config.client_secret
+        existing_snowflake_identfier_obj.token_endpoint = config.token_endpoint
+        existing_snowflake_identfier_obj.authorization_endpoint = authorization_endpoint
+        existing_snowflake_identfier_obj.warehouse = config.warehouse
+        self.session.commit()
+        params = {
+            "response_type": "code",
+            "client_id": config.client_id,
+            "redirect_uri": REDIRECT_URI, 
+            "account": config.account_identifier,
+        }
+        authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
+
+        return {"authorization_url": authorization_url}
+
+
     def _get_snowflake_identifier_obj(self):
         snowflake_identifier_obj = self.session.query(SnowflakeIdentifier).filter(
             SnowflakeIdentifier.user_id == self.user.user_id
