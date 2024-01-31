@@ -16,12 +16,14 @@ from app.backend.session import create_maindb_session
 from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
+import logging
+
 
 
 app = FastAPI()
 
 
-REDIRECT_URI = "https://copilot.datox.ai/integration/2" 
+REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake" 
 
 
 class SnowflakeIntegrationService:
@@ -66,7 +68,16 @@ class SnowflakeIntegrationService:
         existing_snowflake_identfier_obj = self._get_snowflake_identifier_obj()        
         if not existing_snowflake_identfier_obj:
             raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
-        return SnowflakeOauthMapper.map_to_chat_response(existing_snowflake_identfier_obj)
+        authorization_endpoint = existing_snowflake_identfier_obj.token_endpoint.replace("token-request", "authorize")
+        params = {
+            "response_type": "code",
+            "client_id": existing_snowflake_identfier_obj.client_id,
+            "redirect_uri": REDIRECT_URI, 
+            "account": existing_snowflake_identfier_obj.account_identifier,
+        }
+        authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
+
+        return {"authorization_url": authorization_url}
 
 
     def update_oauth_logic(self, config):
@@ -98,29 +109,33 @@ class SnowflakeIntegrationService:
             SnowflakeIdentifier.user_id == self.user.user_id
         ).first()
         return snowflake_identifier_obj
-
+    
+    logging.basicConfig(level=logging.DEBUG)
     # Callback endpoint for OAuth flow
+
     async def oauth_callback_logic(self, code: str):
+    
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
+            
         try:
             token_response = await self.exchange_code_for_token(code)
             if 'access_token' not in token_response:
                 raise HTTPException(status_code=400, detail="Access token not in response")
-            self.update_token_info(token_response)
             return token_response
         except HTTPStatusError as http_err:
-            print(f"Error in exchange_code_for_token:{http_err}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            logging.error(f"HTTP status error occurred: {http_err}")
+        # Handle or re-raise HTTPStatusError as needed
         except NetworkError as net_err:
-            print(f"Request error occurred: {net_err}")
-            raise HTTPException(status_code=500, detail="Network error during token exchange")
+            logging.error(f"Network error occurred: {net_err}")
+        # Handle or re-raise NetworkError as needed
         except (ConnectTimeout, ReadTimeout) as timeout_err:
-            print(f"Timeout error: {timeout_err}")
-            raise HTTPException(status_code=500, detail="Timeout error during token exchange")
+            logging.error(f"Timeout error occurred: {timeout_err}")
+        # Handle or re-raise timeout errors as needed
         except Exception as e:
-            print(f"Unexpected error in exchange_code_for_token: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            logging.error(f"Unexpected error: {e}")
+        
+
 
 
     # Exchanges an authorization code for an access token
@@ -133,7 +148,7 @@ class SnowflakeIntegrationService:
                     data={
                         "grant_type": "authorization_code",
                         "code": code,
-                        "redirect_uri": snowflake_identifier_obj.redirect_uri,
+                        "redirect_uri": REDIRECT_URI,
                         "client_id": snowflake_identifier_obj.client_id,
                         "client_secret": snowflake_identifier_obj.client_secret
                     }
@@ -142,35 +157,18 @@ class SnowflakeIntegrationService:
             response.raise_for_status()
             return response.json()
         except HTTPStatusError as http_err:
-            print(f"HTTP status error occurred: {http_err}")
-            # Handle or re-raise HTTPStatusError as needed
+            logging.error(f"HTTP status error occurred: {http_err}")
+        # Handle or re-raise HTTPStatusError as needed
         except NetworkError as net_err:
-            print(f"Network error occurred: {net_err}")
-            # Handle or re-raise NetworkError as needed
+            logging.error(f"Network error occurred: {net_err}")
+        # Handle or re-raise NetworkError as needed
         except (ConnectTimeout, ReadTimeout) as timeout_err:
-            print(f"Timeout error occurred: {timeout_err}")
-            # Handle or re-raise timeout errors as needed
+            logging.error(f"Timeout error occurred: {timeout_err}")
+        # Handle or re-raise timeout errors as needed
         except Exception as e:
-            print(f"Unexpected error: {e}")
-            # Handle or re-raise other unexpected exceptions
+            logging.error(f"Unexpected error: {e}")
 
-    # Method to update token information
-    def update_token_info(self, token_data):
-        self.token_info = {
-            "access_token": token_data.get("access_token"),
-            "refresh_token": token_data.get("refresh_token"),
-            "expires_at": datetime.datetime.now() + datetime.timedelta(seconds=token_data.get("expires_in", 600))
-        }
 
-    # Check if the token is expired
-    def is_token_expired(self):
-        return datetime.datetime.now() >= self.token_info["expires_at"]
-
-    # Get a valid access token, refresh if expired
-    async def get_valid_access_token(self):
-        if self.is_token_expired():
-            await self.refresh_access_token_logic(self.token_info["refresh_token"])
-        return self.token_info["access_token"]
 
     # Refresh access token logic
     async def refresh_access_token_logic(self, refresh_token: str):
@@ -187,9 +185,8 @@ class SnowflakeIntegrationService:
                     }
                 )
                 response.raise_for_status()
-                new_token_data = response.json()
-                self.update_token_info(new_token_data)
-                return new_token_data
+                return response.json()
+        
         except HTTPStatusError as http_err:
             print(f"HTTP status error during token refresh: {http_err}")
             # Handle or re-raise HTTPStatusError as needed
@@ -205,39 +202,24 @@ class SnowflakeIntegrationService:
 
 
     # Creates a connection to Snowflake
-    def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
-        try: 
-       
-            ctx = snowflake.connector.connect(
-                account=snowflake_account,
-                authenticator='oauth',
-                token=oauth_token
-            )
-            return ctx
-        except DatabaseError as db_err:
-            print(f"Database error occurred: {db_err}")
-            # Handle specific DatabaseError here (e.g., log, raise a custom exception, etc.)
-        except Exception as e:
-            print(f"Unexpected error during Snowflake connection: {e}")
+    def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):  
+        ctx = snowflake.connector.connect(
+            account=snowflake_account,
+            authenticator='oauth',
+            token=oauth_token
+        )
+        return ctx
+
         
 
     # Endpoint to list data warehouses
     def list_data_warehouses_logic(self, token: str):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()
-        
-        # Check if the token is potentially expired
-        if self.is_token_expired():
-            raise ValueError("Token is expired or about to expire")
 
-        try:
-            ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
-        except OperationalError:
-            raise ConnectionError("Operational error when trying to connect to Snowflake")
-        except InterfaceError:
-            raise ConnectionError("Interface error when trying to connect to Snowflake")
-        except DatabaseError:
-            raise ConnectionError("General database error occurred during connection")
-
+        ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
+        if ctx is None:
+    # Handle the error appropriately
+            raise ConnectionError("Failed to establish a connection to Snowflake.")
         cursor = ctx.cursor()
         try:
             cursor.execute("SHOW WAREHOUSES")
@@ -245,13 +227,6 @@ class SnowflakeIntegrationService:
             # Assuming the first column contains the warehouse names
             warehouse_names = [wh[0] for wh in warehouses]  # Adjust the index if needed
             return {"data_warehouses": warehouse_names}
-        except ProgrammingError:
-            raise RuntimeError("SQL Programming error occurred while executing the query")
-        except DatabaseError:
-            raise RuntimeError("Database error occurred while executing the query")
-        except Exception as e:
-            print(f"Unexpected error during querying: {e}")
-            raise RuntimeError("An unexpected error occurred while executing the query")
         finally:
             cursor.close()
             ctx.close()
@@ -259,8 +234,6 @@ class SnowflakeIntegrationService:
     # Endpoint to select a data warehouse
     def select_warehouse_logic(self, token: str, warehouse_name: str):
         # Check if the token is valid
-        if not self.is_token_valid(token):  # assuming is_token_valid is a method that checks token validity
-            raise ValueError("Invalid or expired token provided")
 
         # Hypothetical method to check if warehouse exists
         if not self.warehouse_exists(warehouse_name):
@@ -280,43 +253,21 @@ class SnowflakeIntegrationService:
 
     # Modified endpoint to list databases using the selected data warehouse
     def list_databases_logic(self, token: str):
+
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()
+        if not snowflake_identifier_obj.warehouse:
+            raise HTTPException(status_code=400, detail="No data warehouse selected")
+
+        ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
+        cursor = ctx.cursor()
         try:
-            snowflake_identifier_obj = self._get_snowflake_identifier_obj()
-            if not snowflake_identifier_obj.warehouse:
-                raise HTTPException(status_code=400, detail="No data warehouse selected")
-
-            conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
-            cursor = conn.cursor()
-
-            try:
-                cursor.execute(f"USE WAREHOUSE {snowflake_identifier_obj.warehouse}")
-                cursor.execute("SHOW DATABASES")
-                databases = cursor.fetchall()
-                return {"databases": [db[1] for db in databases]}
-            except ProgrammingError as prog_err:
-                print(f"SQL Programming error: {prog_err}")
-                raise HTTPException(status_code=400, detail="SQL programming error occurred")
-            except DatabaseError as db_err:
-                print(f"Database error: {db_err}")
-                raise HTTPException(status_code=500, detail="Database error occurred")
-            finally:
-                cursor.close()
-        except OperationalError as op_err:
-            print(f"Operational error: {op_err}")
-            raise HTTPException(status_code=500, detail="Operational error when trying to connect to Snowflake")
-        except InterfaceError as if_err:
-            print(f"Interface error: {if_err}")
-            raise HTTPException(status_code=500, detail="Interface error when trying to connect to Snowflake")
-        except DatabaseError as db_err:
-            print(f"Database connection error: {db_err}")
-            raise HTTPException(status_code=500, detail="Database connection error occurred")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            raise HTTPException(status_code=500, detail="Unexpected error occurred")
+                    cursor.execute(f"USE WAREHOUSE {snowflake_identifier_obj.warehouse}")
+                    cursor.execute("SHOW DATABASES")
+                    databases = cursor.fetchall()
+                    return {"databases": [db[1] for db in databases]}
         finally:
-            if 'conn' in locals() and conn is not None:
-                conn.close()
-
+                cursor.close()
+                ctx.close()
 
     def get_schemas_logic(self, token: str, db_name: str):
         snowflake_identfier_obj = self._get_snowflake_identifier_obj()
