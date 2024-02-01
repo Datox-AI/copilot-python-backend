@@ -23,7 +23,7 @@ class SnowflakeWarehouse(BaseAudit):
     __tablename__ = 'snowflake_warehouses'
 
     name = Column(String)
-    identifier_id = Column(UUID, ForeignKey("snowflake_identifiers.id"), unique=True)
+    identifier_id = Column(UUID(as_uuid=True), ForeignKey("snowflake_identifiers.id"), unique=True)
     selected = Column(Boolean, default=False)       
     
     identifier = relationship(SnowflakeIdentifier, back_populates="warehouses")
