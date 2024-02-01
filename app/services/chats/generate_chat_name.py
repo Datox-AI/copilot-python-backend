@@ -1,7 +1,8 @@
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
-from sqlalchemy import UUID, select
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session

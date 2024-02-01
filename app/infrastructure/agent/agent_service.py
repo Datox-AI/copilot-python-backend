@@ -1,6 +1,6 @@
 import urllib
 from uuid import UUID
-
+from typing import Dict
 from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, LLMSingleActionAgent
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
@@ -15,11 +15,13 @@ from sqlalchemy.orm import Session
 from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
 from app.infrastructure.agent.database_tools import CustomSQLDatabase, QuerySaveSQLDataBaseTool
-from app.infrastructure.agent.helpers import TokenCounter
+from app.infrastructure.agent.token_counter import TokenCounter
 from app.infrastructure.agent.output_parser import CustomOutputParser
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
 from app.infrastructure.agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
+
+from app.models.maindb import Chat
 
 load_dotenv()
 
@@ -104,28 +106,22 @@ class DataAnalyticAgent:
 
 
 class AgentSnowflakeEngineManager:
+    
     def __init__(self):
         self.engine = None
 
-    def validate_snowflake_data(self, snowflake_data):
-        required_keys = ["account", "database", "schema", "warehouse", "oauth_token"]
-        missing_keys = [key for key in required_keys if key not in snowflake_data]
-
-        if missing_keys:
-            return False, f"Missing required Snowflake data: {', '.join(missing_keys)}"
-        return True, ""
-
-    def create_engine(self, snowflake_data):
-        is_valid, error_message = self.validate_snowflake_data(snowflake_data)
-        if not is_valid:
-            return False, error_message
+    def create_engine(self, snowflake_token_data: Dict, chat_obj: Chat):
+        if "oauth_token" not in snowflake_token_data:
+            error_message = "Missing required 'oauth_token' value"
+            return False, error_message 
+        chat_snowflake_data_obj = chat_obj.snowflake_data
 
         snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
-            snowflake_data["account"],
-            snowflake_data["database"],
-            snowflake_data["schema"],
-            snowflake_data["warehouse"],
-            urllib.parse.quote(snowflake_data["oauth_token"]),
+            chat_snowflake_data_obj.snowflake_account,
+            chat_snowflake_data_obj.database_name,
+            chat_snowflake_data_obj.schema,
+            chat_snowflake_data_obj.warehouse,
+            urllib.parse.quote(snowflake_token_data["oauth_token"]),
         )
         engine = create_engine(snowflake_connection_url)
         try:

@@ -2,8 +2,9 @@ from enum import Enum
 
 
 class ChatType(Enum):
-    Analytics = 0
-    FileSearch = 1
+    Analytics = "Analytics"
+    FileSearch = "FileSearch"
+    DataAnalytics = "DataAnalytics"
 
     @property
     def description(self):

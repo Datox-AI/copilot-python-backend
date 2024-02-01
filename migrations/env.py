@@ -1,25 +1,41 @@
 import os
+import sys
+from pathlib import Path
+import time 
+
+
+# Calculate the path to the directory above "migrations"
+root_dir = Path(__file__).resolve().parent.parent
+
+# Add this directory to sys.path
+sys.path.append(str(root_dir))
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from urllib.parse import urlparse
 
 from alembic import context
 from dotenv import load_dotenv
 
-from app.models.base_models.base import Base
+from app.models.base_models.base_audit import Base
 from app.models.maindb import *
 from app.models.admindb import *
 
-# from app.models.base_models.base import Base
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 load_dotenv()
 config = context.config
 
-db_name = config.config_ini_section  # active config ini section is the db name that we have chosen
-print(os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"], " versss----")
-config.set_main_option("sqlalchemy.url", f'{os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]}')
+db_name = (
+    config.config_ini_section
+)
+    
+
+  # active config ini section is the db name that we have chosen
+db_dsn = os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]
+print(db_dsn)
+config.set_main_option(
+    "sqlalchemy.url", db_dsn
+)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -51,12 +67,13 @@ def run_migrations_offline() -> None:
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    print(url, " rererere")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        version_table_schema=db_name,
+        version_locations=config.get_main_option("version_locations")
     )
 
     with context.begin_transaction():
@@ -69,8 +86,7 @@ def run_migrations_online() -> None:
     In this scenario we need to create an Engine
     and associate a connection with the context.
 
-    """
-    print(" rererere")
+    """    
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
@@ -90,7 +106,7 @@ def run_migrations_online() -> None:
             return False
         if type_ == "table":
             db = object.info.get("dbname")
-            if db == db_name or db is None:
+            if db in db_name or db is None:
                 return True
         elif object.table.info.get("dbname") == db_name or object.table.info.get("dbname") is None:
             return True

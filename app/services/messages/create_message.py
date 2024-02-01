@@ -13,7 +13,8 @@ from app.schemas.identity.current_user import CurrentUser
 from uuid import UUID
 
 
-class MessageService:
+
+class MessageCreateService:
     def __init__(
         self,
         user: CurrentUser,

@@ -1,5 +1,4 @@
-import uuid
-from typing import Literal, Union
+from typing import Literal
 
 import pandas as pd
 from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
@@ -8,7 +7,7 @@ from langchain_community.utilities import SQLDatabase
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
-from app.infrastructure.agent.helpers import TokenCounter
+from app.infrastructure.agent.token_counter import TokenCounter
 from app.infrastructure.agent.prompts.tool_prompts import query_and_save_tool_description
 
 
