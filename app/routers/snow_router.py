@@ -34,8 +34,6 @@ def get_oauth(
     return snow_integration_service.update_oauth_logic(config)
 
 
-
-
 @router.get("/callback")
 async def oauth_callback(
     code: str,
@@ -140,3 +138,11 @@ def preview_data(
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
     return {"data_preview": snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name)}
+
+@router.get("/available_roles")
+def get_available_roles(
+    token: str,
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
+):
+    return snow_integration_service.get_available_roles_logic(token)
+
