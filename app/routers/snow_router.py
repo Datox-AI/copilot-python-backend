@@ -27,14 +27,18 @@ def get_oauth(
     return snow_integration_service.get_oauth_logic()
 
 @router.put("/update_oauth")
-def get_oauth(
+def update_oauth(
     config: OAuthConfig, 
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
     return snow_integration_service.update_oauth_logic(config)
 
-
-
+@router.delete("/delete_oauth")
+def delete_oauth(
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    snow_integration_service.delete_oauth_logic()
+    return {"message": "Snowflake integration deleted successfully."}
 
 @router.get("/callback")
 async def oauth_callback(
@@ -85,7 +89,7 @@ def get_schemas(
     db_name: str,
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
-    return {"schemas": snow_integration_service.get_schemas_logic(token, db_name)}
+    return snow_integration_service.get_schemas_logic(token, db_name)
 
 # Endpoint to select a schema and check separately for the existence of tables and views
 @router.get("/select_schema")
@@ -140,3 +144,11 @@ def preview_data(
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
     return {"data_preview": snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name)}
+
+@router.get("/available_roles")
+def get_available_roles(
+    token: str,
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
+):
+    return snow_integration_service.get_available_roles_logic(token)
+

@@ -6,4 +6,7 @@ class OAuthConfig(BaseSchema):
     client_id: str
     client_secret: str
     token_endpoint: str
-    warehouse: str
+    warehouse: str | None
+
+class Warehouse(BaseSchema):
+    name: str
