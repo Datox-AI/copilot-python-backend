@@ -216,10 +216,9 @@ class SnowflakeIntegrationService:
         )
         return ctx
     
-    def create_warehouse(self, warehouse_config):
+    def _create_warehouse(self, warehouse_name):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
         
-        warehouse_name = warehouse_config.name
         warehouse_obj = SnowflakeWarehouse(
             name=warehouse_name,
             identifier=snowflake_identifier_obj,
@@ -254,7 +253,7 @@ class SnowflakeIntegrationService:
     def select_warehouse_logic(self, token: str, warehouse_name: str):
         try:
             # Hypothetical method to select the warehouse
-            self.set_current_warehouse(token, warehouse_name)
+            self._create_warehouse(warehouse_name)
         except PermissionError:
             raise PermissionError("Insufficient permissions to select the warehouse")
         except Exception as e:
