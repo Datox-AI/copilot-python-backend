@@ -8,6 +8,7 @@ openai==1.10.0
 psycopg2==2.9.9
 python-dotenv
 pydantic-settings==2.1.0
+python-multipart==0.0.6
 pandas
 snowflake-connector-python==3.6.0
 snowflake-sqlalchemy==1.5.1
