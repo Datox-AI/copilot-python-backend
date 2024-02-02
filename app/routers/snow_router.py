@@ -54,12 +54,12 @@ def list_data_warehouses(token: str, snow_integration_service: Annotated[Snowfla
     return snow_integration_service.list_data_warehouses_logic(token)
 
 
-# Endpoint to select a data warehouse # kerakmi?
-@router.post("/select_warehouse")
-def select_warehouse(
-    token: str, warehouse_name: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
-):
-    return snow_integration_service.select_warehouse_logic(token, warehouse_name)
+# # Endpoint to select a data warehouse # kerakmi?
+# @router.post("/select_warehouse")
+# def select_warehouse(
+#     token: str, warehouse_name: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+# ):
+#     return snow_integration_service.select_warehouse_logic(token, warehouse_name)
 
 
 # Modified endpoint to list databases using the selected data warehouse

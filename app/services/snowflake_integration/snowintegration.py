@@ -68,6 +68,32 @@ class SnowflakeIntegrationService:
         else:
             selected_warehouse_obj = None
         return existing_snowflake_identifier_obj, selected_warehouse_obj
+    
+
+    def _select_or_create_warehouse_obj(self, snowflake_identifier_obj: SnowflakeIdentifier, warehouse_name: str):
+        warehouse_objs_query = self.session.query(SnowflakeWarehouse).filter(SnowflakeWarehouse.identifier == snowflake_identifier_obj)
+
+        if len(warehouse_objs_query.all()) != 0:
+            warehouse_obj_with_name = warehouse_objs_query.filter(SnowflakeWarehouse.name == warehouse_name).first()
+        else:
+            warehouse_obj_with_name = None
+
+        if warehouse_obj_with_name is None:
+            # creating new warehouse 
+            created_warehouse_obj = SnowflakeWarehouse(
+                name=warehouse_name,
+                identifier=snowflake_identifier_obj,
+                selected=True
+            )
+            self.session.add(created_warehouse_obj)
+        else:
+            warehouse_obj_with_name.selected = True
+            for warehouse_obj in warehouse_objs_query.all():
+                if warehouse_obj != warehouse_obj_with_name:
+                    warehouse_obj.selected = False
+
+        self.session.commit()
+
 
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
@@ -122,7 +148,7 @@ class SnowflakeIntegrationService:
             authorization_url=authorization_url,
         )
 
-    def update_oauth_logic(self, config):
+    def update_oauth_logic(self, config: OAuthConfig):
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
@@ -131,6 +157,11 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj.client_secret = config.client_secret
         existing_snowflake_identifier_obj.token_endpoint = config.token_endpoint
         existing_snowflake_identifier_obj.authorization_endpoint = authorization_endpoint
+        # updating warehouses 
+        self._select_or_create_warehouse_obj(
+            snowflake_identifier_obj=existing_snowflake_identifier_obj, 
+            warehouse_name=config.warehouse
+        )
         self.session.commit()
         params = {
             "response_type": "code",
@@ -146,6 +177,7 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         self.session.delete(existing_snowflake_identifier_obj)
         self.session.commit()
+
 
     async def oauth_callback_logic(self, code: str):
         if not code:
@@ -202,6 +234,7 @@ class SnowflakeIntegrationService:
 
     # Creates a connection to Snowflake
     def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
+        print(snowflake_account, "  account sn")
         ctx = snowflake.connector.connect(account=snowflake_account, authenticator="oauth", token=oauth_token)
         return ctx
 
