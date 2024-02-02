@@ -183,7 +183,7 @@ class SnowflakeIntegrationService:
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
         token_response = await self.exchange_code_for_token(code)
-        
+
         try:
             if "access_token" not in token_response:
                 raise HTTPException(status_code=400, detail="Access token not in response")
