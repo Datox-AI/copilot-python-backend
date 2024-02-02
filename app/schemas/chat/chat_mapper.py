@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Optional
-from app.models.maindb import Chat
-from app.schemas.chat import ChatResponse, ChatHistoryResponse, ChatSnowflakeData
 
+from app.models.maindb import Chat
+from app.schemas.chat import ChatHistoryResponse, ChatResponse, ChatSnowflakeData
 from app.schemas.message import MessageResponse
 
 
@@ -12,7 +12,7 @@ class ChatMapper:
         chat: Chat,
         messages_count: int,
         files_count: int,
-        last_message: Optional[datetime] = None,
+        last_message: datetime | None = None,
     ) -> ChatResponse:
         if chat.snowflake_data:
             snowflake_data_response = ChatSnowflakeData(
@@ -34,7 +34,7 @@ class ChatMapper:
             messages_count=messages_count,
             files_count=files_count,
             last_message=last_message,
-            snowflake_data=snowflake_data_response
+            snowflake_data=snowflake_data_response,
         )
 
     @staticmethod

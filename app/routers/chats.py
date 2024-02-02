@@ -1,7 +1,7 @@
 from typing import Annotated, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 
@@ -16,15 +16,12 @@ from app.shared.auth import current_user
 router = APIRouter(prefix="/api/chats", tags=["Chats"])
 
 
-@router.get("", response_model=List[ChatResponse])
-async def get_chats(
-    get_chat_service: Annotated[GetChat, Depends()],
-    chat_type: str = None
-):
+@router.get("", response_model=list[ChatResponse])
+async def get_chats(get_chat_service: Annotated[GetChat, Depends()], chat_type: str = None):
     return get_chat_service.get_chat_list(chat_type=chat_type)
 
 
-@router.get("/{user_id}", response_model=List[ChatResponse])
+@router.get("/{user_id}", response_model=list[ChatResponse])
 async def get_chats_for_user(
     user_id: UUID,
     get_chat_service: Annotated[GetChat, Depends()],
@@ -58,11 +55,12 @@ async def update_chat(
     update_chat_service.invoke(request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
+
 @router.put("/snowflake-data/{chat_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_chat(
-    chat_id: UUID, 
-    request: UpdateChatSnowflakeDataRequest, 
-    update_chat_snowflake_data_service: Annotated[UpdateChatSnowflakeData, Depends()]
+    chat_id: UUID,
+    request: UpdateChatSnowflakeDataRequest,
+    update_chat_snowflake_data_service: Annotated[UpdateChatSnowflakeData, Depends()],
 ):
     if chat_id != request.chat_id:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mismatched chat ID")
@@ -78,7 +76,5 @@ async def generate_chat_name(chat_id: UUID, generate_chat_name_service: Annotate
 
 
 @router.get("/chat-history/{chat_id}", response_model=ChatHistoryResponse)
-async def get_chat_history(
-    chat_id: UUID, get_chat_service: Annotated[GetChat, Depends()]
-):
+async def get_chat_history(chat_id: UUID, get_chat_service: Annotated[GetChat, Depends()]):
     return get_chat_service.get_chat_history(chat_id=chat_id)

@@ -1,4 +1,5 @@
-import re 
+import re
+
 
 def extract_python_code(markdown_string: str) -> str:
     # Regex pattern to match Python code blocks

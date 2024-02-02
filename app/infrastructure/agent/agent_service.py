@@ -1,6 +1,8 @@
+import os
 import urllib
-from uuid import UUID
 from typing import Dict
+from uuid import UUID
+
 from dotenv import load_dotenv
 from langchain.agents import AgentExecutor, LLMSingleActionAgent
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
@@ -15,12 +17,11 @@ from sqlalchemy.orm import Session
 from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
 from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
 from app.infrastructure.agent.database_tools import CustomSQLDatabase, QuerySaveSQLDataBaseTool
-from app.infrastructure.agent.token_counter import TokenCounter
 from app.infrastructure.agent.output_parser import CustomOutputParser
 from app.infrastructure.agent.prompt_template import CustomPromptTemplate
 from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
 from app.infrastructure.agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
-
+from app.infrastructure.agent.token_counter import TokenCounter
 from app.models.maindb import Chat
 
 load_dotenv()
@@ -31,7 +32,7 @@ class DataAnalyticAgent:
         self.llm_chat_model = AzureChatOpenAI(deployment_name="gpt-4-32k", temperature=0)
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
-        self.azure_blob_storage_manager = AzureBlobStorageManager()
+        self.azure_blob_storage_manager = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"])
         token_counter = TokenCounter()
         self.db.initiate_blob_storage_manager_and_token_counter(
             blob_manager=self.azure_blob_storage_manager, token_counter=token_counter
@@ -106,14 +107,13 @@ class DataAnalyticAgent:
 
 
 class AgentSnowflakeEngineManager:
-    
     def __init__(self):
         self.engine = None
 
-    def create_engine(self, snowflake_token_data: Dict, chat_obj: Chat):
+    def create_engine(self, snowflake_token_data: dict, chat_obj: Chat):
         if "oauth_token" not in snowflake_token_data:
             error_message = "Missing required 'oauth_token' value"
-            return False, error_message 
+            return False, error_message
         chat_snowflake_data_obj = chat_obj.snowflake_data
 
         snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(

@@ -26,6 +26,7 @@ class UpdateChat:
 
         self.session.commit()
 
+
 class UpdateChatSnowflakeData:
     def __init__(self, session: Annotated[Session, Depends(create_maindb_session)]) -> None:
         self.session = session
@@ -39,9 +40,15 @@ class UpdateChatSnowflakeData:
         if entity.type != ChatType.DataAnalytics:
             raise HTTPException(status_code=404, detail="Chat type must be DataAnalytics to update snowflake data")
         snowflake_data_obj = entity.snowflake_data
-        snowflake_data_obj.snowflake_account = model.snowflake_account if model.snowflake_account is not None else snowflake_data_obj.snowflake_account
-        snowflake_data_obj.database_name = model.database_name if model.database_name is not None else snowflake_data_obj.database_name
-        snowflake_data_obj.schema = model.snowflake_schema if model.snowflake_schema is not None else snowflake_data_obj.schema
+        snowflake_data_obj.snowflake_account = (
+            model.snowflake_account if model.snowflake_account is not None else snowflake_data_obj.snowflake_account
+        )
+        snowflake_data_obj.database_name = (
+            model.database_name if model.database_name is not None else snowflake_data_obj.database_name
+        )
+        snowflake_data_obj.schema = (
+            model.snowflake_schema if model.snowflake_schema is not None else snowflake_data_obj.schema
+        )
         snowflake_data_obj.warehouse = model.warehouse if model.warehouse is not None else snowflake_data_obj.warehouse
 
         self.session.commit()

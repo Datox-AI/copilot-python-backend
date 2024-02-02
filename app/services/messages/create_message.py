@@ -1,23 +1,23 @@
-import uuid, json
-from fastapi import Depends
-from sqlalchemy.orm import Session
+import json
+import uuid
 from typing import Annotated
-
-from app.backend.session import create_maindb_session
-from app.shared.auth.azure_scheme import current_user
-from app.schemas.identity.current_user import CurrentUser
-from app.schemas.message import MessageMapper
-from app.models.maindb import Chat, Message
-from app.enums.message_enums import MessageRole, MessageStatus
-from app.schemas.identity.current_user import CurrentUser
 from uuid import UUID
 
+from fastapi import Depends
+from sqlalchemy.orm import Session
+
+from app.backend.session import create_maindb_session
+from app.enums.message_enums import MessageRole, MessageStatus
+from app.models.maindb import Message
+from app.schemas.identity.current_user import CurrentUser
+from app.schemas.message import MessageMapper
+from app.shared.auth.azure_scheme import current_user
 
 
 class MessageCreateService:
     def __init__(
         self,
-        user: CurrentUser,
+        user: Annotated[CurrentUser, Depends(current_user)],
         chat_id: UUID,
         session: Annotated[Session, Depends(create_maindb_session)],
     ) -> None:

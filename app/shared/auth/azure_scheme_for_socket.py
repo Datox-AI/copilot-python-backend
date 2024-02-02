@@ -1,17 +1,17 @@
-from fastapi import Depends
-from jose import jwt
-from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
-from typing import Any, Annotated
-from app.enums import AzureTokenErrorMessagesEnum
+import os
+from typing import Annotated, Any
+
 from dotenv import load_dotenv
-from app.services.identity import CheckUpdateUser
-from app.schemas.identity import CurrentUser, CurrentUserRequest
-import pprint
-import os, asyncio
+from fastapi import Depends
 from fastapi_azure_auth.openid_config import OpenIdConfig
 from fastapi_azure_auth.user import User
 from fastapi_azure_auth.utils import is_guest
+from jose import jwt
+from jose.exceptions import ExpiredSignatureError, JWTClaimsError, JWTError
 
+from app.enums import AzureTokenErrorMessagesEnum
+from app.schemas.identity import CurrentUserRequest
+from app.services.identity import CheckUpdateUser
 
 load_dotenv(override=True)
 AZURE_AD_CLIENT_ID = os.getenv("AZURE_AD_CLIENT_ID")
