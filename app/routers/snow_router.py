@@ -27,14 +27,18 @@ def get_oauth(
     return snow_integration_service.get_oauth_logic()
 
 @router.put("/update_oauth")
-def get_oauth(
+def update_oauth(
     config: OAuthConfig, 
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
     return snow_integration_service.update_oauth_logic(config)
 
-
-
+@router.delete("/delete_oauth")
+def delete_oauth(
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    snow_integration_service.delete_oauth_logic()
+    return {"message": "Snowflake integration deleted successfully."}
 
 @router.get("/callback")
 async def oauth_callback(code: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
@@ -70,8 +74,12 @@ def list_databases(token: str, snow_integration_service: Annotated[SnowflakeInte
 
 # Endpoint to list schemas of a specific database in Snowflake
 @router.get("/schemas/{db_name}")
-def get_schemas(token: str, db_name: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return {"schemas": snow_integration_service.get_schemas_logic(token, db_name)}
+def get_schemas(
+    token: str, 
+    db_name: str,
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    return snow_integration_service.get_schemas_logic(token, db_name)
 
 
 # Endpoint to select a schema and check separately for the existence of tables and views
@@ -127,6 +135,12 @@ def preview_data(
     table_or_view_name: str,
     snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()],
 ):
-    return {
-        "data_preview": snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name)
-    }
+    return {"data_preview": snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name)}
+
+@router.get("/available_roles")
+def get_available_roles(
+    token: str,
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
+):
+    return snow_integration_service.get_available_roles_logic(token)
+
