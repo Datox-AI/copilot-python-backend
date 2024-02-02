@@ -150,8 +150,9 @@ class SnowflakeIntegrationService:
     async def oauth_callback_logic(self, code: str):
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
+        token_response = await self.exchange_code_for_token(code)
+        
         try:
-            token_response = await self.exchange_code_for_token(code)
             if "access_token" not in token_response:
                 raise HTTPException(status_code=400, detail="Access token not in response")
             return token_response
@@ -160,7 +161,7 @@ class SnowflakeIntegrationService:
 
     # Exchanges an authorization code for an access token
     async def exchange_code_for_token(self, code: str):
-        snowflake_identifier_obj = self._get_snowflake_identifier_obj()
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -177,7 +178,7 @@ class SnowflakeIntegrationService:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self.handle_common_errors(e)
+            raise HTTPException(status_code=400, detail="Code is invalid or outdated")
 
     # Refresh access token logic
     async def refresh_access_token_logic(self, refresh_token: str):
