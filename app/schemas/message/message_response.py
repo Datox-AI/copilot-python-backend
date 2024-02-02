@@ -14,3 +14,15 @@ class MessageResponse(BaseSchema):
     follow_up_questions: str | None
     sql_query: str | None
     stored_file_id: str | None
+
+
+class UserMessageResponse(BaseSchema):
+    id: UUID
+    chat_id: UUID
+    text: str
+    role: MessageRole
+    pinned: bool | None
+    pinned_date: datetime.datetime | None
+    reply_to: UUID | None
+    questions: list[str] | None
+    created_at: datetime.datetime
