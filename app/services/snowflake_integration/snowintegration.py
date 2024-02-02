@@ -80,17 +80,18 @@ class SnowflakeIntegrationService:
 
         if warehouse_obj_with_name is None:
             # creating new warehouse 
-            created_warehouse_obj = SnowflakeWarehouse(
+            warehouse_obj_with_name = SnowflakeWarehouse(
                 name=warehouse_name,
                 identifier=snowflake_identifier_obj,
                 selected=True
             )
-            self.session.add(created_warehouse_obj)
+            self.session.add(warehouse_obj_with_name)
         else:
             warehouse_obj_with_name.selected = True
-            for warehouse_obj in warehouse_objs_query.all():
-                if warehouse_obj != warehouse_obj_with_name:
-                    warehouse_obj.selected = False
+        
+        for warehouse_obj in warehouse_objs_query.all():
+            if warehouse_obj != warehouse_obj_with_name:
+                warehouse_obj.selected = False
 
         self.session.commit()
 
