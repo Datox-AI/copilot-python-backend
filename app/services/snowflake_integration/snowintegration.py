@@ -22,7 +22,7 @@ import logging
 app = FastAPI()
 
 
-REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake" 
+REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake"
 
 
 class SnowflakeIntegrationService:
@@ -48,35 +48,36 @@ class SnowflakeIntegrationService:
             print(exception)
             # logging.error(f"Unexpected error: {exception}")
             raise HTTPException(status_code=500, detail="Unexpected error occurred")
-        
 
     def _get_snowflake_identifier_obj(self):
-
-        existing_snowflake_identifier_obj = self.session.query(SnowflakeIdentifier).filter(
-            SnowflakeIdentifier.user_id == self.user.user_id
-        ).first()
+        existing_snowflake_identifier_obj = (
+            self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
+        )
         if not existing_snowflake_identifier_obj:
             raise HTTPException(status_code=404, detail="User does not have snowflake identifier object")
 
         if existing_snowflake_identifier_obj:
-            selected_warehouse_obj = self.session.query(SnowflakeWarehouse).filter(
-                SnowflakeWarehouse.identifier == existing_snowflake_identifier_obj,
-                SnowflakeWarehouse.selected == True
-            ).first()
+            selected_warehouse_obj = (
+                self.session.query(SnowflakeWarehouse)
+                .filter(
+                    SnowflakeWarehouse.identifier == existing_snowflake_identifier_obj,
+                    SnowflakeWarehouse.selected == True,
+                )
+                .first()
+            )
         else:
             selected_warehouse_obj = None
         return existing_snowflake_identifier_obj, selected_warehouse_obj
 
-
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
-        existing_snowflake_identifier_obj = self.session.query(SnowflakeIdentifier).filter(
-            SnowflakeIdentifier.user_id == self.user.user_id
-        ).first()
+        existing_snowflake_identifier_obj = (
+            self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
+        )
         if existing_snowflake_identifier_obj:
             raise HTTPException(status_code=404, detail="User has already snowflake identifier object")
-        
+
         snowflake_identifier_obj = SnowflakeIdentifier(
             id=uuid.uuid4(),
             user_id=self.user.user_id,
@@ -87,10 +88,7 @@ class SnowflakeIntegrationService:
             authorization_endpoint=authorization_endpoint,
         )
         warehouse_obj = SnowflakeWarehouse(
-            id=uuid.uuid4(),
-            name=config.warehouse,
-            identifier=snowflake_identifier_obj,
-            selected=True
+            id=uuid.uuid4(), name=config.warehouse, identifier=snowflake_identifier_obj, selected=True
         )
 
         self.session.add(snowflake_identifier_obj)
@@ -107,26 +105,25 @@ class SnowflakeIntegrationService:
         return {"authorization_url": authorization_url}
 
     def get_oauth_logic(self):
-        existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()        
+        existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
         authorization_endpoint = existing_snowflake_identifier_obj.token_endpoint.replace("token-request", "authorize")
         params = {
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
-            "redirect_uri": REDIRECT_URI, 
+            "redirect_uri": REDIRECT_URI,
             "account": existing_snowflake_identifier_obj.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
         return SnowflakeOauthMapper.map_to_oauth_response(
-            snowflake_identifier=existing_snowflake_identifier_obj, 
+            snowflake_identifier=existing_snowflake_identifier_obj,
             warehouse_obj=selected_warehouse_obj,
-            authorization_url=authorization_url
+            authorization_url=authorization_url,
         )
 
-
     def update_oauth_logic(self, config):
-        existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]     
+        existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
         existing_snowflake_identifier_obj.account_identifier = config.account_identifier
@@ -138,22 +135,19 @@ class SnowflakeIntegrationService:
         params = {
             "response_type": "code",
             "client_id": config.client_id,
-            "redirect_uri": REDIRECT_URI, 
+            "redirect_uri": REDIRECT_URI,
             "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
         return {"authorization_url": authorization_url}
-    
 
     def delete_oauth_logic(self):
-        existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]     
+        existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         self.session.delete(existing_snowflake_identifier_obj)
         self.session.commit()
 
-
     async def oauth_callback_logic(self, code: str):
-    
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
         try:
@@ -201,32 +195,23 @@ class SnowflakeIntegrationService:
                 )
                 response.raise_for_status()
                 return response.json()
-        
+
         except Exception as e:
             self.handle_common_errors(e)
 
     # Creates a connection to Snowflake
-    def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):  
-        ctx = snowflake.connector.connect(
-            account=snowflake_account,
-            authenticator='oauth',
-            token=oauth_token
-        )
+    def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
+        ctx = snowflake.connector.connect(account=snowflake_account, authenticator="oauth", token=oauth_token)
         return ctx
-    
+
     def _create_warehouse(self, warehouse_name):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
-        
-        warehouse_obj = SnowflakeWarehouse(
-            name=warehouse_name,
-            identifier=snowflake_identifier_obj,
-            selected=True
-        )
+
+        warehouse_obj = SnowflakeWarehouse(name=warehouse_name, identifier=snowflake_identifier_obj, selected=True)
         # unselecting
         selected_warehouse_obj.selected = False
         self.session.add(warehouse_obj)
         self.session.commit()
-
 
     # Endpoint to list data warehouses
     def list_data_warehouses_logic(self, token: str):
@@ -234,7 +219,7 @@ class SnowflakeIntegrationService:
 
         ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
         if ctx is None:
-        # Handle the error appropriately
+            # Handle the error appropriately
             raise ConnectionError("Failed to establish a connection to Snowflake.")
         cursor = ctx.cursor()
         try:
@@ -262,24 +247,21 @@ class SnowflakeIntegrationService:
 
     # Modified endpoint to list databases using the selected data warehouse
     def list_databases_logic(self, token: str):
-
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
-
 
         ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
         cursor = ctx.cursor()
         try:
-                    cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
-                    cursor.execute("SHOW DATABASES")
-                    databases = cursor.fetchall()
-                    return {"databases": [db[1] for db in databases]}
+            cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            cursor.execute("SHOW DATABASES")
+            databases = cursor.fetchall()
+            return {"databases": [db[1] for db in databases]}
         finally:
-                cursor.close()
-                ctx.close()
+            cursor.close()
+            ctx.close()
 
     def get_schemas_logic(self, token: str, db_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
-
 
         ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
         cursor = ctx.cursor()
@@ -296,7 +278,6 @@ class SnowflakeIntegrationService:
     def select_schema_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
-
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
@@ -309,14 +290,10 @@ class SnowflakeIntegrationService:
                 cursor.execute(f"SHOW VIEWS IN {db_name}.{schema_name}")
                 views_status = len(cursor.fetchall()) > 0
 
-                return {
-                    "message": f"Schema '{schema_name}' selected",
-                    "tables": tables_status,
-                    "views": views_status
-                }
+                return {"message": f"Schema '{schema_name}' selected", "tables": tables_status, "views": views_status}
 
             finally:
-                if 'conn' in locals() and conn is not None:
+                if "conn" in locals() and conn is not None:
                     conn.close()
         except Exception as e:
             self.handle_common_errors(e)
@@ -344,16 +321,15 @@ class SnowflakeIntegrationService:
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()
         if not snowflake_identifier_obj:
             raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
-             
-        try:
 
+        try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
-        # Get the current user's username
+            # Get the current user's username
             cursor.execute("SELECT CURRENT_USER();")
             current_username = cursor.fetchone()[0]
 
-        # Changing the default role for the current user in Snowflake
+            # Changing the default role for the current user in Snowflake
             try:
                 cursor.execute(f"ALTER USER {current_username} SET DEFAULT_ROLE = '{new_role}'")
             except Exception as e:
@@ -365,7 +341,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             conn.close()
-
 
     def get_views_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -435,11 +410,11 @@ class SnowflakeIntegrationService:
                 cursor.close()
         except Exception as e:
             self.handle_common_errors(e)
-        
+
     # list available roles
     def get_available_roles_logic(self, token: str):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
-        
+
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()

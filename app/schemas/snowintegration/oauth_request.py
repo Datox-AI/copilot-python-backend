@@ -9,5 +9,6 @@ class OAuthConfig(BaseSchema):
     token_endpoint: str
     warehouse: str | None
 
+
 class Warehouse(BaseSchema):
     name: str
