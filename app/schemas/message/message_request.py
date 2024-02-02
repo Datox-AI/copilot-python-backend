@@ -1,12 +1,13 @@
 from uuid import UUID
 
 from pydantic import BaseModel
+from typing import Optional, List
 
 
 class CreateMessageRequest(BaseModel):
     prompt: str
-    replyTo: UUID | None
-    files: list[UUID] | None
+    replyTo: Optional[UUID] = None
+    files: Optional[List[UUID]] = None
 
 
 class UpdateMessageRequest(BaseModel):
