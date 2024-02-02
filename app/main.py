@@ -1,25 +1,20 @@
 import os
+
 import uvicorn
-from fastapi import (
-    FastAPI,
-    FastAPI,
-)
-from fastapi_pagination import add_pagination
-from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi_pagination import add_pagination
 
+from app.routers import agent, chats, files, messages
 from app.routers.snow_router import router as snowflake_oauth_router
-from app.routers import chats, agent, messages
-from app.shared.auth import azure_scheme, AZURE_AD_FRONTEND_CLIENT_ID
+from app.shared.auth import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme
 
-from .const import (
-    OPEN_API_DESCRIPTION,
-    OPEN_API_TITLE,
-)
+from .const import OPEN_API_DESCRIPTION, OPEN_API_TITLE
 from .version import __version__
- 
+
 load_dotenv()
- 
+
 app = FastAPI(
     title=OPEN_API_TITLE,
     description=OPEN_API_DESCRIPTION,
@@ -46,16 +41,18 @@ app.add_middleware(
 # Adding routers
 app.include_router(chats.router)
 app.include_router(agent.router)
+app.include_router(files.router)
 app.include_router(messages.router)
 app.include_router(snowflake_oauth_router)
 
 
-@app.on_event('startup')
+@app.on_event("startup")
 async def load_config() -> None:
     """
     Load OpenID config on startup.
     """
     await azure_scheme.openid_config.load_config()
+
 
 if __name__ == "__main__":
     uvicorn.run(

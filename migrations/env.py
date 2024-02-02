@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-import time 
+import time
 
 
 # Calculate the path to the directory above "migrations"
@@ -25,17 +25,13 @@ from app.models.admindb import *
 load_dotenv()
 config = context.config
 
-db_name = (
-    config.config_ini_section
-)
-    
+db_name = config.config_ini_section
 
-  # active config ini section is the db name that we have chosen
+
+# active config ini section is the db name that we have chosen
 db_dsn = os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]
 print(db_dsn)
-config.set_main_option(
-    "sqlalchemy.url", db_dsn
-)
+config.set_main_option("sqlalchemy.url", db_dsn)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
@@ -73,7 +69,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         version_table_schema=db_name,
-        version_locations=config.get_main_option("version_locations")
+        version_locations=config.get_main_option("version_locations"),
     )
 
     with context.begin_transaction():
@@ -86,7 +82,7 @@ def run_migrations_online() -> None:
     In this scenario we need to create an Engine
     and associate a connection with the context.
 
-    """    
+    """
 
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),

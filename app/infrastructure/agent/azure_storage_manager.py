@@ -4,18 +4,18 @@ import uuid
 import pandas as pd
 from azure.storage.blob import BlobServiceClient
 from dotenv import load_dotenv
+from fastapi import UploadFile
 
 load_dotenv()
 
 
 class AzureBlobStorageManager:
-    def __init__(self):
+    def __init__(self, container_name):
         # initiating blob service client
         az_storage_connection_string = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
-        az_storage_agent_container_name = os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"]
         blob_service_client = BlobServiceClient.from_connection_string(az_storage_connection_string)
 
-        self.container_client = blob_service_client.get_container_client(container=az_storage_agent_container_name)
+        self.container_client = blob_service_client.get_container_client(container=container_name)
 
     def upload_csv(self, df: pd.DataFrame, message_id: str):
         store_id = uuid.uuid4().hex
@@ -31,3 +31,19 @@ class AzureBlobStorageManager:
         for blob in blob_list:
             if blob.name != file_full_name:
                 self.container_client.delete_blob(blob=blob)
+
+    def upload_file(self, file: UploadFile) -> str:
+        file_id = str(uuid.uuid4())
+        blob_client = self.container_client.get_blob_client(blob=file_id)
+        metadata = {"media_type": file.content_type}
+        blob_client.upload_blob(file.file, metadata=metadata)
+        return file_id
+
+    def download_file(self, file_id: uuid.UUID):
+        blob_client = self.container_client.get_blob_client(blob=str(file_id))
+        properties = blob_client.get_blob_properties()
+        media_type = properties.metadata.get("media_type", "application/pdf")
+
+        stream = blob_client.download_blob().readall()
+
+        return stream, media_type

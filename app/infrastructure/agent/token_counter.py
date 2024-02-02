@@ -1,5 +1,6 @@
 import tiktoken
 
+
 class TokenCounter:
     def __init__(self, max_token: int = 32768):
         # gpt encoding

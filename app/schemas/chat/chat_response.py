@@ -1,14 +1,14 @@
-from app.schemas.base import BaseSchema
 from datetime import datetime
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from app.enums import ChatType
+from app.schemas.base import BaseSchema
 from app.schemas.message import MessageResponse
 
 
 class ChatSnowflakeData(BaseSchema):
-    id: UUID 
+    id: UUID
     snowflake_account: str
     database_name: str
     snowflake_schema: str
@@ -20,12 +20,12 @@ class ChatResponse(BaseSchema):
     name: str
     created: datetime
     pinned: bool
-    pinned_date: Optional[datetime] = None
+    pinned_date: datetime | None = None
     type: ChatType
     messages_count: int
     files_count: int
-    last_message: Optional[datetime] = None
-    snowflake_data: Optional[ChatSnowflakeData] = None
+    last_message: datetime | None = None
+    snowflake_data: ChatSnowflakeData | None = None
 
 
 class ChatHistoryResponse(BaseSchema):
@@ -33,7 +33,5 @@ class ChatHistoryResponse(BaseSchema):
     name: str
     created: datetime
     type: ChatType
-    snowflake_data: Optional[ChatSnowflakeData] = None
-    messages: List[MessageResponse]
-
-
+    snowflake_data: ChatSnowflakeData | None = None
+    messages: list[MessageResponse]
