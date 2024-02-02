@@ -28,7 +28,10 @@ ENV OPENAI_API_VERSION $OPENAI_API_VERSION
 ARG AZURE_OPENAI_API_KEY
 ENV AZURE_OPENAI_API_KEY $AZURE_OPENAI_API_KEY
 
+
 WORKDIR /code
+# COPY ./.env /code/.env
+
 # 
 COPY ./requirements.txt /code/requirements.txt
 
