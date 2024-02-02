@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
 from app.enums.message_enums import MessageRole, MessageStatus
+from app.schemas.message import CreateMessageRequest
 from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
@@ -25,14 +26,11 @@ class UserMessageService:
         self.user = user
         self.chat_id = chat_id
 
-    def create_message(
-        self,
-        message_text: str,
-    ):
+    def create_message(self, request: CreateMessageRequest):
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
-            text=message_text,
+            text=request.prompt,
             status=MessageStatus.Success,
             role=MessageRole.User,
         )
