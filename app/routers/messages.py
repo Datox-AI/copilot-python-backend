@@ -3,13 +3,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
-from app.schemas.message import MessageResponse
-from app.services.messages.get_message import MessageGetService
+from app.schemas.message import AnalyticAgentMessageResponse
+from app.services.messages.analytics_agent.get_message import MessageGetService
 
 router = APIRouter(prefix="/api/messages", tags=["Messages"])
 
 
-@router.get("/{chat_id}", response_model=list[MessageResponse])
+@router.get("/{chat_id}", response_model=list[AnalyticAgentMessageResponse])
 async def get_messages(
     chat_id: UUID,
     get_message_service: Annotated[MessageGetService, Depends()],

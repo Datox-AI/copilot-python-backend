@@ -1,11 +1,11 @@
 from app.models.maindb import Message
-from app.schemas.message.message_response import MessageResponse, UserMessageResponse
+from app.schemas.message.message_response import AnalyticAgentMessageResponse, UserMessageResponse, RAGAgentMessageResponse
 
 
 class MessageMapper:
     @staticmethod
-    def map_to_message_response(message: Message):
-        return MessageResponse(
+    def map_to_analytic_agent_message_response(message: Message):
+        return AnalyticAgentMessageResponse(
             id=message.id.hex,
             chat_id=message.chat_id,
             text=message.text,
@@ -15,6 +15,19 @@ class MessageMapper:
             sql_query=message.sql_query,
             stored_file_id=message.stored_file_id,
         )
+    
+    @staticmethod
+    def map_to_RAG_agent_message_response(message: Message):
+        return RAGAgentMessageResponse(
+            id=message.id.hex,
+            chat_id=message.chat_id,
+            text=message.text,
+            role=message.role,
+            created_at=message.created_at,
+            # sources=message.file_sources
+            # follow_up_questions=message.follow_up_questions,
+        )
+
 
     @staticmethod
     def map_to_user_message_response(message: Message):

@@ -31,4 +31,4 @@ class MessageGetService:
             raise HTTPException(status_code=400, detail=f"Chat object under chat id: {chat_id} does not exist")
         message_objs = self.session.query(Message).filter(Message.chat_id == chat_id)
 
-        return [MessageMapper.map_to_message_response(message_obj) for message_obj in message_objs]
+        return [MessageMapper.map_to_analytic_agent_message_response(message_obj) for message_obj in message_objs]

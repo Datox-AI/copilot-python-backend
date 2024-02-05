@@ -14,7 +14,7 @@ from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
 
 
-class MessageCreateService:
+class AnalyticsAgentMessageCreateService:
     def __init__(
         self,
         user: Annotated[CurrentUser, Depends(current_user)],
@@ -38,10 +38,7 @@ class MessageCreateService:
         )
         self.session.add(new_user_message)
         self.session.commit()
-        message_response = MessageMapper.map_to_message_response(new_user_message)
-        message_response_json = json.loads(message_response.model_dump_json())
 
-        return message_response_json
 
     def create_agent_response(
         self,

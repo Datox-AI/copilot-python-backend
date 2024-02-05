@@ -8,10 +8,7 @@ from pydantic import BaseModel
 from app.schemas.snowintegration import OAuthConfig
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
 
-router = APIRouter()
-
-
-app = FastAPI()
+router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integration"])
 
 
 # Endpoint to initialize OAuth configuration

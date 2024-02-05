@@ -13,7 +13,7 @@ from app.models.maindb.message import Message
 from app.mysocket.connection import ConnectionManager
 from app.services.chats import GetChat
 from app.services.identity import CheckUpdateUser
-from app.services.messages import MessageCreateService
+from app.services.messages.analytics_agent.create_message import AnalyticsAgentMessageCreateService
 from app.shared.auth import azure_scheme, multi_auth
 from app.shared.auth.azure_scheme_for_socket import validate_azure_token
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
@@ -45,7 +45,7 @@ async def agent_endpoint(
         chat_obj = validator.chat_obj
         # initiating services
         agent_engine_manager = AgentSnowflakeEngineManager()
-        message_service = MessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
+        message_service = AnalyticsAgentMessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
         # default connection engine error
         connection_error_message = "Engine is not connected"
         try:
@@ -71,7 +71,7 @@ async def agent_endpoint(
                         )
                     except Exception as e:
                         print(e, "   agent error")
-                        error_message = "Agent failed"
+                        error_message = f"Agent failed: {e}"
                         await manager.disconnect(websocket=websocket, reason=error_message, code=1007)
                         break
                     # notifying front end about connection is succesful

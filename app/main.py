@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 
-from app.routers import agent, chats, files, messages, user_messages
+from app.routers import analytics_agent, chats, files, messages, user_messages
 from app.routers.snow_router import router as snowflake_oauth_router
 from app.shared.auth import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme
 
@@ -40,7 +40,7 @@ app.add_middleware(
 )
 # Adding routers
 app.include_router(chats.router)
-app.include_router(agent.router)
+app.include_router(analytics_agent.router)
 app.include_router(files.router)
 app.include_router(messages.router)
 app.include_router(user_messages.router)

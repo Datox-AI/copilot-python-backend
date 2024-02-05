@@ -3,7 +3,7 @@ from typing import Dict, List
 
 from fastapi import WebSocket
 
-from app.schemas.message import MessageResponse
+from app.schemas.message import AnalyticAgentMessageResponse
 
 
 class ConnectionManager:
@@ -35,7 +35,7 @@ class ConnectionManager:
     async def send_connection_success_message(self, websocket: WebSocket):
         await websocket.send_json({"status": "success", "message": "Engine is connected succesfully"})
 
-    async def send_agent_response(self, response: MessageResponse, websocket: WebSocket):
+    async def send_agent_response(self, response: AnalyticAgentMessageResponse, websocket: WebSocket):
         await websocket.send_json(
             {
                 "output": response["output"],
