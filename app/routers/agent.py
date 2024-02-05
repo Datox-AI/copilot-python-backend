@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Security, WebSocket, WebSocketDis
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
-from app.infrastructure.agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
+from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
 from app.models.maindb.message import Message
 from app.mysocket.connection import ConnectionManager
 from app.services.chats import GetChat

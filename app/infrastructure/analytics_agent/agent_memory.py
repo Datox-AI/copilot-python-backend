@@ -11,7 +11,7 @@ from app.enums.message_enums import MessageRole
 from app.models.maindb.message import Message
 
 
-class CustomChatMessageHistory(BaseChatMessageHistory):
+class AnalyticsAgentChatMessageHistory(BaseChatMessageHistory):
     def __init__(self, chat_id: UUID, db_session: Session):
         self.chat_id = chat_id
         self.db_session = db_session

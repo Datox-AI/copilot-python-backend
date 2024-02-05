@@ -2,7 +2,7 @@ from langchain.prompts import BaseChatPromptTemplate
 from langchain.schema import SystemMessage
 from langchain.tools import BaseTool
 
-from app.infrastructure.agent.token_counter import TokenCounter
+from app.infrastructure.analytics_agent.token_counter import TokenCounter
 
 
 # Set up a prompt template

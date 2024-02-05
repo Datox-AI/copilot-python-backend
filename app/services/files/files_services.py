@@ -5,7 +5,7 @@ from fastapi import Depends, UploadFile
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
-from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 from app.models.maindb.file import File
 from app.schemas.files.file_mapper import FileMapper
 from app.schemas.files.file_response import FilesDetailResponse
