@@ -1,13 +1,10 @@
 from typing import Annotated
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from urllib.parse import urlencode
 import httpx
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 import snowflake.connector
-from snowflake.connector.errors import DatabaseError, ProgrammingError, InterfaceError, OperationalError
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 from fastapi import HTTPException
@@ -17,7 +14,6 @@ from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
 import uuid
-import logging
 
 app = FastAPI()
 
@@ -68,10 +64,11 @@ class SnowflakeIntegrationService:
         else:
             selected_warehouse_obj = None
         return existing_snowflake_identifier_obj, selected_warehouse_obj
-    
 
     def _select_or_create_warehouse_obj(self, snowflake_identifier_obj: SnowflakeIdentifier, warehouse_name: str):
-        warehouse_objs_query = self.session.query(SnowflakeWarehouse).filter(SnowflakeWarehouse.identifier == snowflake_identifier_obj)
+        warehouse_objs_query = self.session.query(SnowflakeWarehouse).filter(
+            SnowflakeWarehouse.identifier == snowflake_identifier_obj
+        )
 
         if len(warehouse_objs_query.all()) != 0:
             warehouse_obj_with_name = warehouse_objs_query.filter(SnowflakeWarehouse.name == warehouse_name).first()
@@ -79,22 +76,19 @@ class SnowflakeIntegrationService:
             warehouse_obj_with_name = None
 
         if warehouse_obj_with_name is None:
-            # creating new warehouse 
+            # creating new warehouse
             warehouse_obj_with_name = SnowflakeWarehouse(
-                name=warehouse_name,
-                identifier=snowflake_identifier_obj,
-                selected=True
+                name=warehouse_name, identifier=snowflake_identifier_obj, selected=True
             )
             self.session.add(warehouse_obj_with_name)
         else:
             warehouse_obj_with_name.selected = True
-        
+
         for warehouse_obj in warehouse_objs_query.all():
             if warehouse_obj != warehouse_obj_with_name:
                 warehouse_obj.selected = False
 
         self.session.commit()
-
 
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
@@ -158,10 +152,9 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj.client_secret = config.client_secret
         existing_snowflake_identifier_obj.token_endpoint = config.token_endpoint
         existing_snowflake_identifier_obj.authorization_endpoint = authorization_endpoint
-        # updating warehouses 
+        # updating warehouses
         self._select_or_create_warehouse_obj(
-            snowflake_identifier_obj=existing_snowflake_identifier_obj, 
-            warehouse_name=config.warehouse
+            snowflake_identifier_obj=existing_snowflake_identifier_obj, warehouse_name=config.warehouse
         )
         self.session.commit()
         params = {
@@ -178,7 +171,6 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         self.session.delete(existing_snowflake_identifier_obj)
         self.session.commit()
-
 
     async def oauth_callback_logic(self, code: str):
         if not code:
