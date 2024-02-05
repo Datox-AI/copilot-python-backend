@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi.responses import StreamingResponse
 
 from app.schemas.message import CreateMessageRequest, UpdateMessageRequest, UserMessageResponse
 from app.services.messages import UserMessageService
@@ -9,14 +10,15 @@ from app.services.messages import UserMessageService
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
 
 
-@router.post("/{chat_id}/messages", response_model=UserMessageResponse)
+@router.post("/{chat_id}/messages")
 async def create_message(
     chat_id: UUID, request: CreateMessageRequest, message_service: Annotated[UserMessageService, Depends()]
 ):
     chat_exists = message_service.check_chat_exists(chat_id)
     if not chat_exists:
         raise HTTPException(status_code=404, detail="Chat not found")
-    return message_service.create_message(request)
+    response_generator = message_service.create_message(request)
+    return StreamingResponse(response_generator, media_type="text/event-stream")
 
 
 @router.get("/{chat_id}/messages", response_model=list[UserMessageResponse])
