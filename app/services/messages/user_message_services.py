@@ -14,6 +14,8 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
 
+from .message_create_stream import OpenAIChatStream
+
 
 class UserMessageService:
     def __init__(
@@ -25,6 +27,7 @@ class UserMessageService:
         self.session = session
         self.user = user
         self.chat_id = chat_id
+        self.streamer = OpenAIChatStream(model="gpt-35-turbo-16k")
 
     def create_message(self, request: CreateMessageRequest):
         new_user_message = Message(
@@ -35,11 +38,9 @@ class UserMessageService:
             role=MessageRole.User,
         )
         self.session.add(new_user_message)
+        response_generator = self.streamer.stream_responses(new_user_message.text)
         self.session.commit()
-        message_response = MessageMapper.map_to_user_message_response(new_user_message)
-        message_response_json = json.loads(message_response.model_dump_json())
-
-        return message_response_json
+        return response_generator
 
     def get_messages(self, chat_id: UUID):
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
