@@ -5,7 +5,6 @@ from typing import Optional, List
 
 
 class CreateMessageRequest(BaseModel):
-    id: UUID
     prompt: str
     replyTo: Optional[UUID] = None
     files: Optional[List[UUID]] = None

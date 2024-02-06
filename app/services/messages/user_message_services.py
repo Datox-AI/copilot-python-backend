@@ -32,7 +32,6 @@ class UserMessageService:
         self.streamer = OpenAIChatStream(model="gpt-35-turbo-16k")
 
     def create_message(self, request: CreateMessageRequest):
-        print(request.id, " message UUID")
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
@@ -65,7 +64,7 @@ class UserMessageService:
         message_obj = self.session.query(Message).filter(Message.id == message_id, Message.chat_id == chat_id).first()
         if message_obj:
             if message_obj.id != updated_data.id:
-                raise HTTPException(status_code=400, detail="Message ID you provided is wrong")
+                raise HTTPException(status_code=400, detail=f"Message id you provided ({message_id}) is wrong")
             message_obj.pinned = updated_data.pinned
             if message_obj.pinned:
                 message_obj.pinned_date = datetime.now()
@@ -75,8 +74,7 @@ class UserMessageService:
         else:
             raise HTTPException(status_code=404, detail="Message not found")
 
-    def delete_messages_batch(self, chat_id: UUID, request: DeleteMessagesRequest):
-        message_ids = [request.ids]
+    def delete_messages_batch(self, chat_id: UUID, message_ids: list):
         self.session.query(Message).filter(Message.id.in_(message_ids), Message.chat_id == chat_id).delete(
             synchronize_session=False
         )
