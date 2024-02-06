@@ -28,6 +28,16 @@ async def get_messages(chat_id: UUID, message_service: UserMessageService = Depe
     return message_service.get_messages(chat_id)
 
 
+@router.delete("/{chat_id}/messages/batch", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_messages_batch(
+    chat_id: UUID, message_ids: list[UUID], message_service: UserMessageService = Depends(UserMessageService)
+):
+    if not message_service.check_chat_exists(chat_id):
+        raise HTTPException(status_code=404, detail="Chat not found")
+    message_service.delete_messages_batch(chat_id, message_ids)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.delete("/{chat_id}/messages/{message_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_message(
     chat_id: UUID, message_id: UUID, message_service: UserMessageService = Depends(UserMessageService)
@@ -52,13 +62,3 @@ async def update_message(
     if not updated_message:
         raise HTTPException(status_code=404, detail="Message not found")
     return updated_message
-
-
-@router.delete("/{chat_id}/messages/batch", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_messages_batch(
-    chat_id: UUID, message_ids: list[UUID], message_service: UserMessageService = Depends(UserMessageService)
-):
-    if not message_service.check_chat_exists(chat_id):
-        raise HTTPException(status_code=404, detail="Chat not found")
-    message_service.delete_messages_batch(chat_id, message_ids)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
