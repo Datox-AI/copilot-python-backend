@@ -30,10 +30,10 @@ load_dotenv()
 class DataAnalyticAgent:
     def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
         self.llm_chat_model = AzureChatOpenAI(
-            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"), 
-            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"), 
-            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"), 
-            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"), 
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
         )
         # initiating our db manager and assigning blob manager to our db

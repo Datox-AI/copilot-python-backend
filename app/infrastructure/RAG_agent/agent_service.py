@@ -11,7 +11,8 @@ from langchain.prompts import PromptTemplate, ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI
 from langchain.memory import ConversationTokenBufferMemory
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.retrievers import AzureCognitiveSearchRetriever
+# from langchain.retrievers import AzurzeCognitiveSearchRetriever
+from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
 from langchain.prompts import HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain.tools.render import render_text_description
@@ -19,30 +20,35 @@ from langchain.agents.format_scratchpad import format_log_to_messages
 from langchain.agents.json_chat.prompt import TEMPLATE_TOOL_RESPONSE
 
 
-from app.infrastructure.RAG_agent.prompts.system_prompt import SYSTEM_MESSAGE_TEMPLATE, TOOLS_TEMPLATE, RETRIEVER_PROMPT
-from app.infrastructure.RAG_agent.output_parser import CustomJSONAgentOutputParser
+from app.infrastructure.rag_agent.prompts.system_prompt import (
+    SYSTEM_MESSAGE_TEMPLATE,
+    TOOLS_TEMPLATE,
+    RETRIEVER_PROMPT,
+)
+from app.infrastructure.rag_agent.output_parser import CustomJSONAgentOutputParser
 from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
 
 load_dotenv()
 
-class RAGAgent:
 
+class RAGAgent:
     def __init__(self, chat_id: UUID, db_session: Session):
         # setting up retriever
-        retriever = AzureCognitiveSearchRetriever(
+        print(os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"), "service name")
+        self.retriever = AzureCognitiveSearchRetriever(
             service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
             index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
             api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
-            content_key="content", 
-            top_k=2
+            content_key="content",
+            top_k=1,
         )
 
         retriever_prompt = PromptTemplate.from_template(RETRIEVER_PROMPT)
         tool = create_retriever_tool(
-            retriever,
+            self.retriever,
             "search_from_share_point",
             "Searches and returns documents from sharepoint",
-            document_prompt=retriever_prompt
+            document_prompt=retriever_prompt,
         )
         self.tools = [tool]
         # creating an agent and agent executor
@@ -51,15 +57,15 @@ class RAGAgent:
                 SystemMessagePromptTemplate.from_template(template=SYSTEM_MESSAGE_TEMPLATE),
                 MessagesPlaceholder(variable_name="chat_history", optional=True),
                 HumanMessagePromptTemplate.from_template(TOOLS_TEMPLATE),
-                MessagesPlaceholder(variable_name="agent_scratchpad")
+                MessagesPlaceholder(variable_name="agent_scratchpad"),
             ]
         )
         self.output_parser = CustomJSONAgentOutputParser()
         self.llm = AzureChatOpenAI(
-            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"), 
-            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"), 
-            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"), 
-            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"), 
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
         )
         json_agent = self._create_custom_json_chat_agent()
@@ -68,7 +74,7 @@ class RAGAgent:
         memory = ConversationTokenBufferMemory(
             memory_key="history",
             chat_memory=message_history,
-            llm=self.llm_chat_model,
+            llm=self.llm,
             max_token=5000,
             output_key="output",
             input_key="input",
@@ -81,11 +87,8 @@ class RAGAgent:
             memory=memory,
         )
 
-
     def _create_custom_json_chat_agent(self):
-        missing_vars = {"tools", "tool_names", "agent_scratchpad"}.difference(
-            self.agent_prompt.input_variables
-        )
+        missing_vars = {"tools", "tool_names", "agent_scratchpad"}.difference(self.agent_prompt.input_variables)
         if missing_vars:
             raise ValueError(f"Prompt missing required variables: {missing_vars}")
 
@@ -105,13 +108,20 @@ class RAGAgent:
             | llm_with_stop
             | self.output_parser
         )
-        return agent 
-    
+        return agent
 
-    async def invoke(self, user_query: str):
+    def invoke(self, user_query: str):
         try:
             agent_response = self.agent_executor.invoke({"input": user_query})
-            return agent_response
+            searched_documents = []
+            print(agent_response, " reponse ")
+
+            if agent_response["document_searched_query"] != "":
+                document_searched_query = agent_response["document_searched_query"]
+                self.retriever.top_k = 5
+                searched_documents = self.retriever.invoke(input=document_searched_query)
+
+            return agent_response, searched_documents
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")

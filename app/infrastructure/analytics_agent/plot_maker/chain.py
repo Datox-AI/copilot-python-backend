@@ -17,10 +17,10 @@ class PlotMaker:
     def produce_figure(self):
         # setting up the prompt for chain
         llm_chat_model = AzureChatOpenAI(
-            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"), 
-            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"), 
-            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"), 
-            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"), 
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
         )
         chat_template = ChatPromptTemplate.from_messages(

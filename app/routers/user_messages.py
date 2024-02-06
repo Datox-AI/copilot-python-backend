@@ -1,10 +1,11 @@
-from typing import Annotated
+from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 
-from app.schemas.message import CreateMessageRequest, UpdateMessageRequest, UserMessageResponse
+from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest, DeleteMessagesRequest
+from app.schemas.message.message_response import UserMessageResponse
 from app.services.messages import UserMessageService
 
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
@@ -21,7 +22,7 @@ async def create_message(
     return StreamingResponse(response_generator, media_type="text/event-stream")
 
 
-@router.get("/{chat_id}/messages", response_model=list[UserMessageResponse])
+@router.get("/{chat_id}/messages", response_model=List[UserMessageResponse])
 async def get_messages(chat_id: UUID, message_service: UserMessageService = Depends(UserMessageService)):
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -56,9 +57,11 @@ async def update_message(
 
 @router.delete("/{chat_id}/messages/batch", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_messages_batch(
-    chat_id: UUID, message_ids: list[UUID], message_service: UserMessageService = Depends(UserMessageService)
+    chat_id: UUID, request: DeleteMessagesRequest, message_service: UserMessageService = Depends(UserMessageService)
 ):
+    print("HERE")
+    
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
-    message_service.delete_messages_batch(chat_id, message_ids)
+    message_service.delete_messages_batch(chat_id, request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

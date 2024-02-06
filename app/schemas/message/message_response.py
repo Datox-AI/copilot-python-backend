@@ -16,15 +16,24 @@ class AnalyticAgentMessageResponse(BaseSchema):
     stored_file_id: str | None
 
 
+class SharePointFilesResponse(BaseSchema):
+    id: UUID
+    item_name: str
+    item_url: str
+    content_type: str
+    last_modified: datetime.datetime
+    item_size: int
+
+
 class RAGAgentMessageResponse(BaseSchema):
     id: UUID
+    created_at: datetime.datetime
     chat_id: UUID
     text: str
-    sources: List[str]
+    searched_files: List[SharePointFilesResponse]
     role: MessageRole
-    created_at: datetime.datetime
     # follow_up_questions: str | None
-    
+
 
 class UserMessageResponse(BaseSchema):
     id: UUID

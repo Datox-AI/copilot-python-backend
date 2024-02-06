@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
 from app.enums.message_enums import MessageRole, MessageStatus
-from app.schemas.message import CreateMessageRequest
 from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
+from app.schemas.message.message_request import CreateMessageRequest, DeleteMessagesRequest
+
 from app.shared.auth.azure_scheme import current_user
 
 from .message_create_stream import OpenAIChatStream
@@ -30,6 +31,7 @@ class UserMessageService:
         self.streamer = OpenAIChatStream(model="gpt-35-turbo-16k")
 
     def create_message(self, request: CreateMessageRequest):
+        print(request.id, " message UUID")
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
@@ -67,7 +69,8 @@ class UserMessageService:
             return True
         return False
 
-    def delete_messages_batch(self, chat_id: UUID, message_ids: list[UUID]):
+    def delete_messages_batch(self, chat_id: UUID, request: DeleteMessagesRequest):
+        message_ids = [request.ids]
         self.session.query(Message).filter(Message.id.in_(message_ids), Message.chat_id == chat_id).delete(
             synchronize_session=False
         )

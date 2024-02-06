@@ -15,9 +15,9 @@ class ChatStreamInterface(ABC):
 
 class OpenAIChatStream:
     # Class variables for openai key and  etc
-    api_key = os.getenv("OPENAI_API_KEY")
-    api_endpoint = os.getenv("OPENAI_ENDPOINT")
-    api_version = os.getenv("OPENAI_API_VERSION")
+    api_key = os.getenv("GPT35_TURBO_AZURE_OPENAI_API_KEY")
+    api_endpoint = os.getenv("GPT35_TURBO_AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("GPT35_TURBO_OPENAI_API_VERSION")
 
     def __init__(self, model: str):
         self.model = model

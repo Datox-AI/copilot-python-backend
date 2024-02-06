@@ -34,7 +34,7 @@ Use this if you want to respond directly to the human. Markdown code snippet for
 {{
     "action": "Final Answer",
     "action_input": string \\ You should put what you want to return to use here,
-    "action_sources": List of strings \\ All page sources of the documents you got information from 
+    "document_searched_query": string \\ A query you used to search from sharepoint documents
 }}
 ```
 
@@ -44,4 +44,4 @@ Here is the user\'s input (remember to respond with a markdown code snippet of a
 
 {input}"""
 
-RETRIEVER_PROMPT = "PAGE SOURCE: {metadata_spo_item_weburi}\nPAGE CONTENT:\n{page_content}\n--------------\n\n"
+RETRIEVER_PROMPT = "PAGE CONTENT:\n{page_content}\n--------------\n\n"

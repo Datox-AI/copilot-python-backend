@@ -1,26 +1,25 @@
-import json
 import uuid
 from typing import Annotated
 from uuid import UUID
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, Query, Security, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
-from app.models.maindb.message import Message
 from app.mysocket.connection import ConnectionManager
-from app.services.chats import GetChat
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.create_message import AnalyticsAgentMessageCreateService
-from app.shared.auth import azure_scheme, multi_auth
-from app.shared.auth.azure_scheme_for_socket import validate_azure_token
+from app.services.messages.analytics_agent.get_message import MessageGetService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
+from app.schemas.message import AnalyticAgentMessageResponse
+
 
 load_dotenv()
 
-router = APIRouter(prefix="/agent")
+router = APIRouter(prefix="/api/analytics_agent", tags=["Data analytics agent"])
+
 manager = ConnectionManager()
 
 
@@ -104,3 +103,14 @@ async def agent_endpoint(
             await manager.disconnect(websocket=websocket, closed=True)
     else:
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
+
+
+
+
+@router.get("/{chat_id}/messages", response_model=list[AnalyticAgentMessageResponse])
+async def get_messages(
+    chat_id: UUID,
+    get_message_service: Annotated[AnalyticsAgentMessageCreateService, Depends()],
+):
+    # return None
+    return get_message_service.get_messages(chat_id=chat_id)
