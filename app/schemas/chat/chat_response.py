@@ -4,7 +4,7 @@ from uuid import UUID
 
 from app.enums import ChatType
 from app.schemas.base import BaseSchema
-from app.schemas.message import MessageResponse
+from app.schemas.message import AnalyticAgentMessageResponse
 
 
 class ChatSnowflakeData(BaseSchema):
@@ -34,4 +34,4 @@ class ChatHistoryResponse(BaseSchema):
     created: datetime
     type: ChatType
     snowflake_data: ChatSnowflakeData | None = None
-    messages: list[MessageResponse]
+    messages: list[AnalyticAgentMessageResponse]

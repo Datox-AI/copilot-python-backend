@@ -12,14 +12,16 @@ class CreateMessageRequest(BaseModel):
 
 class UpdateMessageRequest(BaseModel):
     id: UUID
-    text: str | None = None
-    pinned: bool | None = None
+    pinned: bool
 
     class Config:
         json_schema_extra = {
             "example": {
                 "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "text": "Обновлённый текст сообщения",
                 "pinned": True,
             }
         }
+
+
+class DeleteMessagesRequest(BaseModel):
+    ids: List[UUID]

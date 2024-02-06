@@ -3,18 +3,19 @@ import uuid
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
+from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
-from app.models.maindb import Message
+from app.models.maindb import Message, Chat
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
 
 
-class MessageCreateService:
+class AnalyticsAgentMessageCreateService:
     def __init__(
         self,
         user: Annotated[CurrentUser, Depends(current_user)],
@@ -24,6 +25,16 @@ class MessageCreateService:
         self.session = session
         self.user = user
         self.chat_id = chat_id
+        print(self.chat_id, " chat_id")
+
+    def _check_chat_id(self, chat_id):
+        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
+        if not chat_obj:
+            raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
+        if chat_obj.type != ChatType.DataAnalytics:
+            raise HTTPException(
+                status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
+            )
 
     def create_user_message(
         self,
@@ -38,10 +49,6 @@ class MessageCreateService:
         )
         self.session.add(new_user_message)
         self.session.commit()
-        message_response = MessageMapper.map_to_message_response(new_user_message)
-        message_response_json = json.loads(message_response.model_dump_json())
-
-        return message_response_json
 
     def create_agent_response(
         self,
@@ -63,3 +70,11 @@ class MessageCreateService:
         )
         self.session.add(new_agent_message)
         self.session.commit()
+
+    def get_messages(self):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
+        if not chat_obj:
+            raise HTTPException(status_code=400, detail=f"Chat object under chat id: {self.chat_id} does not exist")
+        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id)
+
+        return [MessageMapper.map_to_analytic_agent_message_response(message_obj) for message_obj in message_objs]

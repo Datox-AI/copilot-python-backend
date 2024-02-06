@@ -14,14 +14,14 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.infrastructure.agent.agent_memory import CustomChatMessageHistory
-from app.infrastructure.agent.azure_storage_manager import AzureBlobStorageManager
-from app.infrastructure.agent.database_tools import CustomSQLDatabase, QuerySaveSQLDataBaseTool
-from app.infrastructure.agent.output_parser import CustomOutputParser
-from app.infrastructure.agent.prompt_template import CustomPromptTemplate
-from app.infrastructure.agent.prompts.system_prompt import sql_helper_prompt_template
-from app.infrastructure.agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
-from app.infrastructure.agent.token_counter import TokenCounter
+from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
+from app.infrastructure.analytics_agent.database_tools import CustomSQLDatabase, QuerySaveSQLDataBaseTool
+from app.infrastructure.analytics_agent.output_parser import CustomOutputParser
+from app.infrastructure.analytics_agent.prompt_template import CustomPromptTemplate
+from app.infrastructure.analytics_agent.prompts.system_prompt import sql_helper_prompt_template
+from app.infrastructure.analytics_agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
+from app.infrastructure.analytics_agent.token_counter import TokenCounter
 from app.models.maindb import Chat
 
 load_dotenv()
@@ -29,7 +29,13 @@ load_dotenv()
 
 class DataAnalyticAgent:
     def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
-        self.llm_chat_model = AzureChatOpenAI(deployment_name="gpt-4-32k", temperature=0)
+        self.llm_chat_model = AzureChatOpenAI(
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
+            temperature=0,
+        )
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         self.azure_blob_storage_manager = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"])
@@ -59,7 +65,7 @@ class DataAnalyticAgent:
             stop=["\nObservation:"],
             allowed_tools=agent_tool_names,
         )
-        message_history = CustomChatMessageHistory(chat_id=chat_id, db_session=db_session)
+        message_history = AnalyticsAgentChatMessageHistory(chat_id=chat_id, db_session=db_session)
         memory = ConversationTokenBufferMemory(
             memory_key="history",
             chat_memory=message_history,

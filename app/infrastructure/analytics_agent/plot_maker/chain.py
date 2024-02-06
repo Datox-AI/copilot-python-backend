@@ -1,11 +1,10 @@
-import re
-
+import re, os
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate
 from langchain_community.chat_models import AzureChatOpenAI
 
-from app.infrastructure.agent.plot_maker.helpers import extract_python_code
-from app.infrastructure.agent.prompts.plot_maker_prompts import human_input, system_message
+from app.infrastructure.analytics_agent.plot_maker.helpers import extract_python_code
+from app.infrastructure.analytics_agent.prompts.plot_maker_prompts import human_input, system_message
 
 
 class PlotMaker:
@@ -17,8 +16,13 @@ class PlotMaker:
 
     def produce_figure(self):
         # setting up the prompt for chain
-        llm_chat_model = AzureChatOpenAI(deployment_name="gpt-4-32k", temperature=0)
-
+        llm_chat_model = AzureChatOpenAI(
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
+            temperature=0,
+        )
         chat_template = ChatPromptTemplate.from_messages(
             [
                 (

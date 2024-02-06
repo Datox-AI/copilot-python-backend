@@ -3,7 +3,7 @@ from typing import Optional
 
 from app.models.maindb import Chat
 from app.schemas.chat import ChatHistoryResponse, ChatResponse, ChatSnowflakeData
-from app.schemas.message import MessageResponse
+from app.schemas.message import AnalyticAgentMessageResponse
 
 
 class ChatMapper:
@@ -40,7 +40,7 @@ class ChatMapper:
     @staticmethod
     def map_to_chat_history_response(chat: Chat):
         message_responses = [
-            MessageResponse(
+            AnalyticAgentMessageResponse(
                 id=message.id,
                 chat_id=message.chat_id,
                 text=message.text,

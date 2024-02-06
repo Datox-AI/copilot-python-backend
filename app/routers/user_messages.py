@@ -1,10 +1,12 @@
-from typing import Annotated
+from typing import Annotated, List
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import StreamingResponse
 
-from app.schemas.message import CreateMessageRequest, UpdateMessageRequest, UserMessageResponse
+from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest, DeleteMessagesRequest
+from app.schemas.message.message_response import UserMessageResponse
+from app.schemas.message.message_mappers import MessageMapper
 from app.services.messages import UserMessageService
 
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
@@ -21,7 +23,7 @@ async def create_message(
     return StreamingResponse(response_generator, media_type="text/event-stream")
 
 
-@router.get("/{chat_id}/messages", response_model=list[UserMessageResponse])
+@router.get("/{chat_id}/messages", response_model=List[UserMessageResponse])
 async def get_messages(chat_id: UUID, message_service: UserMessageService = Depends(UserMessageService)):
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
@@ -58,7 +60,6 @@ async def update_message(
 ):
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
-    updated_message = message_service.update_message(chat_id, message_id, updated_data)
-    if not updated_message:
-        raise HTTPException(status_code=404, detail="Message not found")
-    return updated_message
+    updated_message_obj = message_service.update_message(chat_id, message_id, updated_data)
+
+    return MessageMapper.map_to_user_message_response(updated_message_obj)

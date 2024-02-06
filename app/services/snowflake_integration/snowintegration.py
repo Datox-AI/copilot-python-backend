@@ -1,13 +1,10 @@
 from typing import Annotated
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
 from urllib.parse import urlencode
 import httpx
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 import snowflake.connector
-from snowflake.connector.errors import DatabaseError, ProgrammingError, InterfaceError, OperationalError
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 from fastapi import HTTPException
@@ -17,7 +14,6 @@ from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
 import uuid
-import logging
 
 app = FastAPI()
 
