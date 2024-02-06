@@ -6,6 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest, DeleteMessagesRequest
 from app.schemas.message.message_response import UserMessageResponse
+from app.schemas.message.message_mappers import MessageMapper
 from app.services.messages import UserMessageService
 
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
@@ -49,10 +50,9 @@ async def update_message(
 ):
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
-    updated_message = message_service.update_message(chat_id, message_id, updated_data)
-    if not updated_message:
-        raise HTTPException(status_code=404, detail="Message not found")
-    return updated_message
+    updated_message_obj = message_service.update_message(chat_id, message_id, updated_data)
+
+    return MessageMapper.map_to_user_message_response(updated_message_obj)
 
 
 @router.delete("/{chat_id}/messages/batch", status_code=status.HTTP_204_NO_CONTENT)
@@ -60,7 +60,7 @@ async def delete_messages_batch(
     chat_id: UUID, request: DeleteMessagesRequest, message_service: UserMessageService = Depends(UserMessageService)
 ):
     print("HERE")
-    
+
     if not message_service.check_chat_exists(chat_id):
         raise HTTPException(status_code=404, detail="Chat not found")
     message_service.delete_messages_batch(chat_id, request)

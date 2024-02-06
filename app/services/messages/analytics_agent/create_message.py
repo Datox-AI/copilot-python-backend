@@ -32,7 +32,9 @@ class AnalyticsAgentMessageCreateService:
         if not chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
         if chat_obj.type != ChatType.DataAnalytics:
-            raise HTTPException(status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type")
+            raise HTTPException(
+                status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
+            )
 
     def create_user_message(
         self,
@@ -69,11 +71,10 @@ class AnalyticsAgentMessageCreateService:
         self.session.add(new_agent_message)
         self.session.commit()
 
-
-    def get_messages(self, chat_id: UUID):
-        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
+    def get_messages(self):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not chat_obj:
-            raise HTTPException(status_code=400, detail=f"Chat object under chat id: {chat_id} does not exist")
-        message_objs = self.session.query(Message).filter(Message.chat_id == chat_id)
+            raise HTTPException(status_code=400, detail=f"Chat object under chat id: {self.chat_id} does not exist")
+        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id)
 
         return [MessageMapper.map_to_analytic_agent_message_response(message_obj) for message_obj in message_objs]

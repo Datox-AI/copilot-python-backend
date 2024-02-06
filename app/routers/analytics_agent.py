@@ -105,12 +105,10 @@ async def agent_endpoint(
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
 
-
-
 @router.get("/{chat_id}/messages", response_model=list[AnalyticAgentMessageResponse])
 async def get_messages(
     chat_id: UUID,
     get_message_service: Annotated[AnalyticsAgentMessageCreateService, Depends()],
 ):
     # return None
-    return get_message_service.get_messages(chat_id=chat_id)
+    return get_message_service.get_messages()

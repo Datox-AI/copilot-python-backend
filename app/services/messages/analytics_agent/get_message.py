@@ -30,8 +30,9 @@ class MessageGetService:
         if not chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
         if chat_obj.type != ChatType.DataAnalytics:
-            raise HTTPException(status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type")
-
+            raise HTTPException(
+                status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
+            )
 
     def get_messages(self, chat_id: UUID):
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()

@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
-from app.schemas.message import CreateMessageRequest, UpdateMessageRequest, RAGAgentMessageResponse
+from app.schemas.message import CreateMessageRequest, RAGAgentMessageResponse
 from app.services.messages.rag_agent.message_service import RAGAgentMessageService
 
 
