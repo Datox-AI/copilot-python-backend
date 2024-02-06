@@ -13,7 +13,7 @@ from app.models.maindb import Chat, Message, MessageSharepointDocument
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
-from app.infrastructure.rag_agent.agent_service import RAGAgent
+from app.infrastructure.RAG_agent.agent_service import RAGAgent
 
 
 class RAGAgentMessageService:
