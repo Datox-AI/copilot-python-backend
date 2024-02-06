@@ -21,12 +21,12 @@ from langchain.agents.format_scratchpad import format_log_to_messages
 from langchain.agents.json_chat.prompt import TEMPLATE_TOOL_RESPONSE
 
 
-from app.infrastructure.rag_agent.prompts.system_prompt import (
+from app.infrastructure.RAG_agent.prompts.system_prompt import (
     SYSTEM_MESSAGE_TEMPLATE,
     TOOLS_TEMPLATE,
     RETRIEVER_PROMPT,
 )
-from app.infrastructure.rag_agent.output_parser import CustomJSONAgentOutputParser
+from app.infrastructure.RAG_agent.output_parser import CustomJSONAgentOutputParser
 from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
 
 load_dotenv()
