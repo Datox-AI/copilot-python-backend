@@ -15,16 +15,20 @@ class ChatStreamInterface(ABC):
 
 class OpenAIChatStream:
     # Class variables for openai key and  etc
-    api_key = os.getenv("GPT35_TURBO_AZURE_OPENAI_API_KEY")
-    api_endpoint = os.getenv("GPT35_TURBO_AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("GPT35_TURBO_OPENAI_API_VERSION")
+    api_key = os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY")
+    api_endpoint = os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("GPT4_TURBO_OPENAI_API_VERSION")
+    api_model = os.getenv("GPT4_TURBO_DEPLOYMENT_NAME")
 
-    def __init__(self, model: str):
-        self.model = model
+
+    def __init__(self):
+        self.model = self.api_model
         # Setting the API key and base URL for each instance
         self.client = openai.AzureOpenAI(
             api_key=self.api_key, api_version=self.api_version, azure_endpoint=self.api_endpoint
         )
+        print(f"Endpoint: {self.api_endpoint}, Key: {self.api_key}, Version: {self.api_version}")
+
 
     def stream_responses(self, prompt: str):
         openai_stream = self.client.chat.completions.create(

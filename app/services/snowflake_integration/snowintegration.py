@@ -97,7 +97,7 @@ class SnowflakeIntegrationService:
             self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
         )
         if existing_snowflake_identifier_obj:
-            raise HTTPException(status_code=404, detail="User has already snowflake identifier object")
+            raise HTTPException(status_code=400, detail="User has already snowflake identifier object")
 
         snowflake_identifier_obj = SnowflakeIdentifier(
             id=uuid.uuid4(),

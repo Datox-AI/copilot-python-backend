@@ -29,7 +29,7 @@ class UserMessageService:
         self.session = session
         self.user = user
         self.chat_id = chat_id
-        self.streamer = OpenAIChatStream(model="gpt-35-turbo-16k")
+        self.streamer = OpenAIChatStream()
 
     def create_message(self, request: CreateMessageRequest):
         new_user_message = Message(
