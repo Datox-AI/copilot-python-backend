@@ -29,7 +29,6 @@ class OpenAIChatStream:
         )
         print(f"Endpoint: {self.api_endpoint}, Key: {self.api_key}, Version: {self.api_version}")
 
-
     def stream_responses(self, prompt: str):
         openai_stream = self.client.chat.completions.create(
             model=self.model,
