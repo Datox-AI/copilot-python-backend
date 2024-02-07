@@ -25,6 +25,7 @@ class OpenAIChatStream:
         self.client = openai.AzureOpenAI(
             api_key=self.api_key, api_version=self.api_version, azure_endpoint=self.api_endpoint
         )
+        print(f"Endpoint: {self.api_endpoint}, Key: {self.api_key}, Version: {self.api_version}")
 
     def stream_responses(self, prompt: str):
         openai_stream = self.client.chat.completions.create(
