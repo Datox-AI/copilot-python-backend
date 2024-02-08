@@ -32,6 +32,7 @@ class UserMessageService:
         self.streamer = OpenAIChatStream()
 
     def create_message(self, request: CreateMessageRequest):
+        # Сохраняем сообщение пользователя
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
@@ -40,9 +41,25 @@ class UserMessageService:
             role=MessageRole.User,
         )
         self.session.add(new_user_message)
-        response_generator = self.streamer.stream_responses(new_user_message.text)
         self.session.commit()
-        return response_generator
+
+        def response_generator():
+            full_response = ""
+            for response_text in self.streamer.stream_responses(request.prompt):
+                full_response += response_text
+                yield json.dumps({"Type": "Text", "Text": response_text})
+
+            new_assistent_message = Message(
+                id=uuid.uuid4(),
+                chat_id=self.chat_id,
+                text=full_response,
+                status=MessageStatus.Success,
+                role=MessageRole.Assistant,
+            )
+            self.session.add(new_assistent_message)
+            self.session.commit()
+
+        return response_generator()
 
     def get_messages(self, chat_id: UUID):
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
