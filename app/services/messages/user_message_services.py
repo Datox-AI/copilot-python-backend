@@ -47,7 +47,8 @@ class UserMessageService:
             full_response = ""
             for response_text in self.streamer.stream_responses(request.prompt):
                 full_response += response_text
-                yield json.dumps({"Type": "Text", "Text": response_text})
+                formatted_response = f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+                yield formatted_response
 
             new_assistent_message = Message(
                 id=uuid.uuid4(),
