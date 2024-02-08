@@ -5,6 +5,7 @@ from urllib.parse import urlencode
 import httpx
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 import snowflake.connector
+from snowflake.connector.errors import ForbiddenError, DatabaseError
 from sqlalchemy.orm import Session
 from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 from fastapi import HTTPException
@@ -228,9 +229,22 @@ class SnowflakeIntegrationService:
     # Creates a connection to Snowflake
     def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
         print(snowflake_account, "  account sn")
-        ctx = snowflake.connector.connect(account=snowflake_account, authenticator="oauth", token=oauth_token)
-        return ctx
-
+        try:
+            ctx = snowflake.connector.connect(account=snowflake_account, authenticator="oauth", token=oauth_token)
+            return ctx
+        except DatabaseError as e:
+            error_message = e.raw_msg
+            if "OAuth access token expired" in error_message:
+                raise HTTPException(status_code=401, detail="Snowflake token expired")
+            elif "Invalid OAuth access token" in error_message:
+                print(oauth_token, " token")
+                raise HTTPException(status_code=400, detail="Invalid snowflake token")
+            else:
+                raise HTTPException(status_code=500, detail=f"Snowflake connection failed: {e}")
+        except ForbiddenError as e:
+            raise HTTPException(status_code=400, detail=f"Snowflake account is not correct: {snowflake_account}")
+        
+        
     def _create_warehouse(self, warehouse_name):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
