@@ -12,6 +12,7 @@ from app.enums.chat_enums import ChatType
 from app.models.maindb import Chat, Message, MessageSharepointDocument
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
+from app.schemas.chat import ChatMapper
 from app.shared.auth.azure_scheme import current_user
 from app.infrastructure.RAG_agent.agent_service import RAGAgent
 
@@ -30,10 +31,10 @@ class RAGAgentMessageService:
         self.chat_id = chat_id
 
     def _check_chat_id(self, chat_id):
-        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
-        if not chat_obj:
+        self.chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
+        if not self.chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
-        if chat_obj.type != ChatType.FileSearch:
+        if self.chat_obj.type != ChatType.FileSearch:
             raise HTTPException(
                 status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
             )
@@ -82,6 +83,5 @@ class RAGAgentMessageService:
         return MessageMapper.map_to_RAG_agent_message_response(message=new_agent_message)
 
     def get_messages(self):
-        # getting messages
         message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id)
-        return [MessageMapper.map_to_RAG_agent_message_response(message_obj) for message_obj in message_objs]
+        return ChatMapper.map_to_RAG_agent_chat_history_response(chat=self.chat_obj, messages=message_objs)

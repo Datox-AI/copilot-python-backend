@@ -72,8 +72,3 @@ class GetChat:
             ChatMapper.map_to_chat_response(chat, messages_count, files_count, last_message)
             for chat, messages_count, files_count, last_message in result
         ]
-
-    def get_chat_history(self, chat_id: UUID) -> ChatHistoryResponse:
-        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
-
-        return ChatMapper.map_to_chat_history_response(chat=chat_obj)
