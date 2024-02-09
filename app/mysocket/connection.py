@@ -21,6 +21,7 @@ class ConnectionManager:
         code: int = 1000,
         reason: str = None,
     ):
+        print(f"closing....   reason: {reason}")
         if not closed:
             try:
                 await websocket.close(code=code, reason=reason)

@@ -37,7 +37,7 @@ async def agent_endpoint(
         chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
     )
     is_valid = await validator.validate()
-    print(validator.error_message, " ---error")
+    print(validator.error_message, " --- validation error")
     if is_valid:
         # getting the validated user from validator
         user = validator.validated_user
@@ -54,11 +54,13 @@ async def agent_endpoint(
                     await manager.send_error_message(message=connection_error_message, websocket=websocket)
                     # await websocket.send_json({"status": connection_error_message})
                     snowflake_token_data = await websocket.receive_json()
+                    print(type(snowflake_token_data), snowflake_token_data, " ------ received snowflake data")
                     is_valid, error_message = agent_engine_manager.create_engine(
                         snowflake_token_data=snowflake_token_data, chat_obj=chat_obj
                     )
                     if not is_valid:
                         connection_error_message = f"Failed to establish database connection: {error_message}"
+                        print(connection_error_message)
                         continue
                     # Initialize the agent only if it's not already initialized or if the engine was recreated
 
