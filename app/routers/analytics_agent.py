@@ -10,8 +10,7 @@ from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
-from app.services.messages.analytics_agent.create_message import AnalyticsAgentMessageCreateService
-from app.services.messages.analytics_agent.get_message import MessageGetService
+from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
 from app.schemas.message import AnalyticAgentMessageResponse
 
@@ -107,7 +106,7 @@ async def agent_endpoint(
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
 
-@router.get("/{chat_id}/messages", response_model=list[AnalyticAgentMessageResponse])
+@router.get("/{chat_id}/messages")
 async def get_messages(
     chat_id: UUID,
     get_message_service: Annotated[AnalyticsAgentMessageCreateService, Depends()],

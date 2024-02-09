@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Optional
+from typing import List
 
-from app.models.maindb import Chat
+from app.models.maindb import Chat, Message
 from app.schemas.chat import ChatHistoryResponse, ChatResponse, ChatSnowflakeData
-from app.schemas.message import AnalyticAgentMessageResponse
+from app.schemas.message import MessageMapper
 
 
 class ChatMapper:
@@ -38,16 +38,11 @@ class ChatMapper:
         )
 
     @staticmethod
-    def map_to_chat_history_response(chat: Chat):
+    def map_to_data_analytics_chat_history_response(chat: Chat, messages: List[Message]):
         message_responses = [
-            AnalyticAgentMessageResponse(
-                id=message.id,
-                chat_id=message.chat_id,
-                text=message.text,
-                role=message.role,
-            )
-            for message in chat.messages
+            MessageMapper.map_to_analytic_agent_message_response(message=message_obj) for message_obj in messages
         ]
+
         snowflake_data_response = ChatSnowflakeData(
             id=chat.snowflake_data.id,
             snowflake_account=chat.snowflake_data.snowflake_account,
@@ -62,5 +57,19 @@ class ChatMapper:
             created=chat.created_at,
             type=chat.type,
             snowflake_data=snowflake_data_response,
+            messages=message_responses,
+        )
+
+    @staticmethod
+    def map_to_RAG_agent_chat_history_response(chat: Chat, messages: List[Message]):
+        message_responses = [
+            MessageMapper.map_to_RAG_agent_message_response(message=message_obj) for message_obj in messages
+        ]
+
+        return ChatHistoryResponse(
+            id=chat.id,
+            name=chat.name,
+            created=chat.created_at,
+            type=chat.type,
             messages=message_responses,
         )
