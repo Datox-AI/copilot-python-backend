@@ -1,8 +1,8 @@
 import json
 import uuid
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
-from datetime import datetime
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -12,8 +12,7 @@ from app.enums.message_enums import MessageRole, MessageStatus
 from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
-from app.schemas.message.message_request import CreateMessageRequest, DeleteMessagesRequest, UpdateMessageRequest
-
+from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
 from app.shared.auth.azure_scheme import current_user
 
 from .message_create_stream import OpenAIChatStream
@@ -32,7 +31,10 @@ class UserMessageService:
         self.streamer = OpenAIChatStream()
 
     def create_message(self, request: CreateMessageRequest):
-        # Сохраняем сообщение пользователя
+        # Загрузка истории сообщений из базы данных
+        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
+
+        # Сохранение нового пользовательского сообщения
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
@@ -43,21 +45,34 @@ class UserMessageService:
         self.session.add(new_user_message)
         self.session.commit()
 
+        # Генерация ответа и follow-up вопросов
         def response_generator():
             full_response = ""
-            for response_text in self.streamer.stream_responses(request.prompt):
-                full_response += response_text
-                formatted_response = f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
-                yield formatted_response
+            for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
+                message_objs, request.prompt
+            ):
+                if error_message:
+                    yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
+                    continue  # Пропускаем оставшуюся часть цикла в случае ошибки
 
-            new_assistent_message = Message(
+                if response_text and not is_question:
+                    full_response += response_text
+                    yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+
+                if is_question:
+                    yield f"data: {json.dumps({'Questions': follow_up_questions, 'Type': 'Questions'})}\n\n"
+                # Создание и сохранение нового сообщения от ассистента с follow-up вопросами
+
+            new_assistant_message = Message(
                 id=uuid.uuid4(),
                 chat_id=self.chat_id,
                 text=full_response,
+                follow_up_questions=follow_up_questions,
                 status=MessageStatus.Success,
                 role=MessageRole.Assistant,
+                prompt_id=new_user_message.id,
             )
-            self.session.add(new_assistent_message)
+            self.session.add(new_assistant_message)
             self.session.commit()
 
         return response_generator()

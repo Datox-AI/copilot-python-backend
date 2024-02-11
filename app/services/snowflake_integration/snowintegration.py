@@ -1,20 +1,19 @@
+import uuid
 from typing import Annotated
-from fastapi import Depends
-from fastapi import FastAPI, HTTPException
 from urllib.parse import urlencode
+
 import httpx
-from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
 import snowflake.connector
-from snowflake.connector.errors import ForbiddenError, DatabaseError
+from fastapi import Depends, FastAPI, HTTPException
+from httpx import ConnectTimeout, HTTPStatusError, NetworkError, ReadTimeout
+from snowflake.connector.errors import DatabaseError, ForbiddenError
 from sqlalchemy.orm import Session
-from httpx import HTTPStatusError, NetworkError, ConnectTimeout, ReadTimeout
-from fastapi import HTTPException
-from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
+
 from app.backend.session import create_maindb_session
-from app.shared.auth.azure_scheme import current_user
+from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
-import uuid
+from app.shared.auth.azure_scheme import current_user
 
 app = FastAPI()
 
@@ -243,8 +242,7 @@ class SnowflakeIntegrationService:
                 raise HTTPException(status_code=500, detail=f"Snowflake connection failed: {e}")
         except ForbiddenError as e:
             raise HTTPException(status_code=400, detail=f"Snowflake account is not correct: {snowflake_account}")
-        
-        
+
     def _create_warehouse(self, warehouse_name):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 

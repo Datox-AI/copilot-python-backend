@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 from app.enums.message_enums import MessageRole
 from app.schemas.base import BaseSchema
 
@@ -43,5 +43,6 @@ class UserMessageResponse(BaseSchema):
     pinned: bool | None
     pinned_date: datetime.datetime | None
     reply_to: UUID | None
-    questions: list[str] | None
+    questions: Optional[List[str]] = None
     created_at: datetime.datetime
+    prompt_id: UUID | None

@@ -1,9 +1,11 @@
+import json
+
 from app.models.maindb import Message
 from app.schemas.message.message_response import (
     AnalyticAgentMessageResponse,
-    UserMessageResponse,
     RAGAgentMessageResponse,
     SharePointFilesResponse,
+    UserMessageResponse,
 )
 
 
@@ -54,6 +56,7 @@ class MessageMapper:
             pinned_date=message.pinned_date,
             status=message.status,
             reply_to=message.reply_to_id,
-            questions=message.reply_to_message,
+            questions=json.loads(message.follow_up_questions) if message.follow_up_questions else None,
             created_at=message.created_at,
+            prompt_id=message.prompt_id,
         )
