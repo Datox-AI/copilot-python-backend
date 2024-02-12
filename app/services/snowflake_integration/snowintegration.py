@@ -207,7 +207,7 @@ class SnowflakeIntegrationService:
 
     # Refresh access token logic
     async def refresh_access_token_logic(self, refresh_token: str):
-        snowflake_identifier_obj = self._get_snowflake_identifier_obj()
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -223,7 +223,8 @@ class SnowflakeIntegrationService:
                 return response.json()
 
         except Exception as e:
-            self.handle_common_errors(e)
+            print(e)
+            raise HTTPException(status_code=400, detail="Invalid refresh token")
 
     # Creates a connection to Snowflake
     def create_snowflake_connection(self, oauth_token: str, snowflake_account: str):
@@ -357,7 +358,7 @@ class SnowflakeIntegrationService:
 
     # Endpoint to list views of a specific schema in a Snowflake database
     def change_default_role_logic(self, new_role: str, token: str):
-        snowflake_identifier_obj = self._get_snowflake_identifier_obj()
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         if not snowflake_identifier_obj:
             raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
 

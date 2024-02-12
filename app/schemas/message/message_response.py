@@ -11,9 +11,9 @@ class AnalyticAgentMessageResponse(BaseSchema):
     text: str
     role: MessageRole
     created_at: datetime.datetime
-    follow_up_questions: str | None
-    sql_query: str | None
-    stored_file_id: str | None
+    follow_up_questions: Optional[str] = None
+    sql_query: Optional[str] = None
+    stored_file_id: Optional[str] = None
 
 
 class SharePointFilesResponse(BaseSchema):

@@ -12,6 +12,7 @@ from app.enums.message_enums import MessageRole, MessageStatus
 from app.models.maindb import Message, Chat
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
+from app.schemas.chat import ChatMapper
 from app.shared.auth.azure_scheme import current_user
 
 
@@ -76,5 +77,4 @@ class AnalyticsAgentMessageCreateService:
         if not chat_obj:
             raise HTTPException(status_code=400, detail=f"Chat object under chat id: {self.chat_id} does not exist")
         message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id)
-
-        return [MessageMapper.map_to_analytic_agent_message_response(message_obj) for message_obj in message_objs]
+        return ChatMapper.map_to_data_analytics_chat_history_response(chat=chat_obj, messages=message_objs)

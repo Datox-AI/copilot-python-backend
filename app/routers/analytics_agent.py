@@ -10,8 +10,7 @@ from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
-from app.services.messages.analytics_agent.create_message import AnalyticsAgentMessageCreateService
-from app.services.messages.analytics_agent.get_message import MessageGetService
+from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
 from app.schemas.message import AnalyticAgentMessageResponse
 
@@ -37,7 +36,7 @@ async def agent_endpoint(
         chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
     )
     is_valid = await validator.validate()
-    print(validator.error_message, " ---error")
+    print(validator.error_message, " --- validation error")
     if is_valid:
         # getting the validated user from validator
         user = validator.validated_user
@@ -54,11 +53,13 @@ async def agent_endpoint(
                     await manager.send_error_message(message=connection_error_message, websocket=websocket)
                     # await websocket.send_json({"status": connection_error_message})
                     snowflake_token_data = await websocket.receive_json()
+                    print(type(snowflake_token_data), snowflake_token_data, " ------ received snowflake data")
                     is_valid, error_message = agent_engine_manager.create_engine(
                         snowflake_token_data=snowflake_token_data, chat_obj=chat_obj
                     )
                     if not is_valid:
                         connection_error_message = f"Failed to establish database connection: {error_message}"
+                        print(connection_error_message)
                         continue
                     # Initialize the agent only if it's not already initialized or if the engine was recreated
 
@@ -105,7 +106,7 @@ async def agent_endpoint(
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
 
-@router.get("/{chat_id}/messages", response_model=list[AnalyticAgentMessageResponse])
+@router.get("/{chat_id}/messages")
 async def get_messages(
     chat_id: UUID,
     get_message_service: Annotated[AnalyticsAgentMessageCreateService, Depends()],

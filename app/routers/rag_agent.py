@@ -17,7 +17,7 @@ async def create_message(
     return message_service.create_user_message(message_text=request.prompt)
 
 
-@router.get("/{chat_id}/messages", response_model=List[RAGAgentMessageResponse])
+@router.get("/{chat_id}/messages")
 async def get_messages(
     chat_id: UUID,
     get_message_service: Annotated[RAGAgentMessageService, Depends()],

@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, List, Optional
 from uuid import UUID
 
 from app.enums import ChatType
