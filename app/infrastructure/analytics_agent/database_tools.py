@@ -26,7 +26,7 @@ class CustomSQLDatabase(SQLDatabase):
         message_id: str,
         fetch="all",
     ) -> str:
-        """Execute a SQL command, save the result and return a string representing the results and stored_id.
+        """Execute a SQL command, save the result and return a string representing the results and stored_file_id.
 
         If the statement returns rows, a string of the results is returned.
         If the statement returns no rows, an empty string is returned.
@@ -34,7 +34,7 @@ class CustomSQLDatabase(SQLDatabase):
         result = self._execute(command, fetch)
         # uploading the result
         df = pd.DataFrame(result)
-        stored_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
+        stored_file_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
         # Convert columns values to string to avoid issues with sqlalchemy
         # truncating text
         res = [tuple(truncate_word(c, length=self._max_string_length) for c in r.values()) for r in result]
@@ -46,9 +46,9 @@ class CustomSQLDatabase(SQLDatabase):
                 res = [
                     tuple(truncate_word(c, length=self._max_string_length) for c in r.values()) for r in first_ten_rows
                 ]
-                return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {stored_id}"
+                return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {stored_file_id}"
 
-            return f"Data: {res}\nStored ID: {stored_id}"
+            return f"Data: {res}\nStored ID: {stored_file_id}"
 
     def run_and_save_no_throw(
         self,
