@@ -33,7 +33,7 @@ class AzureBlobStorageManager:
             if blob.name != file_full_name:
                 self.container_client.delete_blob(blob=blob)
 
-    def download_csv_file(self, stored_file_id: str):    
+    def download_csv_file(self, stored_file_id: str):
         try:
             downloaded_stream_file = self.container_client.download_blob(blob=stored_file_id)
         except ResourceNotFoundError:
@@ -55,4 +55,3 @@ class AzureBlobStorageManager:
         stream = blob_client.download_blob().readall()
 
         return stream, media_type
-    

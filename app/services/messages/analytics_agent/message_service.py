@@ -28,7 +28,6 @@ class AnalyticsAgentMessageCreateService:
         self.chat_id = chat_id
         print(self.chat_id, " chat_id")
 
-
     def create_user_message(
         self,
         message_text: str,

@@ -118,9 +118,6 @@ async def get_messages(
 
 @router.post("/{chat_id}/get_stored_data")
 async def get_stored_data(
-    chat_id: UUID, 
-    request: FileDownloadRequest, 
-    file_service: Annotated[AnalyticsAgentFileService, Depends()]
+    chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
 ):
     return file_service.download_file(request.stored_file_id)
-    

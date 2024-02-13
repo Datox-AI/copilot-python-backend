@@ -21,7 +21,9 @@ router = APIRouter(prefix="/api/files", tags=["Files"])
 
 
 @router.get("/download/{file_id}", status_code=status.HTTP_200_OK)
-async def download_file(response: Response, file_id: UUID, file_download_service: Annotated[UserFileService, Depends()]):
+async def download_file(
+    response: Response, file_id: UUID, file_download_service: Annotated[UserFileService, Depends()]
+):
     try:
         file_data, media_type = file_download_service.download_file(file_id=file_id)
         file = io.BytesIO(file_data)
