@@ -8,3 +8,7 @@ class OAuthConfig(BaseSchema):
     client_secret: str
     token_endpoint: str
     warehouse: str
+
+
+class RefreshTokenBody(BaseSchema):
+    refresh_token: str

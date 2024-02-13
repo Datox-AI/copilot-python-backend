@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from app.schemas.snowintegration import OAuthConfig
+from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
 
 router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integration"])
@@ -40,8 +40,9 @@ async def oauth_callback(code: str, snow_integration_service: Annotated[Snowflak
 
 @router.post("/refresh_token")
 async def refresh_access_token(
-    refresh_token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+    request_body: RefreshTokenBody, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
 ):
+    refresh_token = request_body.refresh_token
     return await snow_integration_service.refresh_access_token_logic(refresh_token)
 
 
