@@ -53,7 +53,7 @@ class UserMessageService:
 
             full_response = ""
             for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
-                message_objs, request.prompt, reply_message
+                message_objs, request.prompt, reply_message.text
             ):
                 if error_message:
                     yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
