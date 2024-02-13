@@ -89,7 +89,9 @@ class UserMessageService:
         chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
         if not chat_obj:
             raise HTTPException(status_code=400, detail=f"Chat object under chat id: {chat_id} does not exist")
-        message_objs = self.session.query(Message).filter(Message.chat_id == chat_id)
+        message_objs = (
+            self.session.query(Message).filter(Message.chat_id == chat_id).order_by(Message.created_at.asc())
+        )
 
         return [MessageMapper.map_to_user_message_response(message_obj) for message_obj in message_objs]
 
