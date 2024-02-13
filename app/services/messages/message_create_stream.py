@@ -68,7 +68,7 @@ class OpenAIChatStream:
             Please avoid adding any additional text outside of the JSON structure.
             """
 
-    def stream_responses(self, messages: list, prompt: str):
+    def stream_responses(self, messages: list, prompt: str, reply_message: str = None):
         """
         Генерирует ответы на заданный prompt в реальном времени.
         Этот метод должен быть асинхронным генератором, который yield'ит текст ответа по мере его генерации.
@@ -91,6 +91,13 @@ class OpenAIChatStream:
         message_history.append(
             {"role": "user", "content": prompt},
         )
+        if reply_message:
+            message_history.append(
+                {
+                    "role": "system",
+                    "content" : "User is referring to this message: {}".format(reply_message)
+                }
+            )
         try:
             openai_stream = self.client.chat.completions.create(
                 model=self.model,
