@@ -1,5 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import backref, foreign, relationship, remote
 
 from app.enums.message_enums import MessageRole, MessageStatus
@@ -18,10 +18,10 @@ class Message(BaseDelete):
     pinned_date = Column(DateTime, nullable=True)
     status = Column(Enum(MessageStatus))
     role = Column(Enum(MessageRole))
-    follow_up_questions = Column(String, nullable=True)
     search_query = Column(String, nullable=True)
     sql_query = Column(String, nullable=True)
     stored_file_id = Column(String, nullable=True)
+    follow_up_questions = Column(JSONB, nullable=True)
 
     reply_to_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
     prompt_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)

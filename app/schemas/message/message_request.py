@@ -11,7 +11,7 @@ class CreateMessageRequest(BaseModel):
 
 
 class UpdateMessageRequest(BaseModel):
-    id: UUID
+    id: Optional[UUID] = None
     pinned: bool
 
     class Config:
