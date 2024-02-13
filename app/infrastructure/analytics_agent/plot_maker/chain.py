@@ -1,7 +1,7 @@
 import re, os
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate
-from langchain_community.chat_models import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
 
 from app.infrastructure.analytics_agent.plot_maker.helpers import extract_python_code
 from app.infrastructure.analytics_agent.prompts.plot_maker_prompts import human_input, system_message

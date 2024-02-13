@@ -28,14 +28,6 @@ class AnalyticsAgentMessageCreateService:
         self.chat_id = chat_id
         print(self.chat_id, " chat_id")
 
-    def _check_chat_id(self, chat_id):
-        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
-        if not chat_obj:
-            raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
-        if chat_obj.type != ChatType.DataAnalytics:
-            raise HTTPException(
-                status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
-            )
 
     def create_user_message(
         self,

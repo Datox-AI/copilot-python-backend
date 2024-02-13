@@ -8,7 +8,7 @@ from langchain.agents import AgentExecutor, LLMSingleActionAgent
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.chains.llm import LLMChain
 from langchain.memory import ConversationTokenBufferMemory
-from langchain_community.chat_models import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import SQLAlchemyError
@@ -103,7 +103,7 @@ class DataAnalyticAgent:
 
         if agent_response["stored_file_id"] is not None:
             self.azure_blob_storage_manager.delete_extra_files(
-                message_id=message_id_str, store_id=agent_response["stored_file_id"]
+                message_id=message_id_str, stored_file_id=agent_response["stored_file_id"]
             )
             agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
             # is_agent_response_valid = False
