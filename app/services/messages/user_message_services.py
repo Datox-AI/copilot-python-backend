@@ -31,9 +31,6 @@ class UserMessageService:
         self.streamer = OpenAIChatStream()
 
     def create_message(self, request: CreateMessageRequest):
-        # Загрузка истории сообщений из базы данных
-        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
-
         # Сохранение нового пользовательского сообщения
         new_user_message = Message(
             id=uuid.uuid4(),
@@ -41,15 +38,22 @@ class UserMessageService:
             text=request.prompt,
             status=MessageStatus.Success,
             role=MessageRole.User,
+            reply_to_id=request.replyTo if request.replyTo else None,
         )
         self.session.add(new_user_message)
         self.session.commit()
 
         # Генерация ответа и follow-up вопросов
         def response_generator():
+            reply_message = None
+            if request.replyTo:
+                reply_message = self.session.query(Message).filter(Message.id == request.replyTo).first()
+
+            message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
+
             full_response = ""
             for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
-                message_objs, request.prompt
+                message_objs, request.prompt, reply_message
             ):
                 if error_message:
                     yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
