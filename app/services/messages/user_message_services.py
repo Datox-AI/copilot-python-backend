@@ -38,7 +38,7 @@ class UserMessageService:
             text=request.prompt,
             status=MessageStatus.Success,
             role=MessageRole.User,
-            reply_to_id=request.replyTo if request.replyTo else None
+            reply_to_id=request.replyTo if request.replyTo else None,
         )
         self.session.add(new_user_message)
         self.session.commit()
