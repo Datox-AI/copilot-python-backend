@@ -116,10 +116,7 @@ class AgentSnowflakeEngineManager:
     def __init__(self):
         self.engine = None
 
-    def create_engine(self, snowflake_token_data: dict, chat_obj: Chat):
-        if "oauth_token" not in snowflake_token_data:
-            error_message = "Missing required 'oauth_token' value"
-            return False, error_message
+    def create_engine(self, snowflake_token: str, chat_obj: Chat):
         chat_snowflake_data_obj = chat_obj.snowflake_data
 
         snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
@@ -127,7 +124,7 @@ class AgentSnowflakeEngineManager:
             chat_snowflake_data_obj.database_name,
             chat_snowflake_data_obj.schema,
             chat_snowflake_data_obj.warehouse,
-            urllib.parse.quote(snowflake_token_data["oauth_token"]),
+            urllib.parse.quote(snowflake_token),
         )
         engine = create_engine(snowflake_connection_url)
         try:
