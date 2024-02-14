@@ -13,8 +13,8 @@ router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integra
 
 # Endpoint to initialize OAuth configuration
 @router.post("/init_oauth")
-async def init_oauth(config: OAuthConfig, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return await snow_integration_service.init_oauth_logic(config)
+def init_oauth(config: OAuthConfig, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+    return snow_integration_service.init_oauth_logic(config)
 
 
 @router.get("/get_oauth")

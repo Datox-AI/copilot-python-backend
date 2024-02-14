@@ -1,27 +1,38 @@
 import uuid
 from typing import Annotated
 from urllib.parse import urlencode
-
 import httpx
 import snowflake.connector
 from fastapi import Depends, FastAPI, HTTPException
 from httpx import ConnectTimeout, HTTPStatusError, NetworkError, ReadTimeout
 from snowflake.connector.errors import DatabaseError, ForbiddenError
 from sqlalchemy.orm import Session
-
 from app.backend.session import create_maindb_session
 from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
 from app.shared.auth.azure_scheme import current_user
+import requests
+import logging
 
+# Configure logging at the start of your script/application
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = FastAPI()
 
 
 REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake"
 
+def is_url_reachable(url: str) -> bool:
 
+    try:
+        response = requests.get(url, timeout=5)  # Timeout set to 5 seconds
+        return response.status_code == 200
+    except requests.exceptions.RequestException as e:
+        # Handles exceptions like connection errors or timeouts
+        print(f"Error checking URL: {e}")
+        return False
+    
 class SnowflakeIntegrationService:
     def __init__(
         self,
@@ -91,23 +102,10 @@ class SnowflakeIntegrationService:
 
         self.session.commit()
         
-    async def verify_snowflake_authorization_endpoint(self, authorization_endpoint: str) -> bool:
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(authorization_endpoint)
-                if response.status_code == 400:
-                    return True  # Endpoint is reachable but missing required params
-                else:
-                    return False  # Unexpected response code
-            except httpx.RequestError:
-                return False  # Endpoint is not reachable
-
     # Endpoint to initialize OAuth configuration
-    async def init_oauth_logic(self, config: OAuthConfig):
+    def init_oauth_logic(self, config: OAuthConfig):
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
         # Perform the verification asynchronously
-        if not await self.verify_snowflake_authorization_endpoint(authorization_endpoint):
-            raise HTTPException(status_code=400, detail="Snowflake authorization endpoint is not reachable or incorrect.")
         existing_snowflake_identifier_obj = (
             self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
         )
@@ -138,7 +136,11 @@ class SnowflakeIntegrationService:
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
-        return {"authorization_url": authorization_url}
+        if is_url_reachable(authorization_url):
+            return {"authorization_url": authorization_url}
+        else:
+            raise HTTPException(status_code=500, detail="Authorization URL is not reachable")
+    
 
     def get_oauth_logic(self):
         existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -180,7 +182,11 @@ class SnowflakeIntegrationService:
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
-        return {"authorization_url": authorization_url}
+        # Check if the authorization URL is reachable
+        if is_url_reachable(authorization_url):
+            return {"authorization_url": authorization_url}
+        else:
+            raise HTTPException(status_code=500, detail="Please review the entered token endpoint for any typographical errors")
 
     def delete_oauth_logic(self):
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
@@ -218,7 +224,7 @@ class SnowflakeIntegrationService:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            raise HTTPException(status_code=400, detail="Code is invalid or outdated")
+            raise HTTPException(status_code=400, detail="Please review the entered client secret for any typographical errors")
 
     # Refresh access token logic
     async def refresh_access_token_logic(self, refresh_token: str):
