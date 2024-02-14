@@ -104,6 +104,11 @@ class SnowflakeIntegrationService:
         
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
+
+        if len(config.client_id) != 28:
+            raise HTTPException(status_code=400, detail="Please review Client ID for typos")
+        if len(config.client_secret) != 44:
+            raise HTTPException(status_code=400, detail="Please review Client Secret for typos")
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
         # Perform the verification asynchronously
         existing_snowflake_identifier_obj = (
@@ -161,6 +166,11 @@ class SnowflakeIntegrationService:
         )
 
     def update_oauth_logic(self, config: OAuthConfig):
+        if len(config.client_id) != 28:
+            raise HTTPException(status_code=400, detail="Please review Client ID for typos")
+        if len(config.client_secret) != 44:
+            raise HTTPException(status_code=400, detail="Please review Client Secret for typos")
+        
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
