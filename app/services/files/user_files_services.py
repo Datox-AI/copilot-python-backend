@@ -13,7 +13,7 @@ from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
 
-class FileService:
+class UserFileService:
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
@@ -33,4 +33,4 @@ class FileService:
         return FileMapper.map_to_file_response(file_obj)
 
     def download_file(self, file_id: UUID):
-        return self.blob_service.download_file(file_id=file_id)
+        return self.blob_service.download_pdf_file(file_id=file_id)

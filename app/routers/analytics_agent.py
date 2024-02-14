@@ -11,8 +11,9 @@ from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngin
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
+from app.services.files.analytics_agent_file_service import AnalyticsAgentFileService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
-from app.schemas.message import AnalyticAgentMessageResponse
+from app.schemas.data_analytics_agent.agent_request import FileDownloadRequest
 
 
 load_dotenv()
@@ -113,3 +114,10 @@ async def get_messages(
 ):
     # return None
     return get_message_service.get_messages()
+
+
+@router.post("/{chat_id}/get_stored_data")
+async def get_stored_data(
+    chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
+):
+    return file_service.download_file(request.stored_file_id)

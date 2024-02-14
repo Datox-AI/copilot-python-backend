@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 from app.schemas.files.file_response import FilesDetailResponse
-from app.services.files.files_services import FileService
+from app.services.files.user_files_services import UserFileService
 
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
@@ -21,7 +21,9 @@ router = APIRouter(prefix="/api/files", tags=["Files"])
 
 
 @router.get("/download/{file_id}", status_code=status.HTTP_200_OK)
-async def download_file(response: Response, file_id: UUID, file_download_service: Annotated[FileService, Depends()]):
+async def download_file(
+    response: Response, file_id: UUID, file_download_service: Annotated[UserFileService, Depends()]
+):
     try:
         file_data, media_type = file_download_service.download_file(file_id=file_id)
         file = io.BytesIO(file_data)
@@ -31,7 +33,7 @@ async def download_file(response: Response, file_id: UUID, file_download_service
 
 
 @router.post("/files", response_model=FilesDetailResponse, status_code=status.HTTP_201_CREATED)
-async def upload_file(file_upload_service: Annotated[FileService, Depends()], file: UploadFile = File(...)):
+async def upload_file(file_upload_service: Annotated[UserFileService, Depends()], file: UploadFile = File(...)):
     try:
         return file_upload_service.upload_file(file)
     except Exception as e:
