@@ -16,6 +16,7 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
 import uuid
 
+
 app = FastAPI()
 
 
@@ -90,10 +91,24 @@ class SnowflakeIntegrationService:
                 warehouse_obj.selected = False
 
         self.session.commit()
+        
+    async def verify_snowflake_authorization_endpoint(self, authorization_endpoint: str) -> bool:
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(authorization_endpoint)
+                if response.status_code == 400:
+                    return True  # Endpoint is reachable but missing required params
+                else:
+                    return False  # Unexpected response code
+            except httpx.RequestError:
+                return False  # Endpoint is not reachable
 
     # Endpoint to initialize OAuth configuration
-    def init_oauth_logic(self, config: OAuthConfig):
+    async def init_oauth_logic(self, config: OAuthConfig):
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
+        # Perform the verification asynchronously
+        if not await self.verify_snowflake_authorization_endpoint(authorization_endpoint):
+            raise HTTPException(status_code=400, detail="Snowflake authorization endpoint is not reachable or incorrect.")
         existing_snowflake_identifier_obj = (
             self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
         )
