@@ -5,7 +5,7 @@ from uuid import UUID
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
-
+from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
 from app.mysocket.connection import ConnectionManager
@@ -53,17 +53,24 @@ async def agent_endpoint(
                 if not agent_engine_manager.is_engine_alive():
                     await manager.send_error_message(message=connection_error_message, websocket=websocket)
                     # await websocket.send_json({"status": connection_error_message})
-                    snowflake_token_data = await websocket.receive_json()
+                    try:
+                        snowflake_token_data = await websocket.receive_json()
+                        snowflake_token = snowflake_token_data["oauth_token"]
+                    except JSONDecodeError:
+                        await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
+                        break
+                    except KeyError:
+                        await manager.disconnect(websocket=websocket, code=1007, reason="'oauth_token' key not found in json object")
+                        break
                     print(type(snowflake_token_data), snowflake_token_data, " ------ received snowflake data")
                     is_valid, error_message = agent_engine_manager.create_engine(
-                        snowflake_token_data=snowflake_token_data, chat_obj=chat_obj
+                        snowflake_token=snowflake_token, chat_obj=chat_obj
                     )
                     if not is_valid:
                         connection_error_message = f"Failed to establish database connection: {error_message}"
                         print(connection_error_message)
                         continue
                     # Initialize the agent only if it's not already initialized or if the engine was recreated
-
                     try:
                         agent = DataAnalyticAgent(
                             snowflake_engine=agent_engine_manager.engine,
@@ -81,7 +88,15 @@ async def agent_endpoint(
                     connection_error_message = "Engine is not connected"
 
                 # chatting process
-                user_input = await websocket.receive_text()
+                try:
+                    user_input_data = await websocket.receive_json()
+                    user_input = user_input_data["user_input"]
+                except JSONDecodeError:
+                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")        
+                    break
+                except KeyError:
+                    await manager.disconnect(websocket=websocket, code=1007, reason="'user_input' key not found in json object")    
+                    break
                 # invoking agent
                 agent_message_id = uuid.uuid4()
                 agent_response, is_agent_response_valid = await agent.invoke(
