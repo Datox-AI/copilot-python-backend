@@ -83,5 +83,7 @@ class RAGAgentMessageService:
         return MessageMapper.map_to_RAG_agent_message_response(message=new_agent_message)
 
     def get_messages(self):
-        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id)
+        message_objs = (
+            self.session.query(Message).filter(Message.chat_id == self.chat_id).order_by(Message.created_at.asc())
+        )
         return ChatMapper.map_to_RAG_agent_chat_history_response(chat=self.chat_obj, messages=message_objs)

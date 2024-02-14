@@ -14,8 +14,10 @@ class CustomOutputParser(AgentOutputParser):
         # if "Observation:" in llm_output:
         # observation_text = llm_output.split("Observation:")[-1].strip().split("Final Answer")[0]
         if "Final Answer: " in llm_output:
-            final_answer_pattern = r"Final Answer: (.*?)(?:Stored ID: (.*?))?(?:\nSQL query:(.*?))?(?:\nFollowup Questions:(.*))?$"
-            
+            final_answer_pattern = (
+                r"Final Answer: (.*?)(?:Stored ID: (.*?))?(?:\nSQL query:(.*?))?(?:\nFollowup Questions:(.*))?$"
+            )
+
             matches = re.search(final_answer_pattern, llm_output, re.DOTALL)
             final_answer = matches.group(1).strip()
             stored_file_id = matches.group(2).strip() if matches.group(2) else None

@@ -93,7 +93,7 @@ class OpenAIChatStream:
         )
         if reply_message:
             message_history.append(
-                {"role": "system", "content": "User is referring to this message: {}".format(reply_message)}
+                {"role": "system", "content": "User is referring to this message: {}".format(reply_message.text)}
             )
         try:
             openai_stream = self.client.chat.completions.create(
