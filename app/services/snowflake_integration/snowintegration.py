@@ -83,6 +83,7 @@ class SnowflakeIntegrationService:
         )
 
         if len(warehouse_objs_query.all()) != 0:
+            print(len(warehouse_objs_query.all()))
             warehouse_obj_with_name = warehouse_objs_query.filter(SnowflakeWarehouse.name == warehouse_name).first()
         else:
             warehouse_obj_with_name = None
@@ -323,7 +324,14 @@ class SnowflakeIntegrationService:
         ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
         cursor = ctx.cursor()
         try:
-            cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            try:
+                cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            except Exception as e:  # Ideally, catch a more specific exception
+                if "Object does not exist" in str(e):  # Adjust based on actual error message
+                    raise HTTPException(status_code=404, detail="The specified warehouse does not exist. Please select a new data warehouse.")
+                else:
+                    raise HTTPException(status_code=500, detail="An unexpected error occurred while accessing the database.")
+                
             cursor.execute("SHOW DATABASES")
             databases = cursor.fetchall()
             return {"databases": [db[1] for db in databases]}
