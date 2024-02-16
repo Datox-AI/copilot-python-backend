@@ -45,20 +45,10 @@ async def refresh_access_token(
     refresh_token = request_body.refresh_token
     return await snow_integration_service.refresh_access_token_logic(refresh_token)
 
-
 # Endpoint to list data warehouses
 @router.get("/data_warehouses")
 def list_data_warehouses(token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return snow_integration_service.list_data_warehouses_logic(token)
-
-
-# # Endpoint to select a data warehouse # kerakmi?
-@router.post("/select_warehouse")
-def select_warehouse(
-token: str, warehouse_name: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
- ):
-     return snow_integration_service.select_warehouse_logic(token, warehouse_name)
-
 
 # Modified endpoint to list databases using the selected data warehouse
 @router.get("/databases")

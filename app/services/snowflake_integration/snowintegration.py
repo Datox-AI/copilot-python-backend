@@ -304,20 +304,7 @@ class SnowflakeIntegrationService:
             cursor.close()
             ctx.close()
 
-    # Endpoint to select a data warehouse
-    def select_warehouse_logic(self, token: str, warehouse_name: str):
-        try:
-            # Hypothetical method to select the warehouse
-            self._create_warehouse(warehouse_name)
-        except PermissionError:
-            raise PermissionError("Insufficient permissions to select the warehouse")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            raise RuntimeError("An unexpected error occurred while selecting the warehouse")
-
-        return {"message": f"Data warehouse '{warehouse_name}' selected"}
-
-    # Modified endpoint to list databases using the selected data warehouse
+    # Endpoint to list databases
     def list_databases_logic(self, token: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
@@ -326,8 +313,8 @@ class SnowflakeIntegrationService:
         try:
             try:
                 cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
-            except Exception as e:  # Ideally, catch a more specific exception
-                if "Object does not exist" in str(e):  # Adjust based on actual error message
+            except Exception as e:  
+                if "Object does not exist" in str(e):  
                     raise HTTPException(status_code=404, detail="The specified warehouse does not exist. Please select a new data warehouse.")
                 else:
                     raise HTTPException(status_code=500, detail="An unexpected error occurred while accessing the database.")
