@@ -35,5 +35,9 @@ class GenerateChatName:
         message_list = [MessageMapper.map_to_user_message_response(message_obj) for message_obj in message_objs]
 
         generated_name = self.generator.name_generate(message_list)
+        # Обновляем название чата в базе данных
+        if entity:
+            entity.name = generated_name  # Присваиваем новое название
+            self.session.commit()  # Сохраняем изменения в базе данных
 
         return generated_name
