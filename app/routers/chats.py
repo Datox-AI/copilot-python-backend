@@ -29,7 +29,7 @@ async def get_chats_for_user(
 ):
     if "Admin" not in user.roles:
         raise HTTPException(status_code=403, detail="Not authorized")
-    return get_chat_service.get_chat_list(user_id)
+    return get_chat_service.get_chat_list(user_id=user_id)
 
 
 @router.post("", response_model=ChatResponse, status_code=status.HTTP_201_CREATED)
