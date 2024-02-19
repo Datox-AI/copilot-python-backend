@@ -60,7 +60,9 @@ async def agent_endpoint(
                         await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                         break
                     except KeyError:
-                        await manager.disconnect(websocket=websocket, code=1007, reason="'oauth_token' key not found in json object")
+                        await manager.disconnect(
+                            websocket=websocket, code=1007, reason="'oauth_token' key not found in json object"
+                        )
                         break
                     print(type(snowflake_token_data), snowflake_token_data, " ------ received snowflake data")
                     is_valid, error_message = agent_engine_manager.create_engine(
@@ -92,10 +94,12 @@ async def agent_endpoint(
                     user_input_data = await websocket.receive_json()
                     user_input = user_input_data["user_input"]
                 except JSONDecodeError:
-                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")        
+                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                     break
                 except KeyError:
-                    await manager.disconnect(websocket=websocket, code=1007, reason="'user_input' key not found in json object")    
+                    await manager.disconnect(
+                        websocket=websocket, code=1007, reason="'user_input' key not found in json object"
+                    )
                     break
                 # invoking agent
                 agent_message_id = uuid.uuid4()

@@ -24,9 +24,6 @@ class GenerateChatName:
         if not entity:
             raise HTTPException(status_code=404, detail="Chat not found")
 
-        # message_objs = (
-        #     self.session.query(Message).filter(Message.chat_id == id).order_by(Message.created_at.asc())
-        # )
         message_objs = (
             self.session.query(Message)
             .filter(Message.chat_id == id)
@@ -38,5 +35,5 @@ class GenerateChatName:
         message_list = [MessageMapper.map_to_user_message_response(message_obj) for message_obj in message_objs]
 
         generated_name = self.generator.name_generate(message_list)
-        
+
         return generated_name

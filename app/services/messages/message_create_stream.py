@@ -136,7 +136,7 @@ class OpenAIChatStream:
         # Проверяем, пуст ли список сообщений
         if not messages:
             return "New Chat"
-        
+
         message_history = [{"role": "system", "content": self.name_generating_prompt}]
         for message_obj in messages:
             message_role = None
