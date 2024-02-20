@@ -1,4 +1,5 @@
-import uuid
+import uuid, time
+import asyncio
 from typing import Annotated
 from uuid import UUID
 
@@ -21,6 +22,42 @@ load_dotenv()
 router = APIRouter(prefix="/api/analytics_agent", tags=["Data analytics agent"])
 
 manager = ConnectionManager()
+
+async def listen_for_stop_signal(websocket: WebSocket, stop_event):
+    """
+    Listen for the "stop" signal from the websocket.
+    If received, set the stop_event to stop the main loop.
+    """
+    try:
+        stop_sign = await websocket.receive_json()
+        print(stop_sign, " stopppppppp")
+        if "command" in stop_sign.keys() and stop_sign["command"] == "stop":
+            stop_event.set()
+    except Exception as e:
+        print(f"Error listening for stop signal: {e}")
+
+
+@router.websocket("/test")
+async def test_ws(
+    websocket: WebSocket
+):
+    await websocket.accept()
+    stop_event = asyncio.Event()
+
+    async def receive_messages():
+        while not stop_event.is_set():
+            data = await websocket.receive_text()
+            # Process the data based on its type
+            if data == "stop":
+                print("stopeeddd")
+                stop_event.set()
+                print(stop_event.is_set(), " us set")
+                break
+            else:
+                # Handle other messages, e.g., user input
+                await websocket.send_text("received22")
+                time.sleep(10)
+    await receive_messages()
 
 
 @router.websocket("/ws/{chat_id}")
@@ -93,6 +130,7 @@ async def agent_endpoint(
                 try:
                     user_input_data = await websocket.receive_json()
                     user_input = user_input_data["user_input"]
+                    print(user_input_data, " received")
                 except JSONDecodeError:
                     await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                     break
@@ -101,24 +139,51 @@ async def agent_endpoint(
                         websocket=websocket, code=1007, reason="'user_input' key not found in json object"
                     )
                     break
-                # invoking agent
-                agent_message_id = uuid.uuid4()
-                agent_response, is_agent_response_valid = await agent.invoke(
-                    user_query=user_input, message_id=agent_message_id
-                )
-                if is_agent_response_valid:
-                    # saving user and agent responses
-                    message_service.create_user_message(message_text=user_input)
-                    message_service.create_agent_response(
-                        message_id=agent_message_id,
-                        agent_final_output=agent_response["output"],
-                        sql_query=agent_response["sql_query"],
-                        stored_file_id=agent_response["stored_file_id"],
-                        follow_up_questions=agent_response["followup_questions"],
+
+                try:
+                    stop_event = asyncio.Event()
+                    # Start the background task to listen for the stop signal
+                    stop_listener_task = asyncio.create_task(listen_for_stop_signal(websocket, stop_event))
+                    # invokeing agent 
+                    agent_message_id = uuid.uuid4()
+                    agent_run_coroutine = agent.invoke_async(user_query=user_input, message_id=agent_message_id)
+                    agent_run_task = asyncio.create_task(agent_run_coroutine)
+                    done, pending = await asyncio.wait(
+                        {agent_run_task, stop_listener_task}, 
+                        return_when=asyncio.FIRST_COMPLETED
                     )
-                    await manager.send_agent_response(response=agent_response, websocket=websocket)
-                else:
-                    await manager.send_error_message(message="Agent failed!", websocket=websocket)
+                    if stop_event.is_set():
+                        print("Stop signal received or stop listener task completed, canceling agent task...")
+                        agent_run_task.cancel()
+                        try:
+                            # Attempt to gather the agent_run_task to catch the cancellation
+                            await agent_run_task
+                        except asyncio.CancelledError:
+                            await manager.send_stop_notification(websocket=websocket)
+                            print("Agent task was cancelled.")                        
+                    else:
+                        agent_response, is_valid = await agent_run_task
+                        if is_valid:
+                            # saving user and agent responses
+                            message_service.create_user_message(message_text=user_input)
+                            message_service.create_agent_response(
+                                message_id=agent_message_id,
+                                agent_final_output=agent_response["output"],
+                                sql_query=agent_response["sql_query"],
+                                stored_file_id=agent_response["stored_file_id"],
+                                follow_up_questions=agent_response["followup_questions"],
+                            )
+                            await manager.send_agent_response(response=agent_response, websocket=websocket, chat_id=chat_id)
+                        else:
+                            await manager.send_error_message(message="Agent failed!", websocket=websocket)
+                finally:
+                    # Cancel the stop_listener_task if it's still running
+                    stop_listener_task.cancel()
+                    try:
+                        # Wait for the task cancellation to complete
+                        await stop_listener_task
+                    except asyncio.CancelledError:
+                        pass
 
         except WebSocketDisconnect:
             await manager.disconnect(websocket=websocket, closed=True)
