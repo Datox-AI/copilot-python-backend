@@ -67,6 +67,9 @@ class OpenAIChatStream:
             Format the questions as a JSON-like list of strings.
             Please avoid adding any additional text outside of the JSON structure.
             """
+        self.name_generating_prompt = """
+                Generate chat title based on the previous conversation.
+            """
 
     def stream_responses(self, messages: list, prompt: str, reply_message: str = None):
         """
@@ -128,3 +131,37 @@ class OpenAIChatStream:
             # Обработка ошибок подключения или API
             error_message = str(e)
             yield "", False, [], error_message
+
+    def name_generate(self, messages: list):
+        # Проверяем, пуст ли список сообщений
+        if not messages:
+            return "New Chat"
+
+        message_history = [{"role": "system", "content": self.name_generating_prompt}]
+        for message_obj in messages:
+            message_role = None
+            if message_obj.role.value == "Assistant":
+                message_role = "assistant"
+            elif message_obj.role.value == "User":
+                message_role = "user"
+            else:
+                print(message_obj.__dict__)
+            message_history.append({"role": message_role, "content": message_obj.text})
+
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=message_history,
+                temperature=0.7,
+                n=1,  # Генерируем один вариант названия
+            )
+
+            if response.choices and response.choices[0].message.content:
+                chat_name = response.choices[0].message.content
+                return chat_name
+            else:
+                return "Unable to generate chat name."
+
+        except Exception as e:
+            error_message = str(e)
+            return f"Error generating chat name: {error_message}"

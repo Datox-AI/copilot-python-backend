@@ -5,7 +5,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session, aliased
 
-from app.backend.session import create_maindb_session
+from app.backend.session import create_maindb_session, create_admindb_session
 from app.enums.chat_enums import ChatType
 from app.models.admindb.application_user import ApplicationUser
 from app.models.maindb import Chat, Message, MessageFile
@@ -18,9 +18,11 @@ class GetChat:
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
+        admin_session: Annotated[Session, Depends(create_admindb_session)],
         user: Annotated[CurrentUser, Depends(current_user)],
     ) -> None:
         self.session = session
+        self.admin_session = admin_session
         self.user = user
 
     def get_chat_list(self, chat_type: str = None, user_id: UUID | None = None) -> list[ChatResponse]:
@@ -29,10 +31,8 @@ class GetChat:
         if not user_id:
             user_id = self.user.user_id
         elif user_id != self.user.user_id:
-            result = self.session.execute(select(ApplicationUser).where(ApplicationUser.id == user_id))
+            result = self.admin_session.execute(select(ApplicationUser).where(ApplicationUser.id == user_id))
             user = result.scalars().first()
-            print(user.first_name, " first name")
-
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")
 
