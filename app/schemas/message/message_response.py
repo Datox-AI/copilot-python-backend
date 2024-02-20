@@ -1,6 +1,7 @@
 import datetime
-from uuid import UUID
 from typing import List, Optional
+from uuid import UUID
+
 from app.enums.message_enums import MessageRole
 from app.schemas.base import BaseSchema
 

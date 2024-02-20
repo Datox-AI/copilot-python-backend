@@ -1,14 +1,14 @@
+import json
 from typing import Annotated
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
 from app.models.maindb import Chat, Message
 from app.schemas.message import MessageMapper
-
 from app.services.messages.message_create_stream import OpenAIChatStream
 
 
@@ -40,4 +40,9 @@ class GenerateChatName:
             entity.name = generated_name  # Присваиваем новое название
             self.session.commit()  # Сохраняем изменения в базе данных
 
-        return generated_name
+        try:
+            clean_name = json.loads(generated_name)
+        except json.JSONDecodeError:
+            # Если generated_name не является валидным JSON, используем исходное значение
+            clean_name = generated_name
+        return clean_name

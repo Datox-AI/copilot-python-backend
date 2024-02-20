@@ -1,20 +1,20 @@
 import uuid
+from json.decoder import JSONDecodeError
 from typing import Annotated
 from uuid import UUID
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
-from json.decoder import JSONDecodeError
+
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
 from app.mysocket.connection import ConnectionManager
+from app.schemas.data_analytics_agent.agent_request import FileDownloadRequest
+from app.services.files.analytics_agent_file_service import AnalyticsAgentFileService
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
-from app.services.files.analytics_agent_file_service import AnalyticsAgentFileService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
-from app.schemas.data_analytics_agent.agent_request import FileDownloadRequest
-
 
 load_dotenv()
 

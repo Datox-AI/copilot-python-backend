@@ -1,15 +1,16 @@
 import os
 from typing import Annotated
 from uuid import UUID
+
+import pandas as pd
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-import pandas as pd
 
 from app.backend.session import create_maindb_session
+from app.enums.chat_enums import ChatType
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 from app.models.maindb.chat import Chat
 from app.models.maindb.message import Message
-from app.enums.chat_enums import ChatType
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 

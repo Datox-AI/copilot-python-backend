@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
-from app.models.maindb import Message, Chat
+from app.models.maindb import Chat, Message
+from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
-from app.schemas.chat import ChatMapper
 from app.shared.auth.azure_scheme import current_user
 
 

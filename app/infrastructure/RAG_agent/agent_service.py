@@ -1,33 +1,36 @@
 import os
-from fastapi import HTTPException
 from uuid import UUID
-from dotenv import load_dotenv
-from sqlalchemy.orm import Session
 
-from langchain_core.prompts import PromptTemplate
-from langchain.tools.retriever import create_retriever_tool
+from dotenv import load_dotenv
+from fastapi import HTTPException
 from langchain.agents import AgentExecutor
-from langchain.prompts import PromptTemplate, ChatPromptTemplate
-from langchain_openai import AzureChatOpenAI
+from langchain.agents.format_scratchpad import format_log_to_messages
+from langchain.agents.json_chat.prompt import TEMPLATE_TOOL_RESPONSE
 from langchain.memory import ConversationTokenBufferMemory
-from langchain_core.prompts import ChatPromptTemplate
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    PromptTemplate,
+    SystemMessagePromptTemplate,
+)
+from langchain.tools.render import render_text_description
+from langchain.tools.retriever import create_retriever_tool
 
 # from langchain.retrievers import AzurzeCognitiveSearchRetriever
 from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
-from langchain.prompts import HumanMessagePromptTemplate, MessagesPlaceholder, SystemMessagePromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
-from langchain.tools.render import render_text_description
-from langchain.agents.format_scratchpad import format_log_to_messages
-from langchain.agents.json_chat.prompt import TEMPLATE_TOOL_RESPONSE
+from langchain_openai import AzureChatOpenAI
+from sqlalchemy.orm import Session
 
-
+from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
+from app.infrastructure.RAG_agent.output_parser import CustomJSONAgentOutputParser
 from app.infrastructure.RAG_agent.prompts.system_prompt import (
+    RETRIEVER_PROMPT,
     SYSTEM_MESSAGE_TEMPLATE,
     TOOLS_TEMPLATE,
-    RETRIEVER_PROMPT,
 )
-from app.infrastructure.RAG_agent.output_parser import CustomJSONAgentOutputParser
-from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
 
 load_dotenv()
 

@@ -1,5 +1,5 @@
-from app.schemas.snowintegration.oauth_response import SnowflakeIdentifierResponse
 from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
+from app.schemas.snowintegration.oauth_response import SnowflakeIdentifierResponse
 
 
 class SnowflakeOauthMapper:

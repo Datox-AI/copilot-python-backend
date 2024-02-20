@@ -7,8 +7,8 @@ from langchain_community.utilities import SQLDatabase
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
-from app.infrastructure.analytics_agent.token_counter import TokenCounter
 from app.infrastructure.analytics_agent.prompts.tool_prompts import query_and_save_tool_description
+from app.infrastructure.analytics_agent.token_counter import TokenCounter
 
 
 class CustomSQLDatabase(SQLDatabase):
