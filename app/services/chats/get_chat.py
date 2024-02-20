@@ -31,6 +31,7 @@ class GetChat:
         elif user_id != self.user.user_id:
             result = self.session.execute(select(ApplicationUser).where(ApplicationUser.id == user_id))
             user = result.scalars().first()
+            print(user.first_name, " first name")
 
             if user is None:
                 raise HTTPException(status_code=404, detail="User not found")

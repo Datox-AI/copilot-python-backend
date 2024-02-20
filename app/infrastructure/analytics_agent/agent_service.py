@@ -28,6 +28,7 @@ load_dotenv()
 
 
 class DataAnalyticAgent:
+    
     def __init__(self, snowflake_engine: Engine, chat_id: UUID, db_session: Session):
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
@@ -83,7 +84,11 @@ class DataAnalyticAgent:
             memory=memory,
             # return_intermediate_steps=True,
         )
-
+        
+    
+    def get_executor(self):
+        return self.agent_executor
+    
     def _get_sqldb_tools(self):
         toolkit = SQLDatabaseToolkit(db=self.db, llm=self.llm_chat_model, temperature=0)
         query_and_save_tool = QuerySaveSQLDataBaseTool(db=self.db)
@@ -95,21 +100,37 @@ class DataAnalyticAgent:
 
         return tools, tool_names
 
-    async def invoke(self, user_query: str, message_id: UUID):
+    async def invoke_async(self, user_query: str, message_id: UUID):
         is_agent_response_valid = True
         message_id_str = message_id.hex
-        agent_response = self.agent_executor.invoke({"input": user_query, "message_id": message_id_str})
+        agent_response = await self.agent_executor.ainvoke({"input": user_query, "message_id": message_id_str})
+        print(agent_response, " respot")
         # deleting all files that are saved except the last one
-
-        if agent_response["stored_file_id"] is not None:
-            self.azure_blob_storage_manager.delete_extra_files(
-                message_id=message_id_str, stored_file_id=agent_response["stored_file_id"]
-            )
-            agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
-            # is_agent_response_valid = False
-            # agent_response = None
-
+        try:
+            if "stored_file_id" in agent_response.keys() and agent_response["stored_file_id"] is not None:
+                self.azure_blob_storage_manager.delete_extra_files(
+                    message_id=message_id_str, stored_file_id=agent_response["stored_file_id"]
+                )
+                agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+                # is_agent_response_valid = False
+                # agent_response = None
+        except Exception as e:
+            print(f"Error during agent invocation: {e}")
+            is_agent_response_valid = False
+            agent_response = {"error": "Failed to process request"}
+            
         return agent_response, is_agent_response_valid
+
+    async def for_invoke(self, user_query: str, message_id: UUID):
+        message_id_str = message_id.hex
+        async for agent_chunk in self.agent_executor.astream_events(
+            {
+                "input": user_query, "message_id": message_id_str
+            },
+            version="v1"
+        ):
+            yield agent_chunk
+
 
 
 class AgentSnowflakeEngineManager:
