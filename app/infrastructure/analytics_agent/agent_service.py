@@ -105,7 +105,7 @@ class DataAnalyticAgent:
             agent_response = await self.agent_executor.ainvoke({"input": user_query, "message_id": message_id_str})
             # deleting all files that are saved except the last one
             if "stored_file_id" in agent_response.keys() and agent_response["stored_file_id"] is not None:
-                self.azure_blob_storage_manager.delete_extra_files(
+                self.azure_blob_storage_manager.delete_extra_csv_files(
                     message_id=message_id_str, stored_file_id=agent_response["stored_file_id"]
                 )
                 agent_response[

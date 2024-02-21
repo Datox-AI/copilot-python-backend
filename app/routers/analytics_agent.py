@@ -1,10 +1,11 @@
-import uuid, time
+import uuid, io
 import asyncio
 from typing import Annotated
 from uuid import UUID
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
@@ -36,28 +37,6 @@ async def listen_for_stop_signal(websocket: WebSocket, stop_event):
             stop_event.set()
     except Exception as e:
         print(f"Error listening for stop signal: {e}")
-
-
-@router.websocket("/test")
-async def test_ws(websocket: WebSocket):
-    await websocket.accept()
-    stop_event = asyncio.Event()
-
-    async def receive_messages():
-        while not stop_event.is_set():
-            data = await websocket.receive_text()
-            # Process the data based on its type
-            if data == "stop":
-                print("stopeeddd")
-                stop_event.set()
-                print(stop_event.is_set(), " us set")
-                break
-            else:
-                # Handle other messages, e.g., user input
-                await websocket.send_text("received22")
-                time.sleep(10)
-
-    await receive_messages()
 
 
 @router.websocket("/ws/{chat_id}")
@@ -203,4 +182,14 @@ async def get_messages(
 async def get_stored_data(
     chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
 ):
-    return file_service.download_file(request.stored_file_id)
+    return file_service.get_csv_data(request.stored_file_id)
+
+
+@router.post("/{chat_id}/download_stored_data")
+async def download_stored_data(
+    chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
+):
+    file_data, media_type = file_service.download_file(request.stored_file_id)
+    print(media_type, " media type")
+    file = io.BytesIO(file_data.readall())
+    return StreamingResponse(file, media_type="text/csv")
