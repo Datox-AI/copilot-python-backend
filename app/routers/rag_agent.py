@@ -6,7 +6,6 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.schemas.message import CreateMessageRequest, RAGAgentMessageResponse
 from app.services.messages.rag_agent.message_service import RAGAgentMessageService
 
-
 router = APIRouter(prefix="/api/rag_agent", tags=["RAG agent"])
 
 

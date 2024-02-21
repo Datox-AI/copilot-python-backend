@@ -9,10 +9,10 @@ from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
-from app.models.maindb import Message, Chat
+from app.models.maindb import Chat, Message
+from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
-from app.schemas.chat import ChatMapper
 from app.shared.auth.azure_scheme import current_user
 
 
@@ -67,12 +67,11 @@ class AnalyticsAgentMessageCreateService:
             chat_id=self.chat_id,
             text="Agent is cancelled",
             status=MessageStatus.Cancelled,
-            role=MessageRole.Assistant
+            role=MessageRole.Assistant,
         )
         self.session.add(new_cancelled_agent_message)
         self.session.commit()
-        
-    
+
     def get_messages(self):
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not chat_obj:
