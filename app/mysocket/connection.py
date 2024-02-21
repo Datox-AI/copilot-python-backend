@@ -39,7 +39,7 @@ class ConnectionManager:
     async def send_stop_notification(self, websocket: WebSocket, chat_id: UUID):
         await websocket.send_json(
             {
-                "status": "success", 
+                "status": "success",
                 "chat_id": chat_id.hex,
                 "message": "Agent is stopped",
             }

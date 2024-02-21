@@ -67,12 +67,11 @@ class AnalyticsAgentMessageCreateService:
             chat_id=self.chat_id,
             text="Agent is cancelled",
             status=MessageStatus.Cancelled,
-            role=MessageRole.Assistant
+            role=MessageRole.Assistant,
         )
         self.session.add(new_cancelled_agent_message)
         self.session.commit()
-        
-    
+
     def get_messages(self):
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not chat_obj:
