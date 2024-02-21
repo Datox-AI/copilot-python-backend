@@ -1,14 +1,6 @@
-from typing import (
-    Any,
-    List,
-    Sequence,
-    Type,
-)
+from typing import Any, List, Sequence, Type
 
-from sqlalchemy import (
-    func,
-    select,
-)
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import Executable
 

@@ -5,7 +5,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Session, aliased
 
-from app.backend.session import create_maindb_session, create_admindb_session
+from app.backend.session import create_admindb_session, create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.models.admindb.application_user import ApplicationUser
 from app.models.maindb import Chat, Message, MessageFile

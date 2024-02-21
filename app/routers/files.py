@@ -1,9 +1,9 @@
+import io
 from typing import Annotated, List
 from uuid import UUID
-from fastapi.responses import StreamingResponse
-import io
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 from app.schemas.files.file_response import FilesDetailResponse

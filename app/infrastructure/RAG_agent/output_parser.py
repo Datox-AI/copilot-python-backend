@@ -1,8 +1,10 @@
-import re, json
+import json
+import re
 from typing import Union
+
+from langchain.agents.agent import AgentOutputParser
 from langchain_core.agents import AgentAction, AgentFinish
 from langchain_core.exceptions import OutputParserException
-from langchain.agents.agent import AgentOutputParser
 
 
 class CustomJSONAgentOutputParser(AgentOutputParser):

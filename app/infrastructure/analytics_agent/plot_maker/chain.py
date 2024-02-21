@@ -1,4 +1,6 @@
-import re, os
+import os
+import re
+
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate
 from langchain_openai import AzureChatOpenAI

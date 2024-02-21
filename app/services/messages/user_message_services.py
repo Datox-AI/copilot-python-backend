@@ -6,6 +6,7 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
+
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
@@ -14,6 +15,8 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
 from app.shared.auth.azure_scheme import current_user
+from app.services.files.user_files_services import UserFileService
+from app.services.files.lang_chain_file_service import LangChainService
 
 from .message_create_stream import OpenAIChatStream
 
@@ -30,6 +33,8 @@ class UserMessageService:
         self.chat_id = chat_id
         self._check_chat_exists(chat_id=chat_id)
         self.streamer = OpenAIChatStream()
+        self.file_service = UserFileService(user, session)
+        self.langchain_service = LangChainService()
 
     def create_message(self, request: CreateMessageRequest):
         reply_message = None
@@ -39,6 +44,14 @@ class UserMessageService:
                 raise HTTPException(
                     status_code=404, detail=f"Message object under {request.replyTo} id does not exist"
                 )
+        file_exist = None
+        file_contents = []
+        if request.files:
+            for file_id in request.files:
+                file_content = self.file_service.download_file(file_id)
+                if file_content:
+                    file_exist = True
+                    file_contents.append(file_content)
         # Сохранение нового пользовательского сообщения
         new_user_message = Message(
             id=uuid.uuid4(),
@@ -54,34 +67,38 @@ class UserMessageService:
         # Генерация ответа и follow-up вопросов
         def response_generator():
             message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
+            if not file_exist:
+                full_response = ""
+                for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
+                    message_objs, request.prompt, reply_message
+                ):
+                    if error_message:
+                        yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
+                        continue  # Пропускаем оставшуюся часть цикла в случае ошибки
 
-            full_response = ""
-            for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
-                message_objs, request.prompt, reply_message
-            ):
-                if error_message:
-                    yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
-                    continue  # Пропускаем оставшуюся часть цикла в случае ошибки
+                    if response_text and not is_question:
+                        full_response += response_text
+                        yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
 
-                if response_text and not is_question:
-                    full_response += response_text
-                    yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+                    if is_question:
+                        yield f"data: {json.dumps({'Questions': follow_up_questions, 'Type': 'Questions'})}\n\n"
+                    # Создание и сохранение нового сообщения от ассистента с follow-up вопросами
 
-                if is_question:
-                    yield f"data: {json.dumps({'Questions': follow_up_questions, 'Type': 'Questions'})}\n\n"
-                # Создание и сохранение нового сообщения от ассистента с follow-up вопросами
-
-            new_assistant_message = Message(
-                id=uuid.uuid4(),
-                chat_id=self.chat_id,
-                text=full_response,
-                follow_up_questions=follow_up_questions,
-                status=MessageStatus.Success,
-                role=MessageRole.Assistant,
-                prompt_id=new_user_message.id,
+                new_assistant_message = Message(
+                    id=uuid.uuid4(),
+                    chat_id=self.chat_id,
+                    text=full_response,
+                    follow_up_questions=follow_up_questions,
+                    status=MessageStatus.Success,
+                    role=MessageRole.Assistant,
+                    prompt_id=new_user_message.id,
+                )
+                self.session.add(new_assistant_message)
+                self.session.commit()
+            response = self.lang_chain_service.process_document_and_generate_response(
+                file_content_bytes=file_contents, prompt=request.prompt
             )
-            self.session.add(new_assistant_message)
-            self.session.commit()
+            yield f"data: {json.dumps({'Type': 'Text', 'Text': response})}\n\n"
 
         return response_generator()
 

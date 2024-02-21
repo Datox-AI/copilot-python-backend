@@ -2,7 +2,6 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-
 from app.schemas.users.users_response import ApplicationUserRoleSchema, ApplicationUserSchema
 from app.services.users import ApplicationUserService
 
