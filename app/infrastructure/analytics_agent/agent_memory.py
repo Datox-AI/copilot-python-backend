@@ -38,7 +38,7 @@ class AnalyticsAgentChatMessageHistory(BaseChatMessageHistory):
                 old_messages.append(AIMessage(content=agent_message))
 
         return old_messages
-    
+
     @property
     def messages(self):
         return self._messages

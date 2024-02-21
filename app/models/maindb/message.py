@@ -22,6 +22,7 @@ class Message(BaseDelete):
     sql_query = Column(String, nullable=True)
     stored_file_id = Column(String, nullable=True)
     follow_up_questions = Column(JSONB, nullable=True)
+    choices = Column(JSONB, nullable=True)
 
     reply_to_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
     prompt_id = Column(UUID(as_uuid=True), ForeignKey("messages.id"), nullable=True)
