@@ -36,7 +36,7 @@ class AnalyticsAgentFileService:
                 status_code=400,
                 detail=f"Chat object under {self.chat_id} id does not have FileSearch as its chat type",
             )
-
+    
     def download_file(self, stored_file_id: str):
         chat_message_with_store_id = (
             self.session.query(Message)
@@ -44,9 +44,21 @@ class AnalyticsAgentFileService:
             .first()
         )
         if chat_message_with_store_id:
-            downloaded_stream = self.blob_service.download_csv_file(stored_file_id=stored_file_id)
+            return self.blob_service.download_csv_file(stored_file_id=stored_file_id)
+        else:
+            raise HTTPException(status_code=404, detail=f"File with store id ({stored_file_id}) not found")
+
+    def get_csv_data(self, stored_file_id):
+        chat_message_with_store_id = (
+            self.session.query(Message)
+            .filter(Message.chat_id == self.chat_id, Message.stored_file_id == stored_file_id)
+            .first()
+        )
+        if chat_message_with_store_id:
+            downloaded_stream = self.blob_service.download_csv_file(stored_file_id=stored_file_id)[0]
             df = pd.read_csv(downloaded_stream)
             df_data = df.to_dict(orient="records")
             return df_data
         else:
             raise HTTPException(status_code=404, detail=f"File with store id ({stored_file_id}) not found")
+    
