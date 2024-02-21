@@ -60,7 +60,7 @@ class MessageMapper:
             pinned_date=message.pinned_date,
             status=message.status,
             reply_to=message.reply_to_id,
-            questions=json.loads(message.follow_up_questions) if message.follow_up_questions else None,
+            questions=message.follow_up_questions,
             created_at=message.created_at,
             prompt_id=message.prompt_id,
         )
