@@ -45,24 +45,34 @@ class AnalyticsAgentMessageCreateService:
     def create_agent_response(
         self,
         message_id: UUID,
-        agent_final_output: str,
-        sql_query: str,
-        stored_file_id: str,
-        follow_up_questions: str,
+        agent_response: dict,
     ):
         new_agent_message = Message(
             id=message_id,
             chat_id=self.chat_id,
-            text=agent_final_output,
+            text=agent_response["output"],
             status=MessageStatus.Success,
             role=MessageRole.Assistant,
-            follow_up_questions=follow_up_questions,
-            stored_file_id=stored_file_id,
-            sql_query=sql_query,
+            follow_up_questions=agent_response["followup_questions"],
+            stored_file_id=agent_response["stored_file_id"],
+            sql_query=agent_response["sql_query"],
+            choices=agent_response["choices"],
         )
         self.session.add(new_agent_message)
         self.session.commit()
 
+    def create_cancelled_agent_response(self, message_id: UUID):
+        new_cancelled_agent_message = Message(
+            id=message_id,
+            chat_id=self.chat_id,
+            text="Agent is cancelled",
+            status=MessageStatus.Cancelled,
+            role=MessageRole.Assistant
+        )
+        self.session.add(new_cancelled_agent_message)
+        self.session.commit()
+        
+    
     def get_messages(self):
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not chat_obj:
