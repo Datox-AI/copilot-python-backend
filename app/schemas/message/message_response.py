@@ -11,7 +11,7 @@ class AnalyticAgentMessageResponse(BaseSchema):
     text: str
     role: MessageRole
     created_at: datetime.datetime
-    follow_up_questions: Optional[str] = None
+    follow_up_questions: Optional[List[str]] = None
     sql_query: Optional[str] = None
     stored_file_id: Optional[str] = None
 

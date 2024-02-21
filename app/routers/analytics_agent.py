@@ -160,6 +160,7 @@ async def agent_endpoint(
                             # Attempt to gather the agent_run_task to catch the cancellation
                             await agent_run_task
                         except asyncio.CancelledError:
+                            message_service.create_cancelled_agent_response(message_id=agent_message_id)
                             await manager.send_stop_notification(websocket=websocket)
                             print("Agent task was cancelled.")
                     else:
