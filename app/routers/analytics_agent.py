@@ -190,6 +190,5 @@ async def download_stored_data(
     chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
 ):
     file_data, media_type = file_service.download_file(request.stored_file_id)
-    print(media_type, " media type")
     file = io.BytesIO(file_data.readall())
-    return StreamingResponse(file, media_type="text/csv")
+    return StreamingResponse(file, media_type=media_type)
