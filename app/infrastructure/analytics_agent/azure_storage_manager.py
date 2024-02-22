@@ -37,10 +37,10 @@ class AzureBlobStorageManager:
         try:
             blob_client = self.container_client.get_blob_client(blob=str(stored_file_id))
             properties = blob_client.get_blob_properties()
-            media_type = properties.metadata.get("media_type", None)
+            media_type = "text/csv"
             downloaded_stream_file = blob_client.download_blob()
             return downloaded_stream_file, media_type
-        
+
         except ResourceNotFoundError:
             raise HTTPException(status_code=404, detail=f"File (name: {stored_file_id}) not found")
 
