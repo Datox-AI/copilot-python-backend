@@ -95,10 +95,11 @@ class UserMessageService:
                 )
                 self.session.add(new_assistant_message)
                 self.session.commit()
-            response = self.lang_chain_service.process_document_and_generate_response(
-                file_content_bytes=file_contents, prompt=request.prompt
-            )
-            yield f"data: {json.dumps({'Type': 'Text', 'Text': response})}\n\n"
+            else:
+                response = self.langchain_service.process_document_and_generate_response(
+                    file_content_bytes=file_contents, prompt=request.prompt
+                )
+                yield f"data: {json.dumps({'Type': 'Text', 'Text': response})}\n\n"
 
         return response_generator()
 
