@@ -31,12 +31,12 @@ class UserMessageService:
         self.session = session
         self.user = user
         self.chat_id = chat_id
-        self._check_chat_exists(chat_id=chat_id)
         self.streamer = OpenAIChatStream()
         self.file_service = UserFileService(user, session)
         self.langchain_service = LangChainService()
 
     def create_message(self, request: CreateMessageRequest):
+        self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
             reply_message = self.session.query(Message).filter(Message.id == request.replyTo).first()
@@ -103,9 +103,7 @@ class UserMessageService:
         return response_generator()
 
     def get_messages(self, chat_id: UUID):
-        chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
-        if not chat_obj:
-            raise HTTPException(status_code=400, detail=f"Chat object under chat id: {chat_id} does not exist")
+        self._check_chat_exists(chat_id=self.chat_id)
         message_objs = (
             self.session.query(Message).filter(Message.chat_id == chat_id).order_by(Message.created_at.asc())
         )
@@ -121,6 +119,7 @@ class UserMessageService:
         return False
 
     def update_message(self, chat_id: UUID, message_id: UUID, updated_data: UpdateMessageRequest):
+        self._check_chat_exists(chat_id=self.chat_id)
         message_obj = self.session.query(Message).filter(Message.id == message_id, Message.chat_id == chat_id).first()
         if message_obj:
             if message_obj.id != updated_data.id:
