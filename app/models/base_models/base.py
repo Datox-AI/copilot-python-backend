@@ -1,9 +1,9 @@
+import uuid
+
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column
-from sqlalchemy.sql import func
-import uuid
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
 
 DeclarativeBase = declarative_base()
 

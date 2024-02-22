@@ -1,6 +1,6 @@
 import json
 from typing import Dict, List
-
+from uuid import UUID
 from fastapi import WebSocket
 
 from app.schemas.message import AnalyticAgentMessageResponse
@@ -36,9 +36,22 @@ class ConnectionManager:
     async def send_connection_success_message(self, websocket: WebSocket):
         await websocket.send_json({"status": "success", "message": "Engine is connected succesfully"})
 
-    async def send_agent_response(self, response: AnalyticAgentMessageResponse, websocket: WebSocket):
+    async def send_stop_notification(self, websocket: WebSocket, chat_id: UUID):
         await websocket.send_json(
             {
+                "status": "success",
+                "chat_id": chat_id.hex,
+                "message": "Agent is stopped",
+            }
+        )
+
+    async def send_agent_response(self, websocket: WebSocket, response: dict, chat_id: UUID):
+        # changing f-questions with choices if there are choices because front end requested like this
+        if response["choices"]:
+            response["followup_questions"] = response["choices"]
+        await websocket.send_json(
+            {
+                "chat_id": chat_id.hex,
                 "output": response["output"],
                 "followup_questions": response["followup_questions"],
                 "stored_file_id": response["stored_file_id"],

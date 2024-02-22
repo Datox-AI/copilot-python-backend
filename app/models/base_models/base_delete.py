@@ -1,6 +1,5 @@
-from sqlalchemy import Column
+from sqlalchemy import Boolean, Column, DateTime
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy import Column, DateTime, Boolean
 
 from .base_audit import BaseAudit
 

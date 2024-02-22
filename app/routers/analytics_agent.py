@@ -1,9 +1,11 @@
-import uuid
+import uuid, io
+import asyncio
 from typing import Annotated
 from uuid import UUID
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
@@ -21,6 +23,20 @@ load_dotenv()
 router = APIRouter(prefix="/api/analytics_agent", tags=["Data analytics agent"])
 
 manager = ConnectionManager()
+
+
+async def listen_for_stop_signal(websocket: WebSocket, stop_event):
+    """
+    Listen for the "stop" signal from the websocket.
+    If received, set the stop_event to stop the main loop.
+    """
+    try:
+        stop_sign = await websocket.receive_json()
+        print(stop_sign, " stopppppppp")
+        if "command" in stop_sign.keys() and stop_sign["command"] == "stop":
+            stop_event.set()
+    except Exception as e:
+        print(f"Error listening for stop signal: {e}")
 
 
 @router.websocket("/ws/{chat_id}")
@@ -60,7 +76,9 @@ async def agent_endpoint(
                         await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                         break
                     except KeyError:
-                        await manager.disconnect(websocket=websocket, code=1007, reason="'oauth_token' key not found in json object")
+                        await manager.disconnect(
+                            websocket=websocket, code=1007, reason="'oauth_token' key not found in json object"
+                        )
                         break
                     print(type(snowflake_token_data), snowflake_token_data, " ------ received snowflake data")
                     is_valid, error_message = agent_engine_manager.create_engine(
@@ -78,7 +96,7 @@ async def agent_endpoint(
                             db_session=maindb_session,
                         )
                     except Exception as e:
-                        print(e, "   agent error")
+                        print(e, "   agent init error")
                         error_message = f"Agent failed: {e}"
                         await manager.disconnect(websocket=websocket, reason=error_message, code=1007)
                         break
@@ -91,30 +109,59 @@ async def agent_endpoint(
                 try:
                     user_input_data = await websocket.receive_json()
                     user_input = user_input_data["user_input"]
+                    # saving user's message
+                    message_service.create_user_message(message_text=user_input)
+                    print(user_input_data, " received")
                 except JSONDecodeError:
-                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")        
+                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                     break
                 except KeyError:
-                    await manager.disconnect(websocket=websocket, code=1007, reason="'user_input' key not found in json object")    
-                    break
-                # invoking agent
-                agent_message_id = uuid.uuid4()
-                agent_response, is_agent_response_valid = await agent.invoke(
-                    user_query=user_input, message_id=agent_message_id
-                )
-                if is_agent_response_valid:
-                    # saving user and agent responses
-                    message_service.create_user_message(message_text=user_input)
-                    message_service.create_agent_response(
-                        message_id=agent_message_id,
-                        agent_final_output=agent_response["output"],
-                        sql_query=agent_response["sql_query"],
-                        stored_file_id=agent_response["stored_file_id"],
-                        follow_up_questions=agent_response["followup_questions"],
+                    await manager.disconnect(
+                        websocket=websocket, code=1007, reason="'user_input' key not found in json object"
                     )
-                    await manager.send_agent_response(response=agent_response, websocket=websocket)
-                else:
-                    await manager.send_error_message(message="Agent failed!", websocket=websocket)
+                    break
+
+                try:
+                    stop_event = asyncio.Event()
+                    # Start the background task to listen for the stop signal
+                    stop_listener_task = asyncio.create_task(listen_for_stop_signal(websocket, stop_event))
+                    # invokeing agent
+                    agent_message_id = uuid.uuid4()
+                    agent_run_coroutine = agent.invoke_async(user_query=user_input, message_id=agent_message_id)
+                    agent_run_task = asyncio.create_task(agent_run_coroutine)
+                    done, pending = await asyncio.wait(
+                        {agent_run_task, stop_listener_task}, return_when=asyncio.FIRST_COMPLETED
+                    )
+                    if stop_event.is_set():
+                        print("Stop signal received or stop listener task completed, canceling agent task...")
+                        agent_run_task.cancel()
+                        try:
+                            # Attempt to gather the agent_run_task to catch the cancellation
+                            await agent_run_task
+                        except asyncio.CancelledError:
+                            message_service.create_cancelled_agent_response(message_id=agent_message_id)
+                            await manager.send_stop_notification(websocket=websocket, chat_id=chat_id)
+                            print("Agent task was cancelled.")
+                    else:
+                        agent_response, is_valid = await agent_run_task
+                        if is_valid:
+                            # saving agent's responses
+                            message_service.create_agent_response(
+                                message_id=agent_message_id, agent_response=agent_response
+                            )
+                            await manager.send_agent_response(
+                                response=agent_response, websocket=websocket, chat_id=chat_id
+                            )
+                        else:
+                            await manager.send_error_message(message=agent_response["error"], websocket=websocket)
+                finally:
+                    # Cancel the stop_listener_task if it's still running
+                    stop_listener_task.cancel()
+                    try:
+                        # Wait for the task cancellation to complete
+                        await stop_listener_task
+                    except asyncio.CancelledError:
+                        pass
 
         except WebSocketDisconnect:
             await manager.disconnect(websocket=websocket, closed=True)
@@ -135,4 +182,13 @@ async def get_messages(
 async def get_stored_data(
     chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
 ):
-    return file_service.download_file(request.stored_file_id)
+    return file_service.get_csv_data(request.stored_file_id)
+
+
+@router.post("/{chat_id}/download_stored_data")
+async def download_stored_data(
+    chat_id: UUID, request: FileDownloadRequest, file_service: Annotated[AnalyticsAgentFileService, Depends()]
+):
+    file_data, media_type = file_service.download_file(request.stored_file_id)
+    file = io.BytesIO(file_data.readall())
+    return StreamingResponse(file, media_type=media_type)

@@ -1,6 +1,7 @@
 import datetime
-from uuid import UUID
 from typing import List, Optional
+from uuid import UUID
+
 from app.enums.message_enums import MessageRole
 from app.schemas.base import BaseSchema
 
@@ -11,7 +12,7 @@ class AnalyticAgentMessageResponse(BaseSchema):
     text: str
     role: MessageRole
     created_at: datetime.datetime
-    follow_up_questions: Optional[str] = None
+    follow_up_questions: Optional[List[str]] = None
     sql_query: Optional[str] = None
     stored_file_id: Optional[str] = None
 

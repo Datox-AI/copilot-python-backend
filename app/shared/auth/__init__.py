@@ -1,6 +1,1 @@
-from .azure_scheme import (
-    azure_scheme,
-    AZURE_AD_FRONTEND_CLIENT_ID,
-    multi_auth,
-    current_user,
-)
+from .azure_scheme import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme, current_user, multi_auth
