@@ -89,8 +89,8 @@ class ApplicationUserService:
         self.token_provider = TokenProvider(
             client_id=os.getenv("AZURE_AD_CLIENT_ID"),
             client_secret=os.getenv("AZURE_AD_CLIENT_SECRET"),
-            authority=os.getenv("AUTHORITY"),
-            scope=os.getenv("SCOPE"),
+            authority="https://login.microsoftonline.com/" + os.getenv("AZURE_AD_TENANT_ID"),
+            scope="https://graph.microsoft.com/.default",
         )
 
     async def get_user_roles(self) -> dict:
