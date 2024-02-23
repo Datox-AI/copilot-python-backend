@@ -4,7 +4,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 import os
-
+import tempfile
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -40,21 +40,40 @@ class LangChainService:
         )
 
     def process_document_and_generate_response(self, file_content_bytes, prompt):
-        # Загрузка и обработка документа
-        pages = PyPDFLoader(file_content=file_content_bytes).load_and_split()
-        db = Chroma.from_documents(pages, self.embedding)
-        retriever = db.as_retriever()
+        # Ensure file_content_bytes is a bytes-like object
+        if not isinstance(file_content_bytes, bytes):
+            raise TypeError(
+                "file_content_bytes must be a bytes-like object, not {}".format(type(file_content_bytes).__name__)
+            )
 
-        document_chain_prompt = PromptTemplate(input_variables=["page_content"], template="{page_content}")
-        document_variable_name = "context"
-        llm_chain = LLMChain(llm=self.llm_chat_model, prompt=PromptTemplate.from_template(prompt))
-        combine_docs_chain = StuffDocumentsChain(
-            llm_chain=llm_chain, document_prompt=document_chain_prompt, document_variable_name=document_variable_name
-        )
-        reduce_chain = ReduceDocumentsChain(combine_documents_chain=combine_docs_chain)
+        # Step 1: Save file_content_bytes to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+            tmp_file.write(file_content_bytes)
+            tmp_file_path = tmp_file.name
 
-        chain = ConversationalRetrievalChain(
-            combine_docs_chain=reduce_chain, retriever=retriever, question_generator=llm_chain, verbose=True
-        )
+        try:
+            # Step 2: Use the file path with PyPDFLoader
+            pages = PyPDFLoader(tmp_file_path).load_and_split()
+            # Proceed with the rest of your method...
 
-        return chain.invoke({"question": prompt, "chat_history": []})
+            db = Chroma.from_documents(pages, self.embedding)
+            retriever = db.as_retriever()
+
+            document_chain_prompt = PromptTemplate(input_variables=["page_content"], template="{page_content}")
+            document_variable_name = "context"
+            llm_chain = LLMChain(llm=self.llm_chat_model, prompt=PromptTemplate.from_template(prompt))
+            combine_docs_chain = StuffDocumentsChain(
+                llm_chain=llm_chain,
+                document_prompt=document_chain_prompt,
+                document_variable_name=document_variable_name,
+            )
+            reduce_chain = ReduceDocumentsChain(combine_documents_chain=combine_docs_chain)
+
+            chain = ConversationalRetrievalChain(
+                combine_docs_chain=reduce_chain, retriever=retriever, question_generator=llm_chain, verbose=True
+            )
+
+            return chain.invoke({"question": prompt, "chat_history": []})
+        finally:
+            # Clean up: remove the temporary file
+            os.remove(tmp_file_path)
