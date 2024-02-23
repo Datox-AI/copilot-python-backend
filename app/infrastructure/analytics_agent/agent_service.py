@@ -81,6 +81,7 @@ class DataAnalyticAgent:
             tools=agent_tools,
             verbose=True,
             memory=memory,
+            handle_parsing_errors=True
             # return_intermediate_steps=True,
         )
 

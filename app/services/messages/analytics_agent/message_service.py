@@ -71,6 +71,17 @@ class AnalyticsAgentMessageCreateService:
         )
         self.session.add(new_cancelled_agent_message)
         self.session.commit()
+        
+    def create_failed_agent_response(self, message_id: UUID, text: str):
+        new_cancelled_agent_message = Message(
+            id=message_id,
+            chat_id=self.chat_id,
+            text=text,
+            status=MessageStatus.Cancelled,
+            role=MessageRole.Assistant,
+        )
+        self.session.add(new_cancelled_agent_message)
+        self.session.commit()
 
     def get_messages(self):
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
