@@ -30,7 +30,7 @@ db_name = config.config_ini_section
 
 # active config ini section is the db name that we have chosen
 db_dsn = os.environ[f"DATOX_DATABASE__{db_name.upper()}_DSN"]
-print(db_dsn)
+print(db_dsn, "   DSN")
 config.set_main_option("sqlalchemy.url", db_dsn)
 
 # Interpret the config file for Python logging.

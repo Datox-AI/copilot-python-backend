@@ -1,26 +1,38 @@
 import uuid
 from typing import Annotated
 from urllib.parse import urlencode
-
-import httpx
+import httpx, ast
 import snowflake.connector
 from fastapi import Depends, FastAPI, HTTPException
 from httpx import ConnectTimeout, HTTPStatusError, NetworkError, ReadTimeout
 from snowflake.connector.errors import DatabaseError, ForbiddenError
 from sqlalchemy.orm import Session
-
 from app.backend.session import create_maindb_session
 from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
+from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper, SnowflakeRole
 from app.shared.auth.azure_scheme import current_user
+import requests
+import logging
+
+# Configure logging at the start of your script/application
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = FastAPI()
 
 
 REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake"
 
+def is_url_reachable(url: str) -> bool:
 
+    try:
+        response = requests.get(url, timeout=5)  # Timeout set to 5 seconds
+        return response.status_code == 200
+    except requests.exceptions.RequestException as e:
+        # Handles exceptions like connection errors or timeouts
+        print(f"Error checking URL: {e}")
+        return False
+    
 class SnowflakeIntegrationService:
     def __init__(
         self,
@@ -71,6 +83,7 @@ class SnowflakeIntegrationService:
         )
 
         if len(warehouse_objs_query.all()) != 0:
+            print(len(warehouse_objs_query.all()))
             warehouse_obj_with_name = warehouse_objs_query.filter(SnowflakeWarehouse.name == warehouse_name).first()
         else:
             warehouse_obj_with_name = None
@@ -89,10 +102,16 @@ class SnowflakeIntegrationService:
                 warehouse_obj.selected = False
 
         self.session.commit()
-
+        
     # Endpoint to initialize OAuth configuration
     def init_oauth_logic(self, config: OAuthConfig):
+
+        if len(config.client_id) != 28:
+            raise HTTPException(status_code=400, detail="Please review Client ID for typos")
+        if len(config.client_secret) != 44:
+            raise HTTPException(status_code=400, detail="Please review Client Secret for typos")
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
+        # Perform the verification asynchronously
         existing_snowflake_identifier_obj = (
             self.session.query(SnowflakeIdentifier).filter(SnowflakeIdentifier.user_id == self.user.user_id).first()
         )
@@ -119,11 +138,14 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": config.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
-        return {"authorization_url": authorization_url}
+        if is_url_reachable(authorization_url):
+            return {"authorization_url": authorization_url}
+        else:
+            raise HTTPException(status_code=400, detail="Authorization URL is not reachable")
+    
 
     def get_oauth_logic(self):
         existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -133,7 +155,6 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": existing_snowflake_identifier_obj.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -144,6 +165,11 @@ class SnowflakeIntegrationService:
         )
 
     def update_oauth_logic(self, config: OAuthConfig):
+        if len(config.client_id) != 28:
+            raise HTTPException(status_code=400, detail="Please review Client ID for typos")
+        if len(config.client_secret) != 44:
+            raise HTTPException(status_code=400, detail="Please review Client Secret for typos")
+        
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
@@ -161,11 +187,14 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": config.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
-        return {"authorization_url": authorization_url}
+        # Check if the authorization URL is reachable
+        if is_url_reachable(authorization_url):
+            return {"authorization_url": authorization_url}
+        else:
+            raise HTTPException(status_code=500, detail="Please review the entered token endpoint for any typographical errors")
 
     def delete_oauth_logic(self):
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
@@ -173,9 +202,17 @@ class SnowflakeIntegrationService:
         self.session.commit()
 
     async def oauth_callback_logic(self, code: str):
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
+        
         token_response = await self.exchange_code_for_token(code)
+        #saving user role to DB 
+        if not snowflake_identifier_obj.user_role:          
+            scope = token_response["scope"]
+            user_role = scope.split(":")[-1]
+            snowflake_identifier_obj.user_role = user_role
+            self.session.commit(snowflake_identifier_obj)
 
         try:
             if "access_token" not in token_response:
@@ -203,7 +240,7 @@ class SnowflakeIntegrationService:
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            raise HTTPException(status_code=400, detail="Code is invalid or outdated")
+            raise HTTPException(status_code=400, detail="Please review the entered client secret for any typographical errors")
 
     # Refresh access token logic
     async def refresh_access_token_logic(self, refresh_token: str):
@@ -272,27 +309,21 @@ class SnowflakeIntegrationService:
             cursor.close()
             ctx.close()
 
-    # Endpoint to select a data warehouse
-    def select_warehouse_logic(self, token: str, warehouse_name: str):
-        try:
-            # Hypothetical method to select the warehouse
-            self._create_warehouse(warehouse_name)
-        except PermissionError:
-            raise PermissionError("Insufficient permissions to select the warehouse")
-        except Exception as e:
-            print(f"Unexpected error: {e}")
-            raise RuntimeError("An unexpected error occurred while selecting the warehouse")
-
-        return {"message": f"Data warehouse '{warehouse_name}' selected"}
-
-    # Modified endpoint to list databases using the selected data warehouse
+    # Endpoint to list databases
     def list_databases_logic(self, token: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
         ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
         cursor = ctx.cursor()
         try:
-            cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            try:
+                cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            except Exception as e:  
+                if "Object does not exist" in str(e):  
+                    raise HTTPException(status_code=404, detail="The specified warehouse does not exist. Please select a new data warehouse.")
+                else:
+                    raise HTTPException(status_code=500, detail="An unexpected error occurred while accessing the database.")
+                
             cursor.execute("SHOW DATABASES")
             databases = cursor.fetchall()
             return {"databases": [db[1] for db in databases]}
@@ -356,12 +387,11 @@ class SnowflakeIntegrationService:
         except Exception as e:
             self.handle_common_errors(e)
 
-    # Endpoint to list views of a specific schema in a Snowflake database
-    def change_default_role_logic(self, new_role: str, token: str):
+    # Endpoint to change the user role in snowflake
+    def change_default_role_logic(self, new_role_request: SnowflakeRole, token: str):
+        new_role = new_role_request.role
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
-        if not snowflake_identifier_obj:
-            raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
-
+        
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
@@ -374,13 +404,17 @@ class SnowflakeIntegrationService:
                 cursor.execute(f"ALTER USER {current_username} SET DEFAULT_ROLE = '{new_role}'")
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Failed to change default role: {e}")
-
+            # changing it in the DB 
+            snowflake_identifier_obj.user_role = new_role
+            self.session.commit()
+            
             return {"detail": f"Default role for user '{current_username}' changed to '{new_role}' successfully"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
         finally:
             cursor.close()
             conn.close()
+
 
     def get_views_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -454,7 +488,7 @@ class SnowflakeIntegrationService:
     # list available roles
     def get_available_roles_logic(self, token: str):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
-
+        
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
@@ -462,8 +496,8 @@ class SnowflakeIntegrationService:
             try:
                 cursor.execute("SELECT CURRENT_AVAILABLE_ROLES();")
                 roles = cursor.fetchall()
-
-                available_roles = [role[0] for role in roles]
+                available_roles = ast.literal_eval(roles[0][0]) 
+                # available_roles = [role[0] for role in roles]
 
                 return {"available_roles": available_roles}
             finally:

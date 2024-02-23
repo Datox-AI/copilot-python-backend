@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody
+from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody, SnowflakeRole
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
 
 router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integration"])
@@ -33,6 +33,15 @@ def delete_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService
     return {"message": "Snowflake integration deleted successfully."}
 
 
+@router.put("/change_role")
+def change_role(
+    request: SnowflakeRole,
+    token: str,
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+    ):
+    return snow_integration_service.change_default_role_logic(new_role_request=request, token=token)
+
+
 @router.get("/callback")
 async def oauth_callback(code: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return await snow_integration_service.oauth_callback_logic(code)
@@ -45,20 +54,10 @@ async def refresh_access_token(
     refresh_token = request_body.refresh_token
     return await snow_integration_service.refresh_access_token_logic(refresh_token)
 
-
 # Endpoint to list data warehouses
 @router.get("/data_warehouses")
 def list_data_warehouses(token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return snow_integration_service.list_data_warehouses_logic(token)
-
-
-# # Endpoint to select a data warehouse # kerakmi?
-# @router.post("/select_warehouse")
-# def select_warehouse(
-#     token: str, warehouse_name: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
-# ):
-#     return snow_integration_service.select_warehouse_logic(token, warehouse_name)
-
 
 # Modified endpoint to list databases using the selected data warehouse
 @router.get("/databases")

@@ -13,6 +13,7 @@ class SnowflakeOauthMapper:
             client_id=snowflake_identifier.client_id,
             client_secret=snowflake_identifier.client_secret,
             token_endpoint=snowflake_identifier.token_endpoint,
+            user_role=snowflake_identifier.user_role,
             warehouse=warehouse_obj.name,
             authorization_url=authorization_url,
         )
