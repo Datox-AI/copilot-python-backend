@@ -9,5 +9,6 @@ class SnowflakeIdentifierResponse(BaseSchema):
     client_id: str
     client_secret: str
     token_endpoint: str
+    user_role: str
     warehouse: str
     authorization_url: str
