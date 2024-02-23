@@ -144,7 +144,7 @@ class SnowflakeIntegrationService:
         if is_url_reachable(authorization_url):
             return {"authorization_url": authorization_url}
         else:
-            raise HTTPException(status_code=500, detail="Authorization URL is not reachable")
+            raise HTTPException(status_code=400, detail="Authorization URL is not reachable")
     
 
     def get_oauth_logic(self):
