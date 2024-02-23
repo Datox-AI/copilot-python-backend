@@ -138,7 +138,6 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": config.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -156,7 +155,6 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": existing_snowflake_identifier_obj.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -189,7 +187,6 @@ class SnowflakeIntegrationService:
             "response_type": "code",
             "client_id": config.client_id,
             "redirect_uri": REDIRECT_URI,
-            "account": config.account_identifier,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
