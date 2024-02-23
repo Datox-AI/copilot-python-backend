@@ -15,6 +15,7 @@ class SnowflakeIdentifier(BaseAudit):
     client_secret = Column(String, nullable=False)
     token_endpoint = Column(String, nullable=False)
     authorization_endpoint = Column(String, nullable=False)
+    user_role = Column(String, nullable=True)
 
     warehouses = relationship("SnowflakeWarehouse", back_populates="identifier")
 

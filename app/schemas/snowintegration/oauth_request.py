@@ -9,6 +9,9 @@ class OAuthConfig(BaseSchema):
     token_endpoint: str
     warehouse: str
 
+class SnowflakeRole(BaseSchema):
+    role: str
+
 
 class RefreshTokenBody(BaseSchema):
     refresh_token: str
