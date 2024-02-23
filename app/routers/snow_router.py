@@ -35,10 +35,8 @@ def delete_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService
 
 @router.put("/change_role")
 def change_role(
-    request: SnowflakeRole,
-    token: str,
-    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
-    ):
+    request: SnowflakeRole, token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
     return snow_integration_service.change_default_role_logic(new_role_request=request, token=token)
 
 
@@ -54,10 +52,12 @@ async def refresh_access_token(
     refresh_token = request_body.refresh_token
     return await snow_integration_service.refresh_access_token_logic(refresh_token)
 
+
 # Endpoint to list data warehouses
 @router.get("/data_warehouses")
 def list_data_warehouses(token: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return snow_integration_service.list_data_warehouses_logic(token)
+
 
 # Modified endpoint to list databases using the selected data warehouse
 @router.get("/databases")

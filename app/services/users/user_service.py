@@ -96,13 +96,13 @@ class ApplicationUserService:
     async def get_user_roles(self) -> dict:
         access_token = await self.token_provider.get_access_token()
         print(access_token)
-        print("--"*40)
+        print("--" * 40)
         print(os.getenv("AZURE_AD_CLIENT_ID"))
-        print("--"*40)
+        print("--" * 40)
         print(os.getenv("AZURE_AD_CLIENT_SECRET"))
-        print("--"*40)
-        print(authority="https://login.microsoftonline.com/" + os.getenv("AZURE_AD_TENANT_ID"))
-        print("--"*40)
+        print("--" * 40)
+        print("https://login.microsoftonline.com/" + os.getenv("AZURE_AD_TENANT_ID"))
+        print("--" * 40)
         graph_client = GraphApiClient(access_token)
         service_principals = await graph_client.get_service_principal(os.getenv("AZURE_AD_CLIENT_ID"))
         role_definitions = []

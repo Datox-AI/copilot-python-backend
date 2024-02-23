@@ -80,21 +80,15 @@ class CustomSQLDatabase(SQLDatabase):
         If the statement returns rows, a string of the results is returned.
         If the statement returns no rows, an empty string is returned.
         """
-        result = self._execute(
-            command, fetch, parameters=parameters, execution_options=execution_options
-        )
+        result = self._execute(command, fetch, parameters=parameters, execution_options=execution_options)
 
         if fetch == "cursor":
             return result
 
         res = [
-            {
-                column: truncate_word(value, length=self._max_string_length)
-                for column, value in r.items()
-            }
+            {column: truncate_word(value, length=self._max_string_length) for column, value in r.items()}
             for r in result
         ]
-
 
         if not res:
             return ""
@@ -105,9 +99,7 @@ class CustomSQLDatabase(SQLDatabase):
 
             return str(res)
 
-    
-    
-    
+
 # run and save tool
 class QuerySaveSQLDataBaseTool(QuerySQLDataBaseTool):
     name: str = "sql_db_query_save"

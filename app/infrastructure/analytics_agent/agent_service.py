@@ -35,7 +35,7 @@ class DataAnalyticAgent:
             openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
             openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
-            streaming=True
+            streaming=True,
         )
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
@@ -128,9 +128,7 @@ class DataAnalyticAgent:
             self.azure_blob_storage_manager.delete_extra_csv_files(
                 message_id=message_id.hex, stored_file_id=agent_response["stored_file_id"]
             )
-            agent_response[
-                "stored_file_id"
-            ] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+            agent_response["stored_file_id"] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
         return agent_response
 
     def _add_sql_markdown(self, agent_response: dict, message_id: UUID):
@@ -140,9 +138,8 @@ class DataAnalyticAgent:
                 sql_markdown = f"```sql\n{sql_query}\n```"
                 agent_response["sql_query"] = sql_markdown
         return agent_response
-            
-        
-    
+
+
 class AgentSnowflakeEngineManager:
     def __init__(self):
         self.engine = None
