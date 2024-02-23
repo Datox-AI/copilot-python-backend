@@ -106,14 +106,9 @@ class DataAnalyticAgent:
         try:
             agent_response = await self.agent_executor.ainvoke({"input": user_query, "message_id": message_id_str})
             # deleting all files that are saved except the last one
-            if "stored_file_id" in agent_response.keys() and agent_response["stored_file_id"] is not None:
-                self.azure_blob_storage_manager.delete_extra_csv_files(
-                    message_id=message_id_str, stored_file_id=agent_response["stored_file_id"]
-                )
-                agent_response[
-                    "stored_file_id"
-                ] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
-
+            agent_response = self._delete_extra_csv_files(agent_response=agent_response, message_id=message_id)
+            # adding sql markdown for the ones that do not have
+            agent_response = self._add_sql_markdown(agent_response=agent_response, message_id=message_id)
         except Exception as e:
             print(f"Error during agent invocation: {e}")
             is_agent_response_valid = False
@@ -128,7 +123,26 @@ class DataAnalyticAgent:
         ):
             yield agent_chunk
 
+    def _delete_extra_csv_files(self, agent_response: dict, message_id: UUID):
+        if agent_response["stored_file_id"]:
+            self.azure_blob_storage_manager.delete_extra_csv_files(
+                message_id=message_id.hex, stored_file_id=agent_response["stored_file_id"]
+            )
+            agent_response[
+                "stored_file_id"
+            ] = f"{agent_response['message_id']}_{agent_response['stored_file_id']}.csv"
+        return agent_response
 
+    def _add_sql_markdown(self, agent_response: dict, message_id: UUID):
+        if agent_response["sql_query"]:
+            sql_query = agent_response["sql_query"]
+            if not sql_query.startswith("```sql"):
+                sql_markdown = f"```sql\n{sql_query}\n```"
+                agent_response["sql_query"] = sql_markdown
+        return agent_response
+            
+        
+    
 class AgentSnowflakeEngineManager:
     def __init__(self):
         self.engine = None
