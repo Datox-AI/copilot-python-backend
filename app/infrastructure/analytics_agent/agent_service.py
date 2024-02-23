@@ -35,6 +35,7 @@ class DataAnalyticAgent:
             openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
             openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
+            streaming=True
         )
         # initiating our db manager and assigning blob manager to our db
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
