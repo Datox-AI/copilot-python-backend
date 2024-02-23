@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Dict, Literal, Sequence, Union
 
 import pandas as pd
 from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
@@ -42,11 +42,8 @@ class CustomSQLDatabase(SQLDatabase):
             return ""
         else:
             if not self.token_counter.count_tokens(input=str(res), agent_step="sql_query_run"):
-                first_ten_rows = result[:10]
-                res = [
-                    tuple(truncate_word(c, length=self._max_string_length) for c in r.values()) for r in first_ten_rows
-                ]
-                return f"Token overloaded.\nFirst 10 rows of data: {res}\nStored ID: {stored_file_id}"
+                first_ten_res = res[:10]
+                return f"Token overloaded.\nFirst 10 rows of data: {first_ten_res}\nStored ID: {stored_file_id}"
 
             return f"Data: {res}\nStored ID: {stored_file_id}"
 
@@ -69,7 +66,48 @@ class CustomSQLDatabase(SQLDatabase):
             """Format the error message"""
             return f"Error: {e}"
 
+    def run(
+        self,
+        command: str,
+        fetch: Literal["all", "one", "cursor"] = "all",
+        include_columns: bool = False,
+        *,
+        parameters=None,
+        execution_options=None,
+    ):
+        """Execute a SQL command and return a string representing the results.
 
+        If the statement returns rows, a string of the results is returned.
+        If the statement returns no rows, an empty string is returned.
+        """
+        result = self._execute(
+            command, fetch, parameters=parameters, execution_options=execution_options
+        )
+
+        if fetch == "cursor":
+            return result
+
+        res = [
+            {
+                column: truncate_word(value, length=self._max_string_length)
+                for column, value in r.items()
+            }
+            for r in result
+        ]
+
+
+        if not res:
+            return ""
+        else:
+            if not self.token_counter.count_tokens(input=str(res), agent_step="sql_query_run"):
+                first_ten_res = res[:10]
+                return f"Token overloaded.\nFirst 10 rows of data: {first_ten_res}"
+
+            return str(res)
+
+    
+    
+    
 # run and save tool
 class QuerySaveSQLDataBaseTool(QuerySQLDataBaseTool):
     name: str = "sql_db_query_save"
