@@ -66,8 +66,7 @@ async def agent_endpoint(
         # connection_error_message = "Snowflake token is expired"
         # azure_token_invalid_message = "Azure token is invalid"
         # azure_token_invalid_message = "Azure token is expired"
-        
-        
+
         try:
             while True:
                 # checking whether engine is alive
@@ -159,11 +158,10 @@ async def agent_endpoint(
                             )
                         else:
                             message_service.create_failed_agent_response(
-                                message_id=agent_message_id, 
-                                text=agent_response["error"]
+                                message_id=agent_message_id, text=agent_response["error"]
                             )
                             await manager.send_error_message(message=agent_response["error"], websocket=websocket)
-                            
+
                 finally:
                     # Cancel the stop_listener_task if it's still running
                     stop_listener_task.cancel()

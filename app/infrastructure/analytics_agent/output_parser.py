@@ -11,7 +11,9 @@ from langchain.schema import AgentAction, AgentFinish
 # Final answer output parser
 class FinalAnswer(BaseModel):
     output: str = Field(description="Final answer and insights to the original input question")
-    confirmation: Union[str, None] = Field(description="the confirmation to move on the next query if there is more than one query")
+    confirmation: Union[str, None] = Field(
+        description="the confirmation to move on the next query if there is more than one query"
+    )
     stored_file_id: str = Field(description="Stored ID of the result from sql query")
     sql_query: str = Field(description="SQL query you generated to get the final answer")
     followup_questions: List[str] = "Followup questions user might want to ask about the table you used"
