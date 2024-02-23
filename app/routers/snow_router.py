@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody
+from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody, SnowflakeRole
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
 
 router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integration"])
@@ -31,6 +31,15 @@ def update_oauth(config: OAuthConfig, snow_integration_service: Annotated[Snowfl
 def delete_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     snow_integration_service.delete_oauth_logic()
     return {"message": "Snowflake integration deleted successfully."}
+
+
+@router.put("/change_role")
+def change_role(
+    request: SnowflakeRole,
+    token: str,
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+    ):
+    return snow_integration_service.change_default_role_logic(new_role_request=request, token=token)
 
 
 @router.get("/callback")

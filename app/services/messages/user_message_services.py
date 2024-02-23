@@ -120,7 +120,6 @@ class UserMessageService:
         return False
 
     def update_message(self, chat_id: UUID, message_id: UUID, updated_data: UpdateMessageRequest):
-        self._check_chat_exists(chat_id=self.chat_id)
         message_obj = self.session.query(Message).filter(Message.id == message_id, Message.chat_id == chat_id).first()
         if message_obj:
             if message_obj.id != updated_data.id:

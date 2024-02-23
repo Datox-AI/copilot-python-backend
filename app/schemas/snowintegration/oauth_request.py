@@ -12,6 +12,5 @@ class OAuthConfig(BaseSchema):
 class SnowflakeRole(BaseSchema):
     role: str
 
-
 class RefreshTokenBody(BaseSchema):
     refresh_token: str

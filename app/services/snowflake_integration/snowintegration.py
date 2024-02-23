@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 from urllib.parse import urlencode
-import httpx
+import httpx, ast
 import snowflake.connector
 from fastapi import Depends, FastAPI, HTTPException
 from httpx import ConnectTimeout, HTTPStatusError, NetworkError, ReadTimeout
@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 from app.models.maindb.snowflake_identifier import SnowflakeIdentifier, SnowflakeWarehouse
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper
+from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper, SnowflakeRole
 from app.shared.auth.azure_scheme import current_user
 import requests
 import logging
@@ -202,9 +202,17 @@ class SnowflakeIntegrationService:
         self.session.commit()
 
     async def oauth_callback_logic(self, code: str):
+        snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
+        
         token_response = await self.exchange_code_for_token(code)
+        #saving user role to DB 
+        if not snowflake_identifier_obj.user_role:          
+            scope = token_response["scope"]
+            user_role = scope.split(":")[-1]
+            snowflake_identifier_obj.user_role = user_role
+            self.session.commit(snowflake_identifier_obj)
 
         try:
             if "access_token" not in token_response:
@@ -379,12 +387,11 @@ class SnowflakeIntegrationService:
         except Exception as e:
             self.handle_common_errors(e)
 
-    # Endpoint to list views of a specific schema in a Snowflake database
-    def change_default_role_logic(self, new_role: str, token: str):
+    # Endpoint to change the user role in snowflake
+    def change_default_role_logic(self, new_role_request: SnowflakeRole, token: str):
+        new_role = new_role_request.role
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
-        if not snowflake_identifier_obj:
-            raise HTTPException(status_code=400, detail="User does not have snowflake identifier object")
-
+        
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
@@ -397,13 +404,17 @@ class SnowflakeIntegrationService:
                 cursor.execute(f"ALTER USER {current_username} SET DEFAULT_ROLE = '{new_role}'")
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"Failed to change default role: {e}")
-
+            # changing it in the DB 
+            snowflake_identifier_obj.user_role = new_role
+            self.session.commit()
+            
             return {"detail": f"Default role for user '{current_username}' changed to '{new_role}' successfully"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
         finally:
             cursor.close()
             conn.close()
+
 
     def get_views_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -477,7 +488,7 @@ class SnowflakeIntegrationService:
     # list available roles
     def get_available_roles_logic(self, token: str):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
-
+        
         try:
             conn = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
             cursor = conn.cursor()
@@ -485,8 +496,8 @@ class SnowflakeIntegrationService:
             try:
                 cursor.execute("SELECT CURRENT_AVAILABLE_ROLES();")
                 roles = cursor.fetchall()
-
-                available_roles = [role[0] for role in roles]
+                available_roles = ast.literal_eval(roles[0][0]) 
+                # available_roles = [role[0] for role in roles]
 
                 return {"available_roles": available_roles}
             finally:

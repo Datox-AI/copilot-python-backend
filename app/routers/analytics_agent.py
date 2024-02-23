@@ -63,6 +63,11 @@ async def agent_endpoint(
         message_service = AnalyticsAgentMessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
         # default connection engine error
         connection_error_message = "Engine is not connected"
+        # connection_error_message = "Snowflake token is expired"
+        # azure_token_invalid_message = "Azure token is invalid"
+        # azure_token_invalid_message = "Azure token is expired"
+        
+        
         try:
             while True:
                 # checking whether engine is alive
@@ -153,7 +158,12 @@ async def agent_endpoint(
                                 response=agent_response, websocket=websocket, chat_id=chat_id
                             )
                         else:
+                            message_service.create_failed_agent_response(
+                                message_id=agent_message_id, 
+                                text=agent_response["error"]
+                            )
                             await manager.send_error_message(message=agent_response["error"], websocket=websocket)
+                            
                 finally:
                     # Cancel the stop_listener_task if it's still running
                     stop_listener_task.cancel()
