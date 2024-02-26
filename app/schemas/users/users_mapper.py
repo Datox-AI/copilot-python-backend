@@ -19,4 +19,8 @@ class ApplicationUserMapper:
 
     @staticmethod
     def map_to_application_user_role_response(role: Role):
-        return ApplicationUserRoleSchema(id=role.id.hex, name=role.name)
+        return ApplicationUserRoleSchema(
+            id=role.id.hex,
+            name=role.name,
+            azure_role_id=role.azure_role_id
+        )

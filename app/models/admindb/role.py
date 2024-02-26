@@ -8,3 +8,4 @@ class Role(Base):
     __tablename__ = "roles"
 
     name = Column(String, nullable=False)
+    azure_role_id = Column(String, index=True, unique=True)
