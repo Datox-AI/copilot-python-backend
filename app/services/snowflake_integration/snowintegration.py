@@ -213,7 +213,7 @@ class SnowflakeIntegrationService:
             scope = token_response["scope"]
             user_role = scope.split(":")[-1]
             snowflake_identifier_obj.user_role = user_role
-            self.session.commit(snowflake_identifier_obj)
+            self.session.commit()
 
         try:
             if "access_token" not in token_response:
