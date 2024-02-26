@@ -168,9 +168,9 @@ class ApplicationUserService:
         session.commit()
 
     async def __sync_user_roles_with_db(self, session: Session, user_azure_object_id: UUID, new_role_ids: List[UUID]):
-        user = session.query(ApplicationUser).filter(
-            ApplicationUser.azure_object_id == str(user_azure_object_id)
-        ).first()
+        user = (
+            session.query(ApplicationUser).filter(ApplicationUser.azure_object_id == str(user_azure_object_id)).first()
+        )
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -187,9 +187,7 @@ class ApplicationUserService:
                 session.delete(user_role)
 
         for role_id in roles_to_add:
-            role = session.query(Role).filter(
-                Role.azure_role_id == role_id
-            ).first()
+            role = session.query(Role).filter(Role.azure_role_id == role_id).first()
             if not role:
                 role = Role(azure_role_id=role_id, name="Unknown Role")
                 session.add(role)
