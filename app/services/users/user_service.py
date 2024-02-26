@@ -58,9 +58,11 @@ class GraphApiClient:
             raise HTTPException(status_code=current_roles_response.status_code, detail="Failed to fetch current roles")
 
         current_roles = current_roles_response.json().get("value", [])
-        current_role_ids = [role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id]
+        current_role_ids = set([role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id])
 
-        role_ids_to_add = list(set(new_role_ids) - set(current_role_ids))
+        new_role_ids_set = {str(item) for item in new_role_ids}
+        role_ids_to_add = list(new_role_ids_set - current_role_ids)
+        role_ids_to_remove = list(current_role_ids - new_role_ids_set)
 
         for role_id in role_ids_to_add:
             app_role_assignment = {
@@ -77,9 +79,7 @@ class GraphApiClient:
                         status_code=add_response.status_code, detail="Failed to add role due to an unexpected error"
                     )
                 if (
-                    add_response.status_code == 400
-                    and "error" in error_details
-                    and "Permission being assigned already exists on the object"
+                    add_response.status_code == 400 and "error" in error_details and "Permission being assigned already exists on the object"
                     in error_details["error"].get("message", "")
                 ):
                     return "Role is already assigned to user."
@@ -90,6 +90,16 @@ class GraphApiClient:
                             "message", "Failed to add role due to an unexpected error"
                         ),
                     )
+
+        for role_id in role_ids_to_remove:
+            role_assignment_id = next(
+                (role["id"] for role in current_roles if role["appRoleId"] == role_id and role["resourceId"] == resource_id), None
+            )
+            if role_assignment_id:
+                response = await self.client.delete(f"users/{str(user_id)}/appRoleAssignments/{role_assignment_id}")
+                response.raise_for_status()
+            else:
+                print(f"No role assignment found for role ID {role_id} to remove")
 
 
 class TokenProvider:
@@ -182,9 +192,11 @@ class ApplicationUserService:
         roles_to_remove = current_roles - new_role_ids_set
 
         for role_id in roles_to_remove:
-            user_roles_to_remove = session.query(UserRole).filter_by(role_id=UUID(role_id)).all()
+            role_obj = session.query(Role).filter_by(azure_role_id=role_id).first()
+            user_roles_to_remove = session.query(UserRole).filter_by(role_id=role_obj.id).filter_by(user_id=user.id).all()
             for user_role in user_roles_to_remove:
                 session.delete(user_role)
+                session.commit()
 
         for role_id in roles_to_add:
             role = session.query(Role).filter(Role.azure_role_id == role_id).first()
