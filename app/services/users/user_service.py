@@ -1,5 +1,6 @@
 import os
 from typing import List
+from uuid import UUID
 from httpx import AsyncClient
 from fastapi import HTTPException, Depends, status
 from sqlalchemy.orm import Session
@@ -30,12 +31,24 @@ class GraphApiClient:
     async def get_service_principal_id(self, client_id: str) -> str:
         # Extract the service principal ID from the response
         service_principals = await self.get_service_principal(client_id)
-        if service_principals:
-            return service_principals[0]["id"]
+        service_principal = service_principals.get("value", [])
+        if service_principal:
+            return service_principal[0]["id"]
         else:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Service Principal not found")
 
-    async def update_user_roles(self, user_id: str, resource_id: str, new_role_ids: List[str]) -> None:
+    async def get_user_role(self, user_id: UUID, resource_id: UUID) -> str:
+        current_roles_response = await self.client.get(
+            f"users/{user_id}/appRoleAssignments", params={"$select": "id,principalId,resourceId,appRoleId"}
+        )
+        if current_roles_response.status_code != 200:
+            raise HTTPException(status_code=current_roles_response.status_code, detail="Failed to fetch current roles")
+
+        current_roles = current_roles_response.json().get("value", [])
+        current_role_ids = [role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id]
+        return str(list(set(current_role_ids))[0])
+
+    async def update_user_roles(self, user_id: UUID, resource_id: UUID, new_role_ids: List[UUID]) -> None:
         # Fetch the current roles assigned to the user for the specified resource
         current_roles_response = await self.client.get(
             f"users/{user_id}/appRoleAssignments", params={"$select": "id,principalId,resourceId,appRoleId"}
@@ -46,26 +59,36 @@ class GraphApiClient:
         current_roles = current_roles_response.json().get("value", [])
         current_role_ids = [role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id]
 
-        # Compute the roles to add and to remove
         role_ids_to_add = list(set(new_role_ids) - set(current_role_ids))
-        role_ids_to_remove = [
-            role for role in current_roles if role["appRoleId"] in (set(current_role_ids) - set(new_role_ids))
-        ]
 
-        # Compute the roles to add and to remove
         for role_id in role_ids_to_add:
-            app_role_assignment = {"principalId": user_id, "resourceId": resource_id, "appRoleId": role_id}
-            add_response = await self.client.post(f"users/{user_id}/appRoleAssignments", json=app_role_assignment)
+            app_role_assignment = {
+                "principalId": str(user_id),
+                "resourceId": str(resource_id),
+                "appRoleId": str(role_id),
+            }
+            add_response = await self.client.post(f"users/{str(user_id)}/appRoleAssignments", json=app_role_assignment)
             if add_response.status_code != 201:
-                raise HTTPException(status_code=add_response.status_code, detail="Failed to add role")
-
-        # Remove old roles
-        for role in role_ids_to_remove:
-            delete_response = await self.client.delete(
-                f'users/{user_id}/appRoleAssignments/{role["id"]}',
-            )
-            if delete_response.status_code != 204:
-                raise HTTPException(status_code=delete_response.status_code, detail="Failed to remove role")
+                try:
+                    error_details = add_response.json()
+                except ValueError:
+                    raise HTTPException(
+                        status_code=add_response.status_code, detail="Failed to add role due to an unexpected error"
+                    )
+                if (
+                    add_response.status_code == 400
+                    and "error" in error_details
+                    and "Permission being assigned already exists on the object"
+                    in error_details["error"].get("message", "")
+                ):
+                    return "Role is already assigned to user."
+                else:
+                    raise HTTPException(
+                        status_code=add_response.status_code,
+                        detail=error_details.get("error", {}).get(
+                            "message", "Failed to add role due to an unexpected error"
+                        ),
+                    )
 
 
 class TokenProvider:
@@ -95,14 +118,6 @@ class ApplicationUserService:
 
     async def get_user_roles(self) -> dict:
         access_token = await self.token_provider.get_access_token()
-        print(access_token)
-        print("--" * 40)
-        print(os.getenv("AZURE_AD_CLIENT_ID"))
-        print("--" * 40)
-        print(os.getenv("AZURE_AD_CLIENT_SECRET"))
-        print("--" * 40)
-        print("https://login.microsoftonline.com/" + os.getenv("AZURE_AD_TENANT_ID"))
-        print("--" * 40)
         graph_client = GraphApiClient(access_token)
         service_principals = await graph_client.get_service_principal(os.getenv("AZURE_AD_CLIENT_ID"))
         role_definitions = []
@@ -120,8 +135,14 @@ class ApplicationUserService:
         application_users = self.session.query(ApplicationUser).all()
         return [ApplicationUserMapper.map_to_application_user_response(user) for user in application_users]
 
-    async def update_user_roles_for_user(self, user_id: str, new_role_ids: List[str]) -> None:
+    async def get_user_role(self, user_id: UUID) -> str:
         access_token = await self.token_provider.get_access_token()
         graph_client = GraphApiClient(access_token)
-        service_principals_id = await graph_client.get_service_principal(os.getenv("AZURE_AD_CLIENT_ID"))
-        await graph_client.update_user_roles(user_id, service_principals_id, new_role_ids)
+        service_principals_id = await graph_client.get_service_principal_id(os.getenv("AZURE_AD_CLIENT_ID"))
+        return await graph_client.get_user_role(user_id, service_principals_id)
+
+    async def update_user_roles_for_user(self, user_id: UUID, new_role_ids: List[UUID]) -> None:
+        access_token = await self.token_provider.get_access_token()
+        graph_client = GraphApiClient(access_token)
+        service_principals_id = await graph_client.get_service_principal_id(os.getenv("AZURE_AD_CLIENT_ID"))
+        return await graph_client.update_user_roles(user_id, service_principals_id, new_role_ids)
