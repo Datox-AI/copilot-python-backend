@@ -16,8 +16,7 @@ router = APIRouter(prefix="/api/chats", tags=["User messages"])
 async def create_message(
     chat_id: UUID, request: CreateMessageRequest, message_service: Annotated[UserMessageService, Depends()]
 ):
-    response_generator = message_service.create_message(request)
-    return StreamingResponse(response_generator, media_type="text/event-stream")
+    return message_service.create_message(request)
 
 
 @router.get("/{chat_id}/messages", response_model=List[UserMessageResponse])
