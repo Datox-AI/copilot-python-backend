@@ -59,11 +59,9 @@ class GraphApiClient:
 
         current_roles = current_roles_response.json().get("value", [])
         current_role_ids = set([role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id])
-
         new_role_ids_set = {str(item) for item in new_role_ids}
         role_ids_to_add = list(new_role_ids_set - current_role_ids)
         role_ids_to_remove = list(current_role_ids - new_role_ids_set)
-
         for role_id in role_ids_to_add:
             app_role_assignment = {
                 "principalId": str(user_id),
@@ -71,6 +69,7 @@ class GraphApiClient:
                 "appRoleId": str(role_id),
             }
             add_response = await self.client.post(f"users/{str(user_id)}/appRoleAssignments", json=app_role_assignment)
+            print(add_response.content)
             if add_response.status_code != 201:
                 try:
                     error_details = add_response.json()
@@ -79,7 +78,9 @@ class GraphApiClient:
                         status_code=add_response.status_code, detail="Failed to add role due to an unexpected error"
                     )
                 if (
-                    add_response.status_code == 400 and "error" in error_details and "Permission being assigned already exists on the object"
+                    add_response.status_code == 400
+                    and "error" in error_details
+                    and "Permission being assigned already exists on the object"
                     in error_details["error"].get("message", "")
                 ):
                     return "Role is already assigned to user."
@@ -93,7 +94,12 @@ class GraphApiClient:
 
         for role_id in role_ids_to_remove:
             role_assignment_id = next(
-                (role["id"] for role in current_roles if role["appRoleId"] == role_id and role["resourceId"] == resource_id), None
+                (
+                    role["id"]
+                    for role in current_roles
+                    if role["appRoleId"] == role_id and role["resourceId"] == resource_id
+                ),
+                None,
             )
             if role_assignment_id:
                 response = await self.client.delete(f"users/{str(user_id)}/appRoleAssignments/{role_assignment_id}")
@@ -158,8 +164,7 @@ class ApplicationUserService:
         graph_client = GraphApiClient(access_token)
         service_principals_id = await graph_client.get_service_principal_id(os.getenv("AZURE_AD_CLIENT_ID"))
         response = await graph_client.update_user_roles(user_id, service_principals_id, new_role_ids)
-        if response:
-            await self.__sync_user_roles_with_db(self.session, user_id, new_role_ids)
+        await self.__sync_user_roles_with_db(self.session, user_id, new_role_ids)
         return response
 
     async def __sync_roles_with_db(self, session: Session, roles_data: List[dict]):
@@ -190,13 +195,18 @@ class ApplicationUserService:
 
         roles_to_add = new_role_ids_set - current_roles
         roles_to_remove = current_roles - new_role_ids_set
+        print("new_role_ids_set", new_role_ids_set)
+        print("roles_to_add", roles_to_add)
+        print("roles_to_remove", roles_to_remove)
 
         for role_id in roles_to_remove:
             role_obj = session.query(Role).filter_by(azure_role_id=role_id).first()
-            user_roles_to_remove = session.query(UserRole).filter_by(role_id=role_obj.id).filter_by(user_id=user.id).all()
+            user_roles_to_remove = (
+                session.query(UserRole).filter_by(role_id=role_obj.id).filter_by(user_id=user.id).all()
+            )
+            print("user_roles_to_remove", user_roles_to_remove)
             for user_role in user_roles_to_remove:
                 session.delete(user_role)
-                session.commit()
 
         for role_id in roles_to_add:
             role = session.query(Role).filter(Role.azure_role_id == role_id).first()
