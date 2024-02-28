@@ -59,13 +59,3 @@ class AzureBlobStorageManager:
         stream = blob_client.download_blob().readall()
 
         return stream, media_type
-
-    async def download_pdf_file_async(self, file_id: uuid.UUID):
-        blob_client = self.container_client.get_blob_client(blob=str(file_id))
-        properties = blob_client.get_blob_properties()
-        media_type = properties.metadata.get("media_type", "application/pdf")
-        try:
-            stream = await blob_client.download_blob().readall()
-            return stream, media_type
-        except Exception as e:  # noqa
-            raise HTTPException(status_code=404, detail=f"File with ID {file_id} not found")

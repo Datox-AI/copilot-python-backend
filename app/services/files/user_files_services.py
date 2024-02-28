@@ -38,8 +38,5 @@ class UserFileService:
         self.session.commit()
         return FileMapper.map_to_file_response(file_obj)
 
-    async def download_file_async(self, file_id: UUID):
-        return await self.blob_service.download_pdf_file_async(file_id=file_id)
-
     def download_file(self, file_id: UUID):
         return self.blob_service.download_pdf_file(file_id=file_id)
