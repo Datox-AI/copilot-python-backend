@@ -2,6 +2,10 @@ import uuid, io
 import asyncio
 from typing import Annotated
 from uuid import UUID
+import urllib 
+
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.engine import create_engine
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, WebSocket, WebSocketDisconnect
@@ -16,6 +20,9 @@ from app.services.messages.analytics_agent.message_service import AnalyticsAgent
 from app.services.files.analytics_agent_file_service import AnalyticsAgentFileService
 from app.validators.websocket_validators import DataAnalyticAgentWebsocketValidator
 from app.schemas.data_analytics_agent.agent_request import FileDownloadRequest
+from app.shared.auth.azure_scheme_for_socket import validate_azure_token
+from app.enums.error_enums import SnowflakeTokenErrorEnum
+from app.models.maindb.chat import Chat
 
 
 load_dotenv()
@@ -39,6 +46,135 @@ async def listen_for_stop_signal(websocket: WebSocket, stop_event):
         print(f"Error listening for stop signal: {e}")
 
 
+class TokenManager:
+    def __init__(self, azure_token, snowflake_token, check_update_user, chat_obj):
+        self.azure_token = azure_token 
+        self.snowflake_token = snowflake_token
+        self.check_update_user = check_update_user
+        self.chat_obj = chat_obj
+        self.engine = None
+    
+    def set_values(self, snowflake_token, azure_token):
+        self.azure_token = azure_token
+        self.snowflake_token = snowflake_token
+        
+    async def check_tokens(self, snowflake_token=None, azure_token=None):
+
+        if snowflake_token:
+            self.snowflake_token = snowflake_token
+        if azure_token:
+            self.azure_token = azure_token
+            
+        azure_token_is_valid = False
+        azure_token_error_message = ""
+        snowflake_token_is_valid = False
+        snowflake_token_error_message = ""
+        if self.snowflake_token is not None and self.azure_token is not None:
+            #checking azure token
+            validated_user, azure_token_error_message = await validate_azure_token(
+                access_token=self.azure_token, check_update_user=self.check_update_user
+            )
+            if validated_user:
+                print("azure token is valid")
+                azure_token_is_valid = True
+                # TODO checking chat object 
+            else:
+                print("azure token is not valid")
+            # validating snowflake token
+            if self.engine:
+                print("have engine")
+                
+                try:
+                    # This is a simple way to check if the connection is alive
+                    with self.engine.connect():
+                        print("trying connecting")
+                        return True
+                except SQLAlchemyError:
+                    snowflake_token_is_valid = False 
+                    snowflake_token_error_message = "Snowflake token is expired"
+            else:
+                print("createing engine")
+                snowflake_token_is_valid, snowflake_token_error_message = self.create_engine()
+        else:
+            snowflake_token_error_message = "Engine is not connected"
+            
+        if not snowflake_token_is_valid:
+            return snowflake_token_is_valid, snowflake_token_error_message
+        elif not azure_token_is_valid:
+            return azure_token_is_valid, azure_token_error_message 
+     
+        return True, ""
+                
+    def create_engine(self):
+        chat_snowflake_data_obj = self.chat_obj.snowflake_data
+
+        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+            chat_snowflake_data_obj.snowflake_account,
+            chat_snowflake_data_obj.database_name,
+            chat_snowflake_data_obj.schema,
+            chat_snowflake_data_obj.warehouse,
+            urllib.parse.quote(self.snowflake_token),
+        )
+        engine = create_engine(snowflake_connection_url)
+        try:
+            con = engine.connect()
+            con.close()
+            self.engine = engine
+            return True, ""
+
+        except SQLAlchemyError as e:
+            if "Invalid OAuth access token" in str(e.orig):
+                error_message = SnowflakeTokenErrorEnum.invalid.value
+            elif "OAuth access token expired" in str(e.orig):
+                error_message = SnowflakeTokenErrorEnum.expired.value
+            else:
+                error_message = str(e.orig)
+            return False, error_message
+    
+    
+
+@router.websocket("/ws_new/{chat_id}")
+async def agent_endpoint(
+    chat_id: UUID,
+    websocket: WebSocket,
+    check_update_user: Annotated[CheckUpdateUser, Depends()],
+    maindb_session: Annotated[Session, Depends(create_maindb_session)],
+):
+    await manager.connect(websocket=websocket)
+    chat_obj = maindb_session.query(Chat).filter(Chat.id == chat_id).first()
+    print(chat_obj)
+    token_manager = TokenManager(
+        azure_token=None,
+        snowflake_token=None,
+        check_update_user=check_update_user,
+        chat_obj=chat_obj
+    )
+    while True:
+        are_tokens_valid, error_message = await token_manager.check_tokens()
+        if not are_tokens_valid: 
+            await manager.send_error_message(websocket=websocket, message=error_message)    
+            result = await manager.receive_token_values(websocket=websocket)
+            if result == 'disconnected':
+                break
+            are_tokens_valid, error_message = await token_manager.check_tokens(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
+            print(are_tokens_valid, error_message)
+            if not are_tokens_valid:
+                await manager.send_error_message(message=error_message, websocket=websocket)
+                result = await manager.receive_token_values(websocket=websocket)
+                if result == 'disconnected':
+                    break
+                    
+                token_manager.set_values(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
+                continue
+
+            else:
+                await manager.send_connection_success_message(websocket=websocket)
+                
+        received = await websocket.receive_json()
+        await websocket.send_text(str(received))
+            
+    
+
 @router.websocket("/ws/{chat_id}")
 async def agent_endpoint(
     chat_id: UUID,
@@ -47,13 +183,12 @@ async def agent_endpoint(
     maindb_session: Annotated[Session, Depends(create_maindb_session)],
     token: str = Query(...),
 ):
-    await manager.connect(websocket=websocket)
+    await manager.connect(websocket=websocket)    
     # validating token, and chat_id
     validator = DataAnalyticAgentWebsocketValidator(
         chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
     )
     is_valid = await validator.validate()
-    print(validator.error_message, " --- validation error")
     if is_valid:
         # getting the validated user from validator
         user = validator.validated_user
@@ -62,6 +197,7 @@ async def agent_endpoint(
         agent_engine_manager = AgentSnowflakeEngineManager()
         message_service = AnalyticsAgentMessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
         # default connection engine error
+        first_message_notification = "Send the azure and snowflake tokens"
         connection_error_message = "Engine is not connected"
         # connection_error_message = "Snowflake token is expired"
         # azure_token_invalid_message = "Azure token is invalid"
@@ -108,7 +244,7 @@ async def agent_endpoint(
                     await manager.send_connection_success_message(websocket=websocket)
                     # changing connection error message to default in case engine needs to reconnect
                     connection_error_message = "Engine is not connected"
-
+                    
                 # chatting process
                 try:
                     user_input_data = await websocket.receive_json()

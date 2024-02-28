@@ -39,6 +39,7 @@ async def multi_auth(
     tenant_id = azure_auth.claims.get("tid")
     user_name = azure_auth.claims.get("name")
     roles = azure_auth.claims.get("roles", [])
+    print(roles, " roles from token --------")
 
     currentUserRequest = CurrentUserRequest(
         azure_object_id=azure_object_id,
