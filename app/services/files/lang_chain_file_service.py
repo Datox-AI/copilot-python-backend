@@ -39,7 +39,7 @@ class LangChainService:
             deployment=self.embedding_deployment,
         )
 
-    def process_document_and_generate_response(self, file_content_bytes, prompt):
+    def process_document_and_generate_response(self, file_content_bytes, prompt_from_user):
         # Ensure file_content_bytes is a bytes-like object
         if not isinstance(file_content_bytes, bytes):
             raise TypeError(
@@ -51,30 +51,31 @@ class LangChainService:
             tmp_file.write(file_content_bytes)
             tmp_file_path = tmp_file.name
 
-        # try:
-        pages = PyPDFLoader(tmp_file_path).load_and_split()
-        print(len(pages))
-        document_chain_prompt = PromptTemplate(input_variables=["page_content"], template="{page_content}")
-        document_variable_name = "context"
-        prompt = PromptTemplate.from_template("Summarize this content: {context}")
-        llm_chain = LLMChain(llm=self.llm_chat_model, prompt=prompt)
-        combine_docs_chain = StuffDocumentsChain(
-            llm_chain=llm_chain, document_prompt=document_chain_prompt,
-            document_variable_name=document_variable_name
-        )
-        db = Chroma.from_documents(pages, self.embedding)
-        retriever = db.as_retriever()
-        reduce_chain = ReduceDocumentsChain(
-            combine_documents_chain=combine_docs_chain,
-        )
-        question_generator_chain = LLMChain(llm=self.llm_chat_model, prompt=prompt)
-        chain = ConversationalRetrievalChain(
-            combine_docs_chain=reduce_chain, retriever=retriever, question_generator=question_generator_chain,
-            verbose=True
-        )
-        os.remove(tmp_file_path)
-        return chain.invoke({"question": prompt, "chat_history": []})
-        # except Exception as e:
-        #     print(f"Ошибка при чтении PDF: {e}")
-        # finally:
-        
+        try:
+            pages = PyPDFLoader(tmp_file_path).load_and_split()
+            document_chain_prompt = PromptTemplate(input_variables=["page_content"], template="{page_content}")
+            document_variable_name = "context"
+            prompt = PromptTemplate.from_template("Summarize this content: {context}")
+            llm_chain = LLMChain(llm=self.llm_chat_model, prompt=prompt)
+            combine_docs_chain = StuffDocumentsChain(
+                llm_chain=llm_chain,
+                document_prompt=document_chain_prompt,
+                document_variable_name=document_variable_name,
+            )
+            db = Chroma.from_documents(pages, self.embedding)
+            retriever = db.as_retriever()
+            reduce_chain = ReduceDocumentsChain(
+                combine_documents_chain=combine_docs_chain,
+            )
+            question_generator_chain = LLMChain(llm=self.llm_chat_model, prompt=prompt)
+            chain = ConversationalRetrievalChain(
+                combine_docs_chain=reduce_chain,
+                retriever=retriever,
+                question_generator=question_generator_chain,
+                verbose=True,
+            )
+            return chain.invoke({"question": prompt_from_user, "chat_history": []})
+        except Exception as e:
+            print(f"Ошибка при чтении PDF: {e}")
+        finally:
+            os.remove(tmp_file_path)
