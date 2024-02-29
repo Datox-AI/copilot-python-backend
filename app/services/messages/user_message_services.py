@@ -68,6 +68,8 @@ class UserMessageService:
             ]
 
             if responses:
+                print("responses", responses)
+                print("responses[0]", responses[0])
                 answer = responses[0]["answer"]
                 data = f"data: {answer}\n\n"
                 new_assistant_message = Message(

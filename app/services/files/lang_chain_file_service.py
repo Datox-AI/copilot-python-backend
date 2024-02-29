@@ -74,6 +74,7 @@ class LangChainService:
                 question_generator=question_generator_chain,
                 verbose=True,
             )
+            print("chain", chain)
             return chain.invoke({"question": prompt_from_user, "chat_history": []})
         except Exception as e:
             print(f"Ошибка при чтении PDF: {e}")
