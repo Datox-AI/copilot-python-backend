@@ -3,6 +3,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from fastapi import HTTPException
 import os
 import tempfile
 from dotenv import load_dotenv
@@ -74,9 +75,9 @@ class LangChainService:
                 question_generator=question_generator_chain,
                 verbose=True,
             )
-            print("chain", chain)
             return chain.invoke({"question": prompt_from_user, "chat_history": []})
         except Exception as e:
             print(f"Ошибка при чтении PDF: {e}")
+            raise HTTPException(status_code=500, detail=f"error, {e}")
         finally:
             os.remove(tmp_file_path)
