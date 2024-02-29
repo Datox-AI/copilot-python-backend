@@ -14,6 +14,7 @@ from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper, Snowf
 from app.shared.auth.azure_scheme import current_user
 import requests
 import logging
+from fastapi import Header
 
 # Configure logging at the start of your script/application
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -418,7 +419,19 @@ class SnowflakeIntegrationService:
 
             return {"detail": f"Default role for user '{current_username}' changed to '{new_role}' successfully"}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            error_message = str(e).lower()
+            if 'role does not exist' in error_message:
+                detail_msg = f"The role '{new_role}' does not exist."
+                raise HTTPException(status_code=400, detail=detail_msg)
+            elif 'insufficient privilege' in error_message:
+                detail_msg = "Insufficient privileges to change the role."
+                raise HTTPException(status_code=403, detail=detail_msg)
+            elif 'default role' in error_message:
+                detail_msg = f"Failed to change default role due to a configuration or permission issue."
+                raise HTTPException(status_code=400, detail=detail_msg)
+            else:
+                # General fallback for unhandled errors
+                raise HTTPException(status_code=500, detail=f"Internal Server Error: {error_message}")
         finally:
             cursor.close()
             conn.close()
