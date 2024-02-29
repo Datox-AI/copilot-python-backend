@@ -3,7 +3,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends
 
-from app.schemas.users.users_response import ApplicationUserRoleSchema, ApplicationUserSchema
+from app.schemas.users.users_response import ApplicationUserRoleSchema, ApplicationUserSchema, AzureUserRoleSchema
 from app.services.users import ApplicationUserService
 from app.schemas.users import UserRoleUpdateRequest
 
@@ -15,7 +15,7 @@ async def get_application_users(user_service: ApplicationUserService = Depends(A
     return user_service.get_users()
 
 
-@router.get("/roles", response_model=List[ApplicationUserRoleSchema])
+@router.get("/roles", response_model=List[AzureUserRoleSchema])
 async def get_application_users_role(user_service: ApplicationUserService = Depends(ApplicationUserService)):
     return await user_service.get_user_roles()
 

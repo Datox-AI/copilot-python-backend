@@ -3,12 +3,13 @@ from typing import List
 from uuid import UUID
 from httpx import AsyncClient
 from fastapi import HTTPException, Depends, status
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.orm import Session
 from msal import ConfidentialClientApplication
 from dotenv import load_dotenv
 
 from app.backend.session import create_admindb_session
-from app.models.admindb import ApplicationUser
+from app.models.admindb import ApplicationUser, Role, UserRole
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.users import ApplicationUserMapper
 from app.shared.auth.azure_scheme import current_user
@@ -57,10 +58,10 @@ class GraphApiClient:
             raise HTTPException(status_code=current_roles_response.status_code, detail="Failed to fetch current roles")
 
         current_roles = current_roles_response.json().get("value", [])
-        current_role_ids = [role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id]
-
-        role_ids_to_add = list(set(new_role_ids) - set(current_role_ids))
-
+        current_role_ids = set([role["appRoleId"] for role in current_roles if role["resourceId"] == resource_id])
+        new_role_ids_set = {str(item) for item in new_role_ids}
+        role_ids_to_add = list(new_role_ids_set - current_role_ids)
+        role_ids_to_remove = list(current_role_ids - new_role_ids_set)
         for role_id in role_ids_to_add:
             app_role_assignment = {
                 "principalId": str(user_id),
@@ -68,6 +69,7 @@ class GraphApiClient:
                 "appRoleId": str(role_id),
             }
             add_response = await self.client.post(f"users/{str(user_id)}/appRoleAssignments", json=app_role_assignment)
+            print(add_response.content)
             if add_response.status_code != 201:
                 try:
                     error_details = add_response.json()
@@ -89,6 +91,21 @@ class GraphApiClient:
                             "message", "Failed to add role due to an unexpected error"
                         ),
                     )
+
+        for role_id in role_ids_to_remove:
+            role_assignment_id = next(
+                (
+                    role["id"]
+                    for role in current_roles
+                    if role["appRoleId"] == role_id and role["resourceId"] == resource_id
+                ),
+                None,
+            )
+            if role_assignment_id:
+                response = await self.client.delete(f"users/{str(user_id)}/appRoleAssignments/{role_assignment_id}")
+                response.raise_for_status()
+            else:
+                print(f"No role assignment found for role ID {role_id} to remove")
 
 
 class TokenProvider:
@@ -128,7 +145,8 @@ class ApplicationUserService:
                 role_id = role.get("id")
                 role_display_name = role.get("displayName")
                 if role_id and role_display_name:
-                    role_definitions.append({"id": role_id, "name": role_display_name})
+                    role_definitions.append({"azure_role_id": role_id, "name": role_display_name})
+        await self.__sync_roles_with_db(self.session, role_definitions)
         return role_definitions
 
     def get_users(self) -> List[dict]:
@@ -145,4 +163,59 @@ class ApplicationUserService:
         access_token = await self.token_provider.get_access_token()
         graph_client = GraphApiClient(access_token)
         service_principals_id = await graph_client.get_service_principal_id(os.getenv("AZURE_AD_CLIENT_ID"))
-        return await graph_client.update_user_roles(user_id, service_principals_id, new_role_ids)
+        response = await graph_client.update_user_roles(user_id, service_principals_id, new_role_ids)
+        await self.__sync_user_roles_with_db(self.session, user_id, new_role_ids)
+        return response
+
+    async def __sync_roles_with_db(self, session: Session, roles_data: List[dict]):
+        for role_data in roles_data:
+            azure_role_id = role_data["azure_role_id"]
+            role_name = role_data["name"]
+            role = session.query(Role).filter_by(name=role_name).first()
+
+            if role:
+                if role.azure_role_id != azure_role_id:
+                    role.azure_role_id = azure_role_id
+            else:
+                role = Role(name=role_name, azure_role_id=azure_role_id)
+                session.add(role)
+
+        session.commit()
+
+    async def __sync_user_roles_with_db(self, session: Session, user_azure_object_id: UUID, new_role_ids: List[UUID]):
+        user = (
+            session.query(ApplicationUser).filter(ApplicationUser.azure_object_id == str(user_azure_object_id)).first()
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        current_roles = {user_role.role.azure_role_id for user_role in user.user_roles}
+
+        new_role_ids_set = {str(role_id) for role_id in new_role_ids}
+
+        roles_to_add = new_role_ids_set - current_roles
+        roles_to_remove = current_roles - new_role_ids_set
+        print("new_role_ids_set", new_role_ids_set)
+        print("roles_to_add", roles_to_add)
+        print("roles_to_remove", roles_to_remove)
+
+        for role_id in roles_to_remove:
+            role_obj = session.query(Role).filter_by(azure_role_id=role_id).first()
+            user_roles_to_remove = (
+                session.query(UserRole).filter_by(role_id=role_obj.id).filter_by(user_id=user.id).all()
+            )
+            print("user_roles_to_remove", user_roles_to_remove)
+            for user_role in user_roles_to_remove:
+                session.delete(user_role)
+
+        for role_id in roles_to_add:
+            role = session.query(Role).filter(Role.azure_role_id == role_id).first()
+            if not role:
+                role = Role(azure_role_id=role_id, name="Unknown Role")
+                session.add(role)
+                session.flush()
+
+            user_role = UserRole(user_id=user.id, role_id=role.id, azure_role_id=role_id)
+            session.add(user_role)
+
+        session.commit()
