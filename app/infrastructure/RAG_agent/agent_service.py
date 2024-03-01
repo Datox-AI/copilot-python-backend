@@ -39,17 +39,10 @@ load_dotenv()
 class RAGAgent:
     def __init__(self, chat_id: UUID, db_session: Session):
         # setting up retriever
-        # self.retriever = AzureCognitiveSearchRetriever(
-        #     service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
-        #     index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
-        #     api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
-        #     content_key="content",
-        #     top_k=2,
-        # )
         self.retriever = AzureCognitiveSearchRetriever(
-            service_name="search-copilot",
-            index_name="sharepoint-staging-index",
-            api_key="5zBZOIYzNnyGxbSusVoat9pgYlqqXLIy1EadGdjg9LAzSeDl3E1j",
+            service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
+            index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
+            api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
             content_key="content",
             top_k=2,
         )
@@ -79,14 +72,6 @@ class RAGAgent:
             openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
         )
-        # self.llm = AzureChatOpenAI(
-        #     temperature=0, 
-        #     # model_name="gpt-4-turbo",
-        #     azure_endpoint="https://datox-copilot-open-ai.openai.azure.com/",
-        #     deployment_name="gpt-4-turbo",
-        #     openai_api_version='2023-08-01-preview',
-        #     openai_api_key="9e6e3b027c754318ac88c06fd732c60b",
-        # )
         json_agent = self._create_custom_json_chat_agent()
         # here I am using Analytics Agent's custom history class because it is also applicable to this agent
         message_history = AnalyticsAgentChatMessageHistory(chat_id=chat_id, db_session=db_session)
