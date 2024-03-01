@@ -57,7 +57,7 @@ class RAGAgentMessageService:
         new_agent_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
-            text=agent_response["output"],
+            text=agent_response,
             status=MessageStatus.Success,
             role=MessageRole.Assistant,
         )
