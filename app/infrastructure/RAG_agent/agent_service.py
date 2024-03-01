@@ -17,6 +17,7 @@ from langchain.prompts import (
 from langchain.tools.render import render_text_description
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel
 # from langchain.retrievers import AzureCognitiveSearchRetriever
 from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
@@ -38,10 +39,17 @@ load_dotenv()
 class RAGAgent:
     def __init__(self, chat_id: UUID, db_session: Session):
         # setting up retriever
+        # self.retriever = AzureCognitiveSearchRetriever(
+        #     service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
+        #     index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
+        #     api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
+        #     content_key="content",
+        #     top_k=2,
+        # )
         self.retriever = AzureCognitiveSearchRetriever(
-            service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
-            index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
-            api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
+            service_name="search-copilot",
+            index_name="sharepoint-staging-index",
+            api_key="5zBZOIYzNnyGxbSusVoat9pgYlqqXLIy1EadGdjg9LAzSeDl3E1j",
             content_key="content",
             top_k=2,
         )
@@ -71,6 +79,14 @@ class RAGAgent:
             openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
             temperature=0,
         )
+        # self.llm = AzureChatOpenAI(
+        #     temperature=0, 
+        #     # model_name="gpt-4-turbo",
+        #     azure_endpoint="https://datox-copilot-open-ai.openai.azure.com/",
+        #     deployment_name="gpt-4-turbo",
+        #     openai_api_version='2023-08-01-preview',
+        #     openai_api_key="9e6e3b027c754318ac88c06fd732c60b",
+        # )
         json_agent = self._create_custom_json_chat_agent()
         # here I am using Analytics Agent's custom history class because it is also applicable to this agent
         message_history = AnalyticsAgentChatMessageHistory(chat_id=chat_id, db_session=db_session)
@@ -114,8 +130,6 @@ class RAGAgent:
         return agent
 
     def test_azure_ai_logic(self, prompt: str):
-        self.retriever.get_relevant_documents(prompt)
-
         def format_docs(docs):
             data = "\n\n".join(doc.page_content for doc in docs)
             return data
@@ -134,26 +148,24 @@ class RAGAgent:
         custom_rag_prompt = PromptTemplate.from_template(template)
 
         rag_chain = (
-            {"context": self.retriever | format_docs, "question": RunnablePassthrough()}
+            RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
             | custom_rag_prompt
             | self.llm
             | StrOutputParser()
         )
-        return rag_chain.invoke(prompt)
+
+        rag_chain_with_source = RunnableParallel(
+            {"context": self.retriever, "question": RunnablePassthrough()}
+        ).assign(answer=rag_chain)
+
+        return rag_chain_with_source.invoke(prompt)
 
     def invoke(self, user_query: str):
         try:
             # agent_response = self.agent_executor.invoke({"input": user_query})
             agent_response = self.test_azure_ai_logic(user_query)
-            searched_documents = []
-
-            print(agent_response, "agent response")
-            # if agent_response["document_searched_query"] != "":
-            #     document_searched_query = agent_response["document_searched_query"]
-            #     self.retriever.top_k = 5
-            #     searched_documents = self.retriever.invoke(input=document_searched_query)
-
-            return agent_response, searched_documents
+            searched_documents = agent_response['context']
+            return agent_response['answer'], searched_documents
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")
