@@ -17,6 +17,7 @@ from langchain.prompts import (
 from langchain.tools.render import render_text_description
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel
 # from langchain.retrievers import AzureCognitiveSearchRetriever
 from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
@@ -114,8 +115,6 @@ class RAGAgent:
         return agent
 
     def test_azure_ai_logic(self, prompt: str):
-        self.retriever.get_relevant_documents(prompt)
-
         def format_docs(docs):
             data = "\n\n".join(doc.page_content for doc in docs)
             return data
@@ -134,26 +133,24 @@ class RAGAgent:
         custom_rag_prompt = PromptTemplate.from_template(template)
 
         rag_chain = (
-            {"context": self.retriever | format_docs, "question": RunnablePassthrough()}
+            RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
             | custom_rag_prompt
             | self.llm
             | StrOutputParser()
         )
-        return rag_chain.invoke(prompt)
+
+        rag_chain_with_source = RunnableParallel(
+            {"context": self.retriever, "question": RunnablePassthrough()}
+        ).assign(answer=rag_chain)
+
+        return rag_chain_with_source.invoke(prompt)
 
     def invoke(self, user_query: str):
         try:
             # agent_response = self.agent_executor.invoke({"input": user_query})
             agent_response = self.test_azure_ai_logic(user_query)
-            searched_documents = []
-
-            print(agent_response, "agent response")
-            # if agent_response["document_searched_query"] != "":
-            #     document_searched_query = agent_response["document_searched_query"]
-            #     self.retriever.top_k = 5
-            #     searched_documents = self.retriever.invoke(input=document_searched_query)
-
-            return agent_response, searched_documents
+            searched_documents = agent_response['context']
+            return agent_response['answer'], searched_documents
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")
