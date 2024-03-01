@@ -1,4 +1,4 @@
-name: Deploy Copilot Python Backend to Azure App Service Action 
+name: Deploy Copilot Python Backend to Azure App Service Action
 
 on:
     push:
