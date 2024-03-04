@@ -55,8 +55,8 @@ class RAGAgentMessageService:
 
                 if agent_response and response_type == "documents":
                     searched_documents = agent_response
+                    files = []
                     for document in agent_response:
-                        files = []
                         files.append(
                             {
                                 "itemName": document.metadata["metadata_spo_item_name"],
