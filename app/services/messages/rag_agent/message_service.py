@@ -56,13 +56,15 @@ class RAGAgentMessageService:
                 if agent_response and response_type == "documents":
                     searched_documents = agent_response
                     for document in agent_response:
-                        yield f"""data: {json.dumps({'Type': 'SearchFiles',
-                                            'Files': {
-                                            "fileName": document.metadata["metadata_spo_item_name"],
-                                            "contentType": document.metadata["metadata_spo_item_content_type"],
-                                            "itemUrl": document.metadata["metadata_spo_item_weburi"]
-                                            }}
-                                        )}\n\n"""
+                        files = []
+                        files.append(
+                            {
+                                "itemName": document.metadata["metadata_spo_item_name"],
+                                "contentType": document.metadata["metadata_spo_item_content_type"],
+                                "itemUrl": document.metadata["metadata_spo_item_weburi"],
+                            }
+                        )
+                    yield f"""data: {json.dumps({'Type': 'SearchFiles', 'Files': files})}\n\n"""
 
                 # saving messages
             new_user_message = Message(
