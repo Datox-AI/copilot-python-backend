@@ -2,7 +2,6 @@ import os
 from typing import Annotated
 from uuid import UUID
 
-import pandas as pd
 from dotenv import load_dotenv
 from fastapi import Depends, UploadFile
 from sqlalchemy.orm import Session
