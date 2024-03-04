@@ -44,11 +44,14 @@ class RAGAgentMessageService:
     ):
         # rag_agent_service
         rag_agent_service = RAGAgent(chat_id=self.chat_id, db_session=self.session)
+        message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
 
         def response_generator():
             full_response = ""
             searched_documents = []
-            for agent_response, response_type in rag_agent_service.invoke(user_query=message_text):
+            for agent_response, response_type in rag_agent_service.invoke(
+                user_query=message_text, chat_history=message_objs
+            ):
                 if agent_response and response_type == "answer":
                     full_response += agent_response
                     yield f"data: {json.dumps({'Type': 'Text', 'Text': agent_response})}\n\n"
