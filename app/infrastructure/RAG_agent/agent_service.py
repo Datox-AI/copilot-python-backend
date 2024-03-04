@@ -46,7 +46,7 @@ class RAGAgent:
             index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
             api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
             content_key="content",
-            top_k=2,
+            top_k=4,
         )
 
         retriever_prompt = PromptTemplate.from_template(RETRIEVER_PROMPT)
