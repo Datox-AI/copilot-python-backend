@@ -1,4 +1,5 @@
 import os
+import json
 from uuid import UUID
 
 from dotenv import load_dotenv
@@ -143,15 +144,20 @@ class RAGAgent:
         rag_chain_with_source = RunnableParallel(
             {"context": self.retriever, "question": RunnablePassthrough()}
         ).assign(answer=rag_chain)
-
-        return rag_chain_with_source.invoke(prompt)
+        for event in rag_chain_with_source.stream(prompt):
+            if event and event.get("answer", None):
+                yield event, "answer"
+            elif event and event.get("context", None):
+                yield event, "documents"
+            else:
+                continue
 
     def invoke(self, user_query: str):
         try:
-            # agent_response = self.agent_executor.invoke({"input": user_query})
-            agent_response = self.test_azure_ai_logic(user_query)
-            searched_documents = agent_response["context"]
-            return agent_response["answer"], searched_documents
-
+            for response_text, response_type in self.test_azure_ai_logic(user_query):
+                if response_text and response_type == "answer":
+                    yield response_text["answer"], response_type
+                if response_text and response_type == "documents":
+                    yield response_text["context"], response_type
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")

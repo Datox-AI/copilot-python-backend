@@ -1,8 +1,9 @@
 import uuid
 from typing import Annotated
 from uuid import UUID
-
+import json
 from fastapi import Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
@@ -12,7 +13,6 @@ from app.infrastructure.RAG_agent.agent_service import RAGAgent
 from app.models.maindb import Chat, Message, MessageSharepointDocument
 from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.message import MessageMapper
 from app.shared.auth.azure_scheme import current_user
 
 
@@ -44,42 +44,65 @@ class RAGAgentMessageService:
     ):
         # rag_agent_service
         rag_agent_service = RAGAgent(chat_id=self.chat_id, db_session=self.session)
-        agent_response, searched_documents = rag_agent_service.invoke(user_query=message_text)
-        # saving messages
-        new_user_message = Message(
-            id=uuid.uuid4(),
-            chat_id=self.chat_id,
-            text=message_text,
-            status=MessageStatus.Success,
-            role=MessageRole.User,
-        )
-        new_agent_message = Message(
-            id=uuid.uuid4(),
-            chat_id=self.chat_id,
-            text=agent_response,
-            status=MessageStatus.Success,
-            role=MessageRole.Assistant,
-        )
-        sharepoint_document_objs = []
-        for searched_document in searched_documents:
-            document_metadata = searched_document.metadata
-            sharepoint_document_obj = MessageSharepointDocument(
-                document_id=document_metadata["id"],
-                item_name=document_metadata["metadata_spo_item_name"],
-                item_path=document_metadata["metadata_spo_item_path"],
-                item_url=document_metadata["metadata_spo_item_weburi"],
-                content_type=document_metadata["metadata_spo_item_content_type"],
-                last_modified=document_metadata["metadata_spo_item_last_modified"],
-                item_size=document_metadata["metadata_spo_item_size"],
-                message=new_agent_message,
-            )
-            sharepoint_document_objs.append(sharepoint_document_obj)
-        self.session.add(new_user_message)
-        self.session.add(new_agent_message)
-        self.session.add_all(sharepoint_document_objs)
-        self.session.commit()
 
-        return MessageMapper.map_to_RAG_agent_message_response(message=new_agent_message)
+        def response_generator():
+            full_response = ""
+            searched_documents = []
+            for agent_response, response_type in rag_agent_service.invoke(user_query=message_text):
+                if agent_response and response_type == "answer":
+                    full_response += agent_response
+                    yield f"data: {json.dumps({'Type': 'Text', 'Text': agent_response})}\n\n"
+
+                if agent_response and response_type == "documents":
+                    searched_documents = agent_response
+                    for document in agent_response:
+                        yield f"""data: {json.dumps({'Type': 'SearchFiles',
+                                            'Files': {
+                                            "fileName": document.metadata["metadata_spo_item_name"],
+                                            "contentType": document.metadata["metadata_spo_item_content_type"],
+                                            "itemUrl": document.metadata["metadata_spo_item_weburi"]
+                                            }}
+                                        )}\n\n"""
+
+                # saving messages
+            new_user_message = Message(
+                id=uuid.uuid4(),
+                chat_id=self.chat_id,
+                text=message_text,
+                status=MessageStatus.Success,
+                role=MessageRole.User,
+            )
+            new_agent_message = Message(
+                id=uuid.uuid4(),
+                chat_id=self.chat_id,
+                text=full_response,
+                status=MessageStatus.Success,
+                role=MessageRole.Assistant,
+            )
+            sharepoint_document_objs = []
+            for searched_document in searched_documents:
+                document_metadata = searched_document.metadata
+                sharepoint_document_obj = MessageSharepointDocument(
+                    document_id=document_metadata["id"],
+                    item_name=document_metadata["metadata_spo_item_name"],
+                    item_path=document_metadata["metadata_spo_item_path"],
+                    item_url=document_metadata["metadata_spo_item_weburi"],
+                    content_type=document_metadata["metadata_spo_item_content_type"],
+                    last_modified=document_metadata["metadata_spo_item_last_modified"],
+                    item_size=document_metadata["metadata_spo_item_size"],
+                    message=new_agent_message,
+                )
+                sharepoint_document_objs.append(sharepoint_document_obj)
+            self.session.add(new_user_message)
+            self.session.add(new_agent_message)
+            self.session.add_all(sharepoint_document_objs)
+            self.session.commit()
+            return response_generator()
+
+        return StreamingResponse(
+            response_generator(),
+            media_type="text/event-stream",
+        )
 
     def get_messages(self):
         message_objs = (
