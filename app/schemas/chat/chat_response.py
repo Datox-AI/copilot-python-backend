@@ -33,4 +33,4 @@ class ChatHistoryResponse(BaseSchema):
     created: datetime
     type: ChatType
     snowflake_data: ChatSnowflakeData | None = None
-    messages: list[AnalyticAgentMessageResponse]
+    messages: list
