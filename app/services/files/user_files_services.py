@@ -3,7 +3,6 @@ from typing import Annotated
 from uuid import UUID
 
 from dotenv import load_dotenv
-
 from fastapi import Depends, UploadFile
 from sqlalchemy.orm import Session
 
@@ -14,7 +13,6 @@ from app.schemas.files.file_mapper import FileMapper
 from app.schemas.files.file_response import FilesDetailResponse
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
-
 
 load_dotenv()
 
