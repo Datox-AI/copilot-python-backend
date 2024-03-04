@@ -18,6 +18,7 @@ from langchain.tools.render import render_text_description
 from langchain.tools.retriever import create_retriever_tool
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel
+
 # from langchain.retrievers import AzureCognitiveSearchRetriever
 from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
@@ -149,8 +150,8 @@ class RAGAgent:
         try:
             # agent_response = self.agent_executor.invoke({"input": user_query})
             agent_response = self.test_azure_ai_logic(user_query)
-            searched_documents = agent_response['context']
-            return agent_response['answer'], searched_documents
+            searched_documents = agent_response["context"]
+            return agent_response["answer"], searched_documents
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")

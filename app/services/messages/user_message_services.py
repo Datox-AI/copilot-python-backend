@@ -1,14 +1,12 @@
 import json
 import uuid
-import asyncio
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
-from fastapi.responses import StreamingResponse, PlainTextResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy.future import select
 
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
@@ -17,10 +15,9 @@ from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
-from app.shared.auth.azure_scheme import current_user
-from app.services.files.user_files_services import UserFileService
 from app.services.files.lang_chain_file_service import LangChainService
-
+from app.services.files.user_files_services import UserFileService
+from app.shared.auth.azure_scheme import current_user
 
 from .message_create_stream import OpenAIChatStream
 
@@ -62,26 +59,40 @@ class UserMessageService:
 
         if request.files:
             file_contents = [self.file_service.download_file(file_id) for file_id in request.files]
-            responses = [
-                self.langchain_service.process_document_and_generate_response(content, request.prompt)
-                for content, media_type in file_contents
-            ]
 
-            if responses:
-                answer = responses[0]["answer"]
-                data = f"data: {answer}\n\n"
-                new_assistant_message = Message(
-                    id=uuid.uuid4(),
-                    chat_id=self.chat_id,
-                    text=answer,
-                    follow_up_questions=None,
-                    status=MessageStatus.Success,
-                    role=MessageRole.Assistant,
-                    prompt_id=new_user_message.id,
-                )
-                self.session.add(new_assistant_message)
-                self.session.commit()
-                return PlainTextResponse(content=data, status_code=200)
+            combined_content_bytes = b""
+            media_types = []
+
+            for content, media_type in file_contents:
+                combined_content_bytes += content
+                media_types.append(media_type)
+
+            def response_generator():
+                full_response = ""
+                for response_text in self.langchain_service.process_document_and_generate_response(
+                    combined_content_bytes, request.prompt, media_types=media_types
+                ):
+                    if response_text:
+                        full_response += response_text
+                        yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+                if full_response:
+                    new_assistant_message = Message(
+                        id=uuid.uuid4(),
+                        chat_id=self.chat_id,
+                        text=full_response,
+                        follow_up_questions=None,
+                        status=MessageStatus.Success,
+                        role=MessageRole.Assistant,
+                        prompt_id=new_user_message.id,
+                    )
+                    self.session.add(new_assistant_message)
+                    self.session.commit()
+                return response_generator()
+
+            return StreamingResponse(
+                response_generator(),
+                media_type="text/event-stream",
+            )
         else:
             return StreamingResponse(
                 self._process_text_query_and_respond(request, new_user_message, reply_message),

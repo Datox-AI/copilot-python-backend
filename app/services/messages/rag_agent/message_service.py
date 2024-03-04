@@ -1,6 +1,5 @@
-import json
 import uuid
-from typing import Annotated, Dict
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
