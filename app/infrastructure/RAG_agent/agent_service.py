@@ -1,4 +1,5 @@
 import os
+import json
 from uuid import UUID
 
 from dotenv import load_dotenv
@@ -16,8 +17,10 @@ from langchain.prompts import (
 )
 from langchain.tools.render import render_text_description
 from langchain.tools.retriever import create_retriever_tool
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel
 
-# from langchain.retrievers import AzurzeCognitiveSearchRetriever
+# from langchain.retrievers import AzureCognitiveSearchRetriever
 from langchain_community.retrievers.azure_cognitive_search import AzureCognitiveSearchRetriever
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
@@ -38,13 +41,12 @@ load_dotenv()
 class RAGAgent:
     def __init__(self, chat_id: UUID, db_session: Session):
         # setting up retriever
-        print(os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"), "service name")
         self.retriever = AzureCognitiveSearchRetriever(
             service_name=os.getenv("AZURE_COGNITIVE_SEARCH_SERVICE_NAME"),
             index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
             api_key=os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"),
             content_key="content",
-            top_k=1,
+            top_k=4,
         )
 
         retriever_prompt = PromptTemplate.from_template(RETRIEVER_PROMPT)
@@ -114,18 +116,48 @@ class RAGAgent:
         )
         return agent
 
+    def test_azure_ai_logic(self, prompt: str):
+        def format_docs(docs):
+            data = "\n\n".join(doc.page_content for doc in docs)
+            return data
+
+        template = """You're an AI assistant analyzing a document. 
+        This could be an invoice, a report, or any other type of documentation. 
+        If it's an invoice, consider that the data might be used for various reports: monthly, quarterly, by client, by product or service, etc. 
+        Capture every crucial detail: names, figures, numbers, dates, events, and other significant points. 
+        The summary should be comprehensive, detailing the core content without adding any extraneous remarks
+
+        {context}
+
+        Question: {question}
+
+        Detail Answer:"""
+        custom_rag_prompt = PromptTemplate.from_template(template)
+
+        rag_chain = (
+            RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
+            | custom_rag_prompt
+            | self.llm
+            | StrOutputParser()
+        )
+
+        rag_chain_with_source = RunnableParallel(
+            {"context": self.retriever, "question": RunnablePassthrough()}
+        ).assign(answer=rag_chain)
+        for event in rag_chain_with_source.stream(prompt):
+            if event and event.get("answer", None):
+                yield event, "answer"
+            elif event and event.get("context", None):
+                yield event, "documents"
+            else:
+                continue
+
     def invoke(self, user_query: str):
         try:
-            agent_response = self.agent_executor.invoke({"input": user_query})
-            searched_documents = []
-            print(agent_response, " reponse ")
-
-            if agent_response["document_searched_query"] != "":
-                document_searched_query = agent_response["document_searched_query"]
-                self.retriever.top_k = 5
-                searched_documents = self.retriever.invoke(input=document_searched_query)
-
-            return agent_response, searched_documents
-
+            for response_text, response_type in self.test_azure_ai_logic(user_query):
+                if response_text and response_type == "answer":
+                    yield response_text["answer"], response_type
+                if response_text and response_type == "documents":
+                    yield response_text["context"], response_type
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"RAG Agent failed: {e}")
