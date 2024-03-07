@@ -525,3 +525,5 @@ class SnowflakeIntegrationService:
                 conn.close()
         except Exception as e:
             self.handle_common_errors(e)
+
+
