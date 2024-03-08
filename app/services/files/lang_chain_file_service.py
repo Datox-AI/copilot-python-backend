@@ -5,10 +5,13 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains import ConversationalRetrievalChain, LLMChain, ReduceDocumentsChain, StuffDocumentsChain
-from langchain_community.document_loaders import PyPDFLoader, CSVLoader
 from langchain_community.vectorstores import Chroma
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+
+
+PyPDFLoader = None
+CSVLoader = None
 
 load_dotenv()
 

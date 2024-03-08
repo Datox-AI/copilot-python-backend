@@ -116,12 +116,6 @@ class DataAnalyticAgent:
 
         return agent_response, is_agent_response_valid
 
-    async def for_invoke(self, user_query: str, message_id: UUID):
-        message_id_str = message_id.hex
-        async for agent_chunk in self.agent_executor.astream_events(
-            {"input": user_query, "message_id": message_id_str}, version="v1"
-        ):
-            yield agent_chunk
 
     def _delete_extra_csv_files(self, agent_response: dict, message_id: UUID):
         if agent_response["stored_file_id"]:

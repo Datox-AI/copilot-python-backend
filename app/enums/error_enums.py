@@ -9,3 +9,9 @@ class AzureTokenErrorMessagesEnum(Enum):
     signature_expired = "Token signature has expired"
     unable_to_validate = "Unable to validate token"
     unknown_error = "Unable to process token"
+
+
+class SnowflakeTokenErrorEnum(Enum):
+    invalid = "Snowflake token is invalid"
+    expired = "Snowflake token is expired"
+    

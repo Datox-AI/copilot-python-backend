@@ -11,37 +11,15 @@ The tools you can use are:
 
 {tools}
 
-RESPONSE FORMAT INSTRUCTIONS
-----------------------------
+Detail Answer:"""
 
-When responding to me, please output a response in one of two formats:
-
-**Option 1:**
-Use this if you want the human to use a tool.
-Markdown code snippet formatted in the following schema:
-
-```json
-{{
-    "action": string, \\ The action to take. Must be one of {tool_names}
-    "action_input": string \\ The input to the action
-}}
-```
-
-**Option #2:**
-Use this if you want to respond directly to the human. Markdown code snippet formatted in the following schema:
-
-```json
-{{
-    "action": "Final Answer",
-    "action_input": string \\ You should put what you want to return to use here,
-    "document_searched_query": string \\ A query you used to search from sharepoint documents
-}}
-```
-
-USER\'S INPUT
---------------------
-Here is the user\'s input (remember to respond with a markdown code snippet of a json blob with a single action, and NOTHING else):
-
-{input}"""
-
-RETRIEVER_PROMPT = "PAGE CONTENT:\n{page_content}\n--------------\n\n"
+ASSISTANT_SYSTEM_PROMPT = """You're an AI assistant analyzing a document or list of documents.
+Yout have access to 'get_documents' tool. This tool returns necessary document names and their content to answer user's question.\
+Documents are structured like this: FILE_NAME: [file_name]\n CONTENT: [content].
+This could be an invoice, a report, or any other type of documentation.
+If it's an invoice, consider that the data might be used for various reports: monthly, quarterly, by client, by product or service, etc.
+Capture every crucial detail: names, figures, numbers, dates, events, and other significant points.
+The summary should be comprehensive, detailing the core content without adding any extraneous remarks.
+ 
+Here's the rules you must abide:
+- If there are multiple documents available and related to user's question, you must answer the question for every document."""

@@ -33,6 +33,7 @@ class ChatMapper:
             type=chat.type,
             messages_count=messages_count,
             files_count=files_count,
+            assistant_thread_id=chat.assistant_thread_id,
             last_message=last_message,
             snowflake_data=snowflake_data_response,
         )
