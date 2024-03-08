@@ -33,7 +33,7 @@ class DataAnalyticAssistant:
             streaming=True,
         )
         
-        client = AzureOpenAI(
+        self.client = AzureOpenAI(
             api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),  
             api_version=os.getenv("GPT4_ASSISTANT_OPENAI_API_VERSION"),
             azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT")
@@ -52,17 +52,17 @@ class DataAnalyticAssistant:
         self.sql_tools = self._get_sqldb_tools()
         # getting assistant and thread
         assistant_id = os.getenv("SQL_ANALYTIC_AZURE_ASSISTANT_ID")
-        my_assistant = client.beta.assistants.retrieve(assistant_id)
+        my_assistant = self.client.beta.assistants.retrieve(assistant_id)
         if thread_id:    
             self.thread_id = thread_id        
-            client.beta.threads.retrieve(thread_id=thread_id)
+            self.client.beta.threads.retrieve(thread_id=thread_id)
         else:
-            empty_thread = client.beta.threads.create()
+            empty_thread = self.client.beta.threads.create()
             self.thread_id = empty_thread.id
         
         self.agent = OpenAIAssistantRunnable(
             assistant_id=assistant_id,
-            client=client, 
+            client=self.client, 
             as_agent=True
         )
     
@@ -75,40 +75,51 @@ class DataAnalyticAssistant:
             "content": input,
             "thread_id": self.thread_id
         })
-
         while not isinstance(response, AgentFinish):
             tool_outputs = []
-            print(response, " ---response")
-            for action in response:
-                if action.tool == "sql_db_query":
-                    print("AAA"*50)
-                    generated_query = action.tool_input
-                
-                    tool_response = tool_map[action.tool].invoke(input={
-                        "query": action.tool_input,
-                        "message_id": message_id.hex
-                    })
-                    if type(tool_response) == dict:
-                        tool_output = tool_response["res"]
-                        stored_id = tool_response["stored_file_id"]
+            thread_id = response[0].thread_id
+            run_id = response[0].run_id
+            try:
+                print(response, " ---response")
+                for action in response:
+                    if action.tool == "sql_db_query":
+                        generated_query = action.tool_input
+                        tool_response = tool_map[action.tool].invoke(input={
+                            "query": action.tool_input,
+                            "message_id": message_id.hex
+                        })
+                        if type(tool_response) == dict:
+                            tool_output = tool_response["res"]
+                            stored_id = tool_response["stored_file_id"]
+                        else:
+                            tool_output = tool_response
                     else:
-                        tool_output = tool_response
-                else:
+                        tool_output = tool_map[action.tool].invoke(action.tool_input)
                     
-                    tool_output = tool_map[action.tool].invoke(action.tool_input)
-                
-                print(action.tool, action.tool_input, tool_output, end="\n\n")
-                tool_outputs.append(
-                    {"output": tool_output, "tool_call_id": action.tool_call_id}
+                    print(action.tool, action.tool_input, tool_output, end="\n\n")
+                    tool_outputs.append(
+                        {"output": tool_output, "tool_call_id": action.tool_call_id}
+                    )
+                response = self.agent.invoke(
+                    {
+                        "tool_outputs": tool_outputs,
+                        "run_id": action.run_id,
+                        "thread_id": action.thread_id,
+                    }
                 )
-            response = self.agent.invoke(
-                {
-                    "tool_outputs": tool_outputs,
-                    "run_id": action.run_id,
-                    "thread_id": action.thread_id,
-                }
-            )
-        
+            except Exception as e:
+                try:
+                    self.client.beta.threads.runs.cancel(
+                        thread_id=thread_id,
+                        run_id=run_id
+                    )
+                    print("cancenlled")
+                except:
+                    print("nahh")
+                    pass
+                finally:
+                    return f"Agent failed: {e}"
+                
         return {
             "output": response.return_values["output"],
             "thread_id": response.return_values["thread_id"],

@@ -143,16 +143,25 @@ class AgentSnowflakeEngineManager:
     def create_engine(self, snowflake_token: str, chat_obj: Chat):
         chat_snowflake_data_obj = chat_obj.snowflake_data
 
-        url = URL(
-            user='jjabborov',
-            password='newSecure1',
-            account='CIPLNUD-YM27169',
-            database="THREAD_SAMPLE",
-            schema="PUBLIC", 
-            warehouse='COMPUTE_WH',
-            role = 'ACCOUNTADMIN'
+        # url = URL(
+        #     user='jjabborov',
+        #     password='newSecure1',
+        #     account='CIPLNUD-YM27169',
+        #     database="THREAD_SAMPLE",
+        #     schema="PUBLIC", 
+        #     warehouse='COMPUTE_WH',
+        #     role = 'ACCOUNTADMIN'
+        # )
+        # engine = create_engine(url)
+        
+        snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
+            chat_snowflake_data_obj.snowflake_account,
+            chat_snowflake_data_obj.database_name,
+            chat_snowflake_data_obj.schema,
+            chat_snowflake_data_obj.warehouse,
+            urllib.parse.quote(snowflake_token),
         )
-        engine = create_engine(url)
+        engine = create_engine(snowflake_connection_url)
         try:
             con = engine.connect()
             con.close()
