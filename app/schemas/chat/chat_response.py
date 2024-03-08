@@ -22,6 +22,7 @@ class ChatResponse(BaseSchema):
     pinned_date: datetime | None = None
     type: ChatType
     messages_count: int
+    assistant_thread_id: str | None = None
     files_count: int
     last_message: datetime | None = None
     snowflake_data: ChatSnowflakeData | None = None
@@ -33,4 +34,4 @@ class ChatHistoryResponse(BaseSchema):
     created: datetime
     type: ChatType
     snowflake_data: ChatSnowflakeData | None = None
-    messages: list[AnalyticAgentMessageResponse]
+    messages: list

@@ -24,6 +24,13 @@ class DataAnalyticAgentWebsocketValidator:
         if self.token == "":
             self.error_message = "Token query is required"
             return is_valid
+        # checking token
+        self.validated_user, token_error_message = await validate_azure_token(
+            access_token=self.token, check_update_user=self.check_update_user
+        )
+        if not self.validated_user:
+            self.error_message = token_error_message
+            return is_valid
         # checking chat
         self.chat_obj = self.maindb_session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not self.chat_obj:
@@ -34,13 +41,7 @@ class DataAnalyticAgentWebsocketValidator:
                 f"Chat object under {self.chat_id} id does not have {ChatType.DataAnalytics.value} chat type"
             )
             return is_valid
-        # checking token
-        self.validated_user, token_error_message = await validate_azure_token(
-            access_token=self.token, check_update_user=self.check_update_user
-        )
-        if not self.validated_user:
-            self.error_message = token_error_message
-            return is_valid
+
         # everything is clean (although code isn't)
         is_valid = True
         return is_valid

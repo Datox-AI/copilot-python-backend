@@ -9,7 +9,7 @@ from app.backend.session import create_admindb_session, create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.models.admindb.application_user import ApplicationUser
 from app.models.maindb import Chat, Message, MessageFile
-from app.schemas.chat import ChatHistoryResponse, ChatMapper, ChatResponse
+from app.schemas.chat import ChatMapper, ChatResponse
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
