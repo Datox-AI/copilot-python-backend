@@ -47,6 +47,7 @@ class CustomSQLDatabase(SQLDatabase):
 
             return f"Data: {res}\nStored ID: {stored_file_id}"
 
+
     def run_and_save_no_throw(
         self,
         command: str,
@@ -65,6 +66,7 @@ class CustomSQLDatabase(SQLDatabase):
         except SQLAlchemyError as e:
             """Format the error message"""
             return f"Error: {e}"
+
 
     def run(
         self,
@@ -98,6 +100,48 @@ class CustomSQLDatabase(SQLDatabase):
                 return f"Token overloaded.\nFirst 10 rows of data: {first_ten_res}"
 
             return str(res)
+
+
+    
+    def run_for_assistant(
+        self,
+        command: str,
+        message_id: str,
+        fetch: Literal["all", "one", "cursor"] = "all",
+    ):
+        result = self._execute(command, fetch)
+        # saving the data 
+        df = pd.DataFrame(result)
+        stored_file_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
+        res = [
+            {column: truncate_word(value, length=self._max_string_length) for column, value in r.items()}
+            for r in result
+        ]
+
+        if not res:
+            return ""
+        else:
+            if self.token_counter.over_limit(input=str(res)):
+                first_5_res = res[:5]
+                res_length = len(first_5_res)
+                res = f"Over the limit.\nFirst {res_length} rows of data: {first_5_res}"
+            else:
+                res = str(res)
+            return res, stored_file_id
+        
+    def run_and_no_throw_for_assistant(
+        self,
+        command: str, 
+        message_id: str,
+        fetch: Literal["all", "one", "cursor"] = "all",
+        
+    ):
+    
+        try:
+            return self.run_and_save(command, message_id, fetch)
+        except SQLAlchemyError as e:
+            """Format the error message"""
+            return f"Error: {e}"
 
 
 # run and save tool

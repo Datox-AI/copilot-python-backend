@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
-from app.infrastructure.RAG_agent.agent_service import RAGAgent
+from app.infrastructure.RAG_agent.agent_service import RAGAgent, RAGAssistantAgent
 from app.models.maindb import Chat, Message, MessageSharepointDocument
 from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
@@ -38,6 +38,12 @@ class RAGAgentMessageService:
                 status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
             )
 
+    def test_function(self, input: str):
+        thread_id = self.chat_obj.assistant_thread_id
+        assistant_agent = RAGAssistantAgent(thread_id=thread_id)
+        response = assistant_agent.invoke(input=input)
+        return response
+    
     def create_user_message(
         self,
         message_text: str,
@@ -50,7 +56,7 @@ class RAGAgentMessageService:
             full_response = ""
             searched_documents = []
             for agent_response, response_type in rag_agent_service.invoke(
-                user_query=message_text, chat_history=message_objs
+                user_query=message_text, message_objs=message_objs
             ):
                 if agent_response and response_type == "answer":
                     full_response += agent_response

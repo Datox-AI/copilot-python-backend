@@ -25,6 +25,19 @@ from app.enums.error_enums import SnowflakeTokenErrorEnum
 from app.models.maindb.chat import Chat
 
 
+        # try:
+        # except NotFoundError as e:
+        #     self.agent = OpenAIAssistantRunnable(
+        #         name="sql assistant with langchain",
+        #         client=client,
+        #         instructions=SQL_ASSISTANT_INSTRUCTIONS,
+        #         tools=self.sql_tools,
+        #         model="gpt-4",
+        #         as_agent=True,
+        #     )
+        #     print(f"NEW ASSISTANT CREATED, ID - {self.agent.assistant_id}")
+        # else:
+
 load_dotenv()
 
 router = APIRouter(prefix="/api/analytics_agent", tags=["Data analytics agent"])
@@ -133,45 +146,45 @@ class TokenManager:
     
     
 
-@router.websocket("/ws_new/{chat_id}")
-async def agent_endpoint(
-    chat_id: UUID,
-    websocket: WebSocket,
-    check_update_user: Annotated[CheckUpdateUser, Depends()],
-    maindb_session: Annotated[Session, Depends(create_maindb_session)],
-):
-    await manager.connect(websocket=websocket)
-    chat_obj = maindb_session.query(Chat).filter(Chat.id == chat_id).first()
-    print(chat_obj)
-    token_manager = TokenManager(
-        azure_token=None,
-        snowflake_token=None,
-        check_update_user=check_update_user,
-        chat_obj=chat_obj
-    )
-    while True:
-        are_tokens_valid, error_message = await token_manager.check_tokens()
-        if not are_tokens_valid: 
-            await manager.send_error_message(websocket=websocket, message=error_message)    
-            result = await manager.receive_token_values(websocket=websocket)
-            if result == 'disconnected':
-                break
-            are_tokens_valid, error_message = await token_manager.check_tokens(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
-            print(are_tokens_valid, error_message)
-            if not are_tokens_valid:
-                await manager.send_error_message(message=error_message, websocket=websocket)
-                result = await manager.receive_token_values(websocket=websocket)
-                if result == 'disconnected':
-                    break
+# @router.websocket("/ws_new/{chat_id}")
+# async def agent_endpoint(
+#     chat_id: UUID,
+#     websocket: WebSocket,
+#     check_update_user: Annotated[CheckUpdateUser, Depends()],
+#     maindb_session: Annotated[Session, Depends(create_maindb_session)],
+# ):
+#     await manager.connect(websocket=websocket)
+#     chat_obj = maindb_session.query(Chat).filter(Chat.id == chat_id).first()
+#     print(chat_obj)
+#     token_manager = TokenManager(
+#         azure_token=None,
+#         snowflake_token=None,
+#         check_update_user=check_update_user,
+#         chat_obj=chat_obj
+#     )
+#     while True:
+#         are_tokens_valid, error_message = await token_manager.check_tokens()
+#         if not are_tokens_valid: 
+#             await manager.send_error_message(websocket=websocket, message=error_message)    
+#             result = await manager.receive_token_values(websocket=websocket)
+#             if result == 'disconnected':
+#                 break
+#             are_tokens_valid, error_message = await token_manager.check_tokens(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
+#             print(are_tokens_valid, error_message)
+#             if not are_tokens_valid:
+#                 await manager.send_error_message(message=error_message, websocket=websocket)
+#                 result = await manager.receive_token_values(websocket=websocket)
+#                 if result == 'disconnected':
+#                     break
                     
-                token_manager.set_values(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
-                continue
+#                 token_manager.set_values(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
+#                 continue
 
-            else:
-                await manager.send_connection_success_message(websocket=websocket)
+#             else:
+#                 await manager.send_connection_success_message(websocket=websocket)
                 
-        received = await websocket.receive_json()
-        await websocket.send_text(str(received))
+#         received = await websocket.receive_json()
+#         await websocket.send_text(str(received))
             
     
 
@@ -311,6 +324,36 @@ async def agent_endpoint(
             await manager.disconnect(websocket=websocket, closed=True)
     else:
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
+
+
+
+@router.websocket("/ws/{chat_id}")
+async def assistant_agent_endpoint(
+    chat_id: UUID,
+    websocket: WebSocket,
+    check_update_user: Annotated[CheckUpdateUser, Depends()],
+    maindb_session: Annotated[Session, Depends(create_maindb_session)],
+    token: str = Query(...),
+):
+    
+    await manager.connect(websocket=websocket)    
+    validator = DataAnalyticAgentWebsocketValidator(
+        chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
+    )
+    is_valid = await validator.validate()
+    if is_valid:
+        # getting the validated user from validator
+        user = validator.validated_user
+        chat_obj = validator.chat_obj
+        agent_engine_manager = AgentSnowflakeEngineManager()
+        message_service = AnalyticsAgentMessageCreateService(
+            user=user, 
+            chat_id=chat_id, 
+            session=maindb_session
+        )
+        
+
+
 
 
 @router.get("/{chat_id}/messages")
