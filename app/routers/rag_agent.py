@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api/rag_agent", tags=["RAG agent"])
 async def create_message(
     chat_id: UUID, request: CreateMessageRequest, message_service: Annotated[RAGAgentMessageService, Depends()]
 ):
-    return message_service.test_function(input=request.prompt)
+    return message_service.create_user_message(message_text=request.prompt)
 
 
 @router.get("/{chat_id}/messages")
