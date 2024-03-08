@@ -127,7 +127,10 @@ class CustomSQLDatabase(SQLDatabase):
                 res = f"Over the limit.\nFirst {res_length} rows of data: {first_5_res}"
             else:
                 res = str(res)
-            return res, stored_file_id
+            return {
+                "res": res, 
+                "stored_file_id": f"{message_id}_{stored_file_id}"
+            }
         
     def run_and_no_throw_for_assistant(
         self,
@@ -138,7 +141,7 @@ class CustomSQLDatabase(SQLDatabase):
     ):
     
         try:
-            return self.run_and_save(command, message_id, fetch)
+            return self.run_for_assistant(command, message_id, fetch)
         except SQLAlchemyError as e:
             """Format the error message"""
             return f"Error: {e}"

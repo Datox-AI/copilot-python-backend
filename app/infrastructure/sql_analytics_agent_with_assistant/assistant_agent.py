@@ -9,6 +9,7 @@ from openai import AzureOpenAI, NotFoundError
 from langchain.agents.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
 from langchain.agents.openai_assistant import OpenAIAssistantRunnable
 from langchain_core.agents import AgentFinish
+from langchain_openai import AzureChatOpenAI
 
 from app.infrastructure.sql_analytics_agent_with_assistant.sql_tool import CustomQuerySQLDataBaseTool
 from app.infrastructure.analytics_agent.database_tools import CustomSQLDatabase
@@ -22,13 +23,22 @@ load_dotenv()
 
 class DataAnalyticAssistant:
     
-    def __init__(self, snowfake_engine: Engine, thread_id: Union[str, None]):
+    def __init__(self, snowflake_engine: Engine, thread_id: Union[str, None]):
+        self.llm_chat_model = AzureChatOpenAI(
+            deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
+            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            openai_api_version=os.getenv("GPT4_TURBO_OPENAI_API_VERSION"),
+            openai_api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
+            temperature=0,
+            streaming=True,
+        )
+        
         client = AzureOpenAI(
             api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),  
             api_version=os.getenv("GPT4_ASSISTANT_OPENAI_API_VERSION"),
             azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT")
         )
-        self.db = CustomSQLDatabase(snowfake_engine, view_support=True)
+        self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
         azure_blob_storage_manager = AzureBlobStorageManager(
             os.environ["AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER"]
         )
@@ -71,12 +81,21 @@ class DataAnalyticAssistant:
             print(response, " ---response")
             for action in response:
                 if action.tool == "sql_db_query":
+                    print("AAA"*50)
                     generated_query = action.tool_input
-                    tool_output, stored_id = tool_map[action.tool].invoke(input={
+                
+                    tool_response = tool_map[action.tool].invoke(input={
                         "query": action.tool_input,
                         "message_id": message_id.hex
                     })
-                tool_output = tool_map[action.tool].invoke(action.tool_input)
+                    if type(tool_response) == dict:
+                        tool_output = tool_response["res"]
+                        stored_id = tool_response["stored_file_id"]
+                    else:
+                        tool_output = tool_response
+                else:
+                    
+                    tool_output = tool_map[action.tool].invoke(action.tool_input)
                 
                 print(action.tool, action.tool_input, tool_output, end="\n\n")
                 tool_outputs.append(
@@ -94,10 +113,9 @@ class DataAnalyticAssistant:
             "output": response.return_values["output"],
             "thread_id": response.return_values["thread_id"],
             "sql_query": generated_query,
-            "stored_id": stored_id
+            "stored_file_id": stored_id
         }
-
-                
+               
     
     def _get_sqldb_tools(self):
         toolkit = SQLDatabaseToolkit(db=self.db, llm=self.llm_chat_model, temperature=0)
@@ -106,6 +124,6 @@ class DataAnalyticAssistant:
         tools.append(sql_db_query_tool)
         tool_names = [tool.name for tool in tools]
 
-        return tools()
+        return tools
 
         
