@@ -412,7 +412,6 @@ async def assistant_agent_endpoint(
                 agent_response = agent.execute_agent(input=user_input, message_id=agent_message_id)
                 if type(agent_response) == dict:
                     agent_response.update({
-                        "followup_questions": [],
                         "choices": []
                     })
                     # saving the message
