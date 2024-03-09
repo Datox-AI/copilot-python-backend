@@ -49,6 +49,7 @@ jobs:
               --build-arg AZURE_COGNITIVE_SEARCH_API_KEY=${{ secrets.AZURE_COGNITIVE_SEARCH_API_KEY }} \
               --build-arg AZURE_COGNITIVE_SEARCH_INDEX_URL=${{ secrets.AZURE_COGNITIVE_SEARCH_INDEX_URL }} \
               --build-arg RAG_AZURE_ASSISTANT_ID=${{ secrets.RAG_AZURE_ASSISTANT_ID }} \
+              --build-arg AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER=${{ secrets.AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER }} \
               --build-arg SQL_ANALYTIC_AZURE_ASSISTANT_ID=${{ secrets.SQL_ANALYTIC_AZURE_ASSISTANT_ID }} \
               --build-arg GPT4_ASSISTANT_OPENAI_API_VERSION=${{ secrets.GPT4_ASSISTANT_OPENAI_API_VERSION }} \
               -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
