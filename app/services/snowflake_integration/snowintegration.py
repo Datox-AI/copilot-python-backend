@@ -118,7 +118,9 @@ class SnowflakeIntegrationService:
         )
         if existing_snowflake_identifier_obj:
             raise HTTPException(status_code=400, detail="User has already snowflake identifier object")
+         
 
+        config.account_identifier = config.account_identifier.replace(".", "-")
         snowflake_identifier_obj = SnowflakeIdentifier(
             id=uuid.uuid4(),
             user_id=self.user.user_id,
@@ -165,6 +167,9 @@ class SnowflakeIntegrationService:
         )
 
     def update_oauth_logic(self, config: OAuthConfig):
+
+        config.account_identifier = config.account_identifier.replace(".", "-")
+        
         if len(config.client_id) != 28:
             raise HTTPException(status_code=400, detail="Please review Client ID for typos")
         if len(config.client_secret) != 44:
@@ -173,6 +178,7 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
+
         existing_snowflake_identifier_obj.account_identifier = config.account_identifier
         existing_snowflake_identifier_obj.client_id = config.client_id
         existing_snowflake_identifier_obj.client_secret = config.client_secret
