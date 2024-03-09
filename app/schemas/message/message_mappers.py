@@ -12,10 +12,10 @@ from app.schemas.message.message_response import (
 class MessageMapper:
     @staticmethod
     def map_to_analytic_agent_message_response(message: Message):
-        if message.choices is not None or message.choices != []:
-            followup_questions = message.choices
-        else:
-            followup_questions = message.follow_up_questions
+        # if message.choices is not None or message.choices != []:
+            # followup_questions = message.choices
+        # else:
+        followup_questions = message.follow_up_questions
         return AnalyticAgentMessageResponse(
             id=message.id.hex,
             chat_id=message.chat_id,

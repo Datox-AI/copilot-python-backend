@@ -47,6 +47,9 @@ class AnalyticsAgentMessageCreateService:
         message_id: UUID,
         agent_response: dict,
     ):
+        print(agent_response, " reponse")
+
+        print(agent_response["followup_questions"], " followup questions")
         new_agent_message = Message(
             id=message_id,
             chat_id=self.chat_id,
