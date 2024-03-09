@@ -86,7 +86,7 @@ class DataAnalyticAssistant:
                 print(response, " ---response")
                 for action in response:
                     if action.tool == "sql_db_query":
-                        generated_query = action.tool_input
+                        generated_query = f"```sql\n{action.tool_input}\n```"
                         tool_response = tool_map[action.tool].invoke(input={
                             "query": action.tool_input,
                             "message_id": message_id.hex
