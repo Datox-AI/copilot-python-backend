@@ -25,3 +25,10 @@ answer like "Here are the 100 rows of 'some' table".
 DO NOT return the details of the SQL query output, just short summary description is enough.
 Return only final answer.
 """
+
+FOLLOWUP_QUESTIONS_PROMPT = """Following below are question and answer between user and AI about user's data. 
+AI is snowflake expert agent that help user about their data on snowflake by retrieving data from database.
+user: '{question}'
+ai: '{answer}'
+Based on them, generate a list of 2-3 followup questions (or answers if AI asked a question) that user might ask in the following format
+{{"questions_answers": ["question1", "question2"]}}"""

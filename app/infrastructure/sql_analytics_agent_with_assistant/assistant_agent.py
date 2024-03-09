@@ -1,5 +1,5 @@
 # SQL_ASSISTANT_INSTRUCTIONS
-import os
+import os, json
 from uuid import UUID
 from typing import Union
 from dotenv import load_dotenv
@@ -15,7 +15,7 @@ from app.infrastructure.sql_analytics_agent_with_assistant.sql_tool import Custo
 from app.infrastructure.analytics_agent.database_tools import CustomSQLDatabase
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 from app.infrastructure.analytics_agent.token_counter import TokenCounter
-from app.infrastructure.sql_analytics_agent_with_assistant.prompts import SQL_ASSISTANT_INSTRUCTIONS
+from app.infrastructure.sql_analytics_agent_with_assistant.prompts import FOLLOWUP_QUESTIONS_PROMPT
 
 
 load_dotenv()
@@ -122,12 +122,17 @@ class DataAnalyticAssistant:
                     pass
                 finally:
                     return f"Agent failed: {e}"
-                
+        followup_questions = self.generate_followup_questions(
+            question=input,
+            answer=response.return_values["output"]
+        )
+        print(followup_questions, "-----folowwup")
         return {
             "output": response.return_values["output"],
             "thread_id": response.return_values["thread_id"],
             "sql_query": generated_query,
-            "stored_file_id": stored_id
+            "stored_file_id": stored_id,
+            "followup_questions": followup_questions
         }
                
     
@@ -140,4 +145,18 @@ class DataAnalyticAssistant:
 
         return tools
 
+        
+    def generate_followup_questions(self, question: str, answer: str):
+        prompt = FOLLOWUP_QUESTIONS_PROMPT.format(
+            question=question,
+            answer=answer
+        )
+        
+        followup_questions_str = self.llm_chat_model.invoke(prompt)
+        print(followup_questions_str)
+        try:
+            followup_questions = json.loads(followup_questions_str.content)
+            return followup_questions["questions_answers"]
+        except:
+            return []
         
