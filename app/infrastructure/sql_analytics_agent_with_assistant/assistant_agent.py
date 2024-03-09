@@ -39,8 +39,11 @@ class DataAnalyticAssistant:
             azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT")
         )
         self.db = CustomSQLDatabase(snowflake_engine, view_support=True)
+        container_name = os.getenv("AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER", "assistant-agent-intermediate-steps-files")
+        
+        
         azure_blob_storage_manager = AzureBlobStorageManager(
-            os.environ["AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER"]
+            container_name
         )
         token_counter = TokenCounter()
 
