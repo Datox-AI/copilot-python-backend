@@ -362,13 +362,13 @@ async def assistant_agent_endpoint(
                     # await websocket.send_json({"status": connection_error_message})
                     try:
                         snowflake_token_data = await websocket.receive_json()
-                        snowflake_token = snowflake_token_data["snowflake_token"]
+                        snowflake_token = snowflake_token_data["snowflake_oauth"]
                     except JSONDecodeError:
                         await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
                         break
                     except KeyError:
                         await manager.disconnect(
-                            websocket=websocket, code=1007, reason="'user_input' key not found in json object"
+                            websocket=websocket, code=1007, reason="'snowflake_oauth' key not found in json object"
                         )
                         break
                     is_valid, error_message = agent_engine_manager.create_engine(
