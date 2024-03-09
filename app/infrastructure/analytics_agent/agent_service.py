@@ -13,6 +13,8 @@ from sqlalchemy.engine import create_engine
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
+from snowflake.sqlalchemy import URL
+
 
 from app.infrastructure.analytics_agent.agent_memory import AnalyticsAgentChatMessageHistory
 from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
@@ -141,6 +143,17 @@ class AgentSnowflakeEngineManager:
     def create_engine(self, snowflake_token: str, chat_obj: Chat):
         chat_snowflake_data_obj = chat_obj.snowflake_data
 
+        # url = URL(
+        #     user='jjabborov',
+        #     password='newSecure1',
+        #     account='CIPLNUD-YM27169',
+        #     database="THREAD_SAMPLE",
+        #     schema="PUBLIC", 
+        #     warehouse='COMPUTE_WH',
+        #     role = 'ACCOUNTADMIN'
+        # )
+        # engine = create_engine(url)
+        
         snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
             chat_snowflake_data_obj.snowflake_account,
             chat_snowflake_data_obj.database_name,

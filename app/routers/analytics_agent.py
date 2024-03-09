@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
+from app.infrastructure.sql_analytics_agent_with_assistant.assistant_agent import DataAnalyticAssistant 
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
@@ -327,7 +328,7 @@ async def agent_endpoint(
 
 
 
-@router.websocket("/ws/{chat_id}")
+@router.websocket("/ws_assistant/{chat_id}")
 async def assistant_agent_endpoint(
     chat_id: UUID,
     websocket: WebSocket,
@@ -345,17 +346,94 @@ async def assistant_agent_endpoint(
         # getting the validated user from validator
         user = validator.validated_user
         chat_obj = validator.chat_obj
+        thread_id = chat_obj.assistant_thread_id
         agent_engine_manager = AgentSnowflakeEngineManager()
         message_service = AnalyticsAgentMessageCreateService(
             user=user, 
             chat_id=chat_id, 
             session=maindb_session
         )
+        connection_error_message = "Engine is not connected"
         
+        try:
+            while True:
+                if not agent_engine_manager.is_engine_alive():
+                    await manager.send_error_message(message=connection_error_message, websocket=websocket)
+                    # await websocket.send_json({"status": connection_error_message})
+                    try:
+                        snowflake_token_data = await websocket.receive_json()
+                        snowflake_token = snowflake_token_data["snowflake_oauth"]
+                    except JSONDecodeError:
+                        await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
+                        break
+                    except KeyError:
+                        await manager.disconnect(
+                            websocket=websocket, code=1007, reason="'snowflake_oauth' key not found in json object"
+                        )
+                        break
+                    is_valid, error_message = agent_engine_manager.create_engine(
+                        snowflake_token=snowflake_token, chat_obj=chat_obj
+                    )
+                    if not is_valid:
+                        connection_error_message = f"Failed to establish database connection: {error_message}"
+                        print(connection_error_message)
+                        continue
+                    # Initialize the agent only if it's not already initialized or if the engine was recreated
+                    try:
+                        agent = DataAnalyticAssistant(
+                            snowflake_engine=agent_engine_manager.engine,
+                            thread_id=thread_id,
+                        )
+                    except Exception as e:
+                        print(e, "   agent creatiom error")
+                        error_message = f"Agent failed: {e}"
+                        await manager.disconnect(websocket=websocket, reason=error_message, code=1007)
+                        break
+                    # notifying front end about connection is succesful
+                    await manager.send_connection_success_message(websocket=websocket)
+                    # changing connection error message to default in case engine needs to reconnect
+                    connection_error_message = "Engine is not connected"
+                # chatting process
+                try:
+                    user_input_data = await websocket.receive_json()
+                    user_input = user_input_data["user_input"]
+                    # saving user's message
+                    message_service.create_user_message(message_text=user_input)
+                    print(user_input_data, " received")
+                except JSONDecodeError:
+                    await manager.disconnect(websocket=websocket, code=1007, reason="You need to send json object")
+                    break
+                except KeyError:
+                    await manager.disconnect(
+                        websocket=websocket, code=1007, reason="'user_input' key not found in json object"
+                    )
+                    break
+                agent_message_id = uuid.uuid4()
+                agent_response = agent.execute_agent(input=user_input, message_id=agent_message_id)
+                if type(agent_response) == dict:
+                    agent_response.update({
+                        "followup_questions": [],
+                        "choices": []
+                    })
+                    # saving the message
+                    message_service.create_agent_response(
+                        message_id=agent_message_id, agent_response=agent_response
+                    )
+                    # saving thread id
+                    chat_obj.assistant_thread_id = agent_response["thread_id"]
+                    maindb_session.commit()
+                    # sending agent response 
+                    await manager.send_agent_response(websocket=websocket, response=agent_response, chat_id=chat_id)
+                else:
+                    await manager.send_error_message(websocket=websocket, message=agent_response)
+        except WebSocketDisconnect:
+            await manager.disconnect(websocket=websocket, closed=True)
+    else:
+        await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
-
-
-
+        
+        
+        
 @router.get("/{chat_id}/messages")
 async def get_messages(
     chat_id: UUID,
