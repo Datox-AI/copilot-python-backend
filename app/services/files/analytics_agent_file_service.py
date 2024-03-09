@@ -26,6 +26,8 @@ class AnalyticsAgentFileService:
         self.chat_id = chat_id
         self.session = session
         self.blob_service = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"])
+        # self.blob_service_assistant = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER"])
+        
         self._check_chat_id()
 
     def _check_chat_id(self):

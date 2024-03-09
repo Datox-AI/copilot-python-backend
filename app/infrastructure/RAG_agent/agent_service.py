@@ -102,7 +102,7 @@ class RAGAssistantAgent:
             tool_outputs = []
             print(response, " ---response")
             for action in response:
-                tool_output, relevant_docs = get_documents(action.tool_input)
+                tool_output, relevant_docs = get_documents.invoke(action.tool_input)
 
                 print(action.tool, action.tool_input, tool_output, end="\n\n")
                 tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})

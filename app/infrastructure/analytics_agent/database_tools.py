@@ -129,7 +129,7 @@ class CustomSQLDatabase(SQLDatabase):
                 res = str(res)
             return {
                 "res": res, 
-                "stored_file_id": f"{message_id}_{stored_file_id}"
+                "stored_file_id": f"{message_id}_{stored_file_id}.csv"
             }
         
     def run_and_no_throw_for_assistant(
