@@ -129,6 +129,7 @@ class TokenManager:
             chat_snowflake_data_obj.warehouse,
             urllib.parse.quote(self.snowflake_token),
         )
+        print(snowflake_connection_url, " contect")
         engine = create_engine(snowflake_connection_url)
         try:
             con = engine.connect()
@@ -137,10 +138,12 @@ class TokenManager:
             return True, ""
 
         except SQLAlchemyError as e:
+            print(str(e.orig))
             if "Invalid OAuth access token" in str(e.orig):
                 error_message = SnowflakeTokenErrorEnum.invalid.value
             elif "OAuth access token expired" in str(e.orig):
                 error_message = SnowflakeTokenErrorEnum.expired.value
+                print("yeahhhh")
             else:
                 error_message = str(e.orig)
             return False, error_message
@@ -375,9 +378,13 @@ async def assistant_agent_endpoint(
                         snowflake_token=snowflake_token, chat_obj=chat_obj
                     )
                     if not is_valid:
-                        connection_error_message = f"Failed to establish database connection: {error_message}"
-                        print(connection_error_message)
-                        continue
+                        if error_message not in SnowflakeTokenErrorEnum.list():
+                            await manager.disconnect(websocket=websocket, code=1007, reason=error_message)
+                            break
+                        else:
+                            connection_error_message = error_message
+                            print(connection_error_message)
+                            continue
                     # Initialize the agent only if it's not already initialized or if the engine was recreated
                     try:
                         agent = DataAnalyticAssistant(
