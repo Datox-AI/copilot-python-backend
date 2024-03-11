@@ -18,6 +18,7 @@ from app.infrastructure.RAG_agent.prompts.system_prompt import (
 )
 
 load_dotenv()
+THRESHOLD = 0.5
 
 
 @tool
@@ -67,13 +68,12 @@ def get_documents_from_azure_search(user_query: str):
     )
 
     results_list = list(results)
-    filtered_results = filter_data_by_reranker_score(results_list)
+    filtered_results = filter_data_by_reranker_score(results_list, THRESHOLD)
 
     return filtered_results
 
 
 class RAGAssistantAgent:
-    THRESHOLD = 0.5
 
     def __init__(self, thread_id: Union[str, None]):
         # setting up retriever
@@ -99,7 +99,7 @@ class RAGAssistantAgent:
         while not isinstance(response, AgentFinish):
             tool_outputs = []
             for action in response:
-                tool_output, relevant_docs = get_documents.invoke(action.tool_input)
+                tool_output, relevant_docs = get_documents(action.tool_input)
                 tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})
             response = self.agent.invoke(
                 {
