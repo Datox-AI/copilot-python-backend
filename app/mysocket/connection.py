@@ -31,7 +31,7 @@ class ConnectionManager:
                         "message": reason
                     }
                 )
-                await websocket.close(code=code, reason=reason)
+                await websocket.close(code=code)
             except Exception as e:
                 print(f"closing socket raised an error: {e}")
                 pass

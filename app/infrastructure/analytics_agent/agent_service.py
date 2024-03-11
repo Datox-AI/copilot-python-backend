@@ -24,6 +24,7 @@ from app.infrastructure.analytics_agent.prompt_template import CustomPromptTempl
 from app.infrastructure.analytics_agent.prompts.system_prompt import sql_helper_prompt_template
 from app.infrastructure.analytics_agent.prompts.tool_prompts import sql_db_query_description, sql_db_schema_description
 from app.infrastructure.analytics_agent.token_counter import TokenCounter
+from app.enums.error_enums import SnowflakeTokenErrorEnum
 from app.models.maindb import Chat
 
 load_dotenv()
@@ -169,7 +170,14 @@ class AgentSnowflakeEngineManager:
             return True, ""
 
         except SQLAlchemyError as e:
-            return False, f"{e.orig}"
+            if "Invalid OAuth access token" in str(e.orig):
+                error_message = SnowflakeTokenErrorEnum.invalid.value
+            elif "OAuth access token expired" in str(e.orig):
+                error_message = SnowflakeTokenErrorEnum.expired.value
+                
+            else:
+                error_message = str(e.orig)
+            return False, error_message
 
     def is_engine_alive(self):
         if self.engine:

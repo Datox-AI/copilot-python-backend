@@ -23,6 +23,7 @@ load_dotenv()
 @tool
 def get_documents(prompt):
     """This tool for get relevant documents from sharepoint"""
+    print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(prompt)
     final_docs_content = ""
     for doc in relevant_docs:
@@ -84,15 +85,12 @@ class RAGAssistantAgent:
 
         assistant_id = os.getenv("RAG_AZURE_ASSISTANT_ID")
         my_assistant = client.beta.assistants.retrieve(assistant_id)
-        print(my_assistant.__dict__)
         if thread_id:
             self.thread_id = thread_id
         else:
             empty_thread = client.beta.threads.create()
             self.thread_id = empty_thread.id
 
-        print(client.__dict__)
-        print(type(client))
         self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=client, as_agent=True)
 
     def invoke(self, input: str):
@@ -100,11 +98,8 @@ class RAGAssistantAgent:
         relevant_docs = []
         while not isinstance(response, AgentFinish):
             tool_outputs = []
-            print(response, " ---response")
             for action in response:
                 tool_output, relevant_docs = get_documents.invoke(action.tool_input)
-
-                print(action.tool, action.tool_input, tool_output, end="\n\n")
                 tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})
             response = self.agent.invoke(
                 {
