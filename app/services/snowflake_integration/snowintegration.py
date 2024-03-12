@@ -14,6 +14,7 @@ from app.schemas.snowintegration import OAuthConfig, SnowflakeOauthMapper, Snowf
 from app.shared.auth.azure_scheme import current_user
 import requests
 import logging
+from fastapi import Header
 
 # Configure logging at the start of your script/application
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -117,7 +118,9 @@ class SnowflakeIntegrationService:
         )
         if existing_snowflake_identifier_obj:
             raise HTTPException(status_code=400, detail="User has already snowflake identifier object")
+         
 
+        config.account_identifier = config.account_identifier.replace(".", "-")
         snowflake_identifier_obj = SnowflakeIdentifier(
             id=uuid.uuid4(),
             user_id=self.user.user_id,
@@ -164,6 +167,9 @@ class SnowflakeIntegrationService:
         )
 
     def update_oauth_logic(self, config: OAuthConfig):
+
+        config.account_identifier = config.account_identifier.replace(".", "-")
+        
         if len(config.client_id) != 28:
             raise HTTPException(status_code=400, detail="Please review Client ID for typos")
         if len(config.client_secret) != 44:
@@ -172,6 +178,7 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
 
         authorization_endpoint = config.token_endpoint.replace("token-request", "authorize")
+
         existing_snowflake_identifier_obj.account_identifier = config.account_identifier
         existing_snowflake_identifier_obj.client_id = config.client_id
         existing_snowflake_identifier_obj.client_secret = config.client_secret
@@ -418,7 +425,19 @@ class SnowflakeIntegrationService:
 
             return {"detail": f"Default role for user '{current_username}' changed to '{new_role}' successfully"}
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+            error_message = str(e).lower()
+            if 'role does not exist' in error_message:
+                detail_msg = f"The role '{new_role}' does not exist."
+                raise HTTPException(status_code=400, detail=detail_msg)
+            elif 'insufficient privilege' in error_message:
+                detail_msg = "Insufficient privileges to change the role."
+                raise HTTPException(status_code=403, detail=detail_msg)
+            elif 'default role' in error_message:
+                detail_msg = f"Failed to change default role due to a configuration or permission issue."
+                raise HTTPException(status_code=400, detail=detail_msg)
+            else:
+                # General fallback for unhandled errors
+                raise HTTPException(status_code=500, detail=f"Internal Server Error: {error_message}")
         finally:
             cursor.close()
             conn.close()
@@ -512,3 +531,5 @@ class SnowflakeIntegrationService:
                 conn.close()
         except Exception as e:
             self.handle_common_errors(e)
+
+
