@@ -29,8 +29,9 @@ def search_documents(query, user_id, chat_id, file_id):
         model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
     )
     embedding = response.data[0].embedding
-    vector_query = VectorizedQuery(vector=embedding, k_nearest_neighbors=3,
-                                    fields="contentVector")
+    vector_query = VectorizedQuery(
+        vector=embedding, k_nearest_neighbors=3, fields="contentVector"
+    )
     if file_id:
         filter = f"userId eq {user_id} and chatId eq '{chat_id}' and fileId eq '{file_id}'",
     else:
@@ -46,4 +47,6 @@ def search_documents(query, user_id, chat_id, file_id):
     text_content = ""
     for result in results:
         text_content += f"{result['content']}"
+        
+    return text_content
      

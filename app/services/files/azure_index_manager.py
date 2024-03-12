@@ -146,9 +146,3 @@ class AzureSearchIndexManager:
     def invoke(self, pdf_data, file_id, prompt):
         self.process_and_store_texts(pdf_data=pdf_data, file_id=file_id)
         return self.search_documents(prompt, self.chat_id, file_id)
-
-
-
-
-# filter = user_id, chat_id, file_id  --> file attach
-# filter = user_id, chat_id 
