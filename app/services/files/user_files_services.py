@@ -17,6 +17,12 @@ from app.shared.auth.azure_scheme import current_user
 load_dotenv()
 
 
+def save_file_id_to_db(session, file_name, file_id, file_extension):
+    new_file = File(file_name=file_name, blob_name=file_id, file_extension=file_extension)
+    session.add(new_file)
+    session.commit()
+
+
 class UserFileService:
     def __init__(
         self,
@@ -35,6 +41,14 @@ class UserFileService:
         self.session.add(file_obj)
         self.session.commit()
         return FileMapper.map_to_file_response(file_obj)
+
+    def upload_file_callback(self, file: UploadFile, callback=None):
+        file_id = self.blob_service.upload_file(file)
+        file_name = file.filename
+        file_extension = file.content_type
+        if callback:
+            callback(self.session, file_name, file_id, file_extension)
+        return file_id
 
     def download_file(self, file_id: UUID):
         return self.blob_service.download_pdf_file(file_id=file_id)
