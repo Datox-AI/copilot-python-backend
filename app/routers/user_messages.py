@@ -1,8 +1,7 @@
 from typing import Annotated, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from app.schemas.message.message_mappers import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
@@ -14,9 +13,15 @@ router = APIRouter(prefix="/api/chats", tags=["User messages"])
 
 @router.post("/{chat_id}/messages")
 async def create_message(
-    chat_id: UUID, request: CreateMessageRequest, message_service: Annotated[UserMessageService, Depends()]
+    background_tasks: BackgroundTasks,
+    chat_id: UUID,
+    message_service: Annotated[UserMessageService, Depends()],
+    prompt: str = Form(...),
+    replyTo: UUID = Form(None),
+    files: List[UploadFile] = File(None),
 ):
-    return message_service.create_message(request)
+    request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, files=files)
+    return await message_service.create_message(request, background_tasks)
 
 
 @router.get("/{chat_id}/messages", response_model=List[UserMessageResponse])

@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -16,7 +16,7 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
 from app.services.files.azure_index_manager import AzureSearchIndexManager
-from app.services.files.user_files_services import UserFileService
+from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
 
 from .message_create_stream import OpenAIChatStream
@@ -36,7 +36,7 @@ class UserMessageService:
         self.file_service = UserFileService(user, session)
         self.azure_indexer = AzureSearchIndexManager(user, session, self.chat_id)
 
-    def create_message(self, request: CreateMessageRequest):
+    async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
@@ -57,11 +57,13 @@ class UserMessageService:
         self.session.commit()
 
         if request.files:
-            file_id = request.files[0]
+            for file in request.files:
+                background_tasks.add_task(self.file_service.upload_file, file, callback=save_file_id_to_db)
             # result = self.azure_indexer.process_and_store_texts(file_id=file_id)
+            pdf_file = "file"
 
             def response_generator():
-                full_response = self.azure_indexer.process_and_store_texts(file_id=file_id)
+                full_response = self.azure_indexer.process_and_store_texts(file=pdf_file)
                 # for response_text in self.azure_indexer.process_and_store_texts(
                 #     file_id
                 # ):
@@ -82,6 +84,7 @@ class UserMessageService:
                     self.session.add(new_assistant_message)
                     self.session.commit()
                 return response_generator()
+
             # print(result)
             return StreamingResponse(
                 response_generator(),
