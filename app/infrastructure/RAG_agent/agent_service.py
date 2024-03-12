@@ -99,7 +99,7 @@ class RAGAssistantAgent:
         while not isinstance(response, AgentFinish):
             tool_outputs = []
             for action in response:
-                tool_output, relevantdocs = get_documents(action.tool_input)
+                tool_output, relevant_docs = get_documents(action.tool_input)
                 tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})
             response = self.agent.invoke(
                 {
