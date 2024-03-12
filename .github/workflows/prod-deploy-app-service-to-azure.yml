@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: prod_runner
     name: Build and Push the Docker image to ACR
     
     steps:
@@ -57,7 +57,7 @@ jobs:
             docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}          
   
   staging:
-    runs-on: ubuntu-latest
+    runs-on: prod_runner
   
     needs: build
     environment: staging 
@@ -71,7 +71,7 @@ jobs:
           images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}'
 
   production:
-    runs-on: ubuntu-latest
+    runs-on: prod_runner
   
     needs: staging
     environment: prod 
