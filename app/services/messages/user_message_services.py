@@ -15,7 +15,7 @@ from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
-from app.services.files.lang_chain_file_service import LangChainService
+from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.files.user_files_services import UserFileService
 from app.shared.auth.azure_scheme import current_user
 
@@ -34,7 +34,7 @@ class UserMessageService:
         self.chat_id = chat_id
         self.streamer = OpenAIChatStream()
         self.file_service = UserFileService(user, session)
-        self.langchain_service = LangChainService()
+        self.azure_indexer = AzureSearchIndexManager(user, session, self.chat_id)
 
     def create_message(self, request: CreateMessageRequest):
         self._check_chat_exists(chat_id=self.chat_id)
@@ -45,7 +45,6 @@ class UserMessageService:
                 raise HTTPException(
                     status_code=404, detail=f"Message object under {request.replyTo} id does not exist"
                 )
-        file_contents = []
         new_user_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
@@ -58,23 +57,18 @@ class UserMessageService:
         self.session.commit()
 
         if request.files:
-            file_contents = [self.file_service.download_file(file_id) for file_id in request.files]
-
-            combined_content_bytes = b""
-            media_types = []
-
-            for content, media_type in file_contents:
-                combined_content_bytes += content
-                media_types.append(media_type)
+            file_id = request.files[0]
+            # result = self.azure_indexer.process_and_store_texts(file_id=file_id)
 
             def response_generator():
-                full_response = ""
-                for response_text in self.langchain_service.process_document_and_generate_response(
-                    combined_content_bytes, request.prompt, media_types=media_types
-                ):
-                    if response_text:
-                        full_response += response_text
-                        yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+                full_response = self.azure_indexer.process_and_store_texts(file_id=file_id)
+                # for response_text in self.azure_indexer.process_and_store_texts(
+                #     file_id
+                # ):
+                #     if response_text:
+                #         full_response += response_text
+                #         yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
+
                 if full_response:
                     new_assistant_message = Message(
                         id=uuid.uuid4(),
@@ -88,7 +82,7 @@ class UserMessageService:
                     self.session.add(new_assistant_message)
                     self.session.commit()
                 return response_generator()
-
+            # print(result)
             return StreamingResponse(
                 response_generator(),
                 media_type="text/event-stream",
