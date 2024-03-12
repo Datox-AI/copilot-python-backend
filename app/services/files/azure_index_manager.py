@@ -16,6 +16,7 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
 )
 from azure.search.documents.models import VectorFilterMode, VectorizedQuery
+from langchain.tools import tool
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from app.schemas.identity.current_user import CurrentUser
@@ -25,6 +26,7 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from .text_processor import TextProcessor
 from .user_files_services import UserFileService
+
 
 
 class AzureSearchIndexManager:
@@ -40,9 +42,9 @@ class AzureSearchIndexManager:
         self.session = session
         # Initialize Azure OpenAI client
         self.openai_client = AzureOpenAI(
-            azure_endpoint=os.environ.get("GPT4_TURBO_AZURE_EMBEDDING_ENDPOINT"),
-            api_key=os.environ.get("GPT4_TURBO_AZURE_EMBEDDING_KEY"),
-            api_version=os.environ.get("GPT4_TURBO_AZURE_EMBEDDING_VERSION")
+            azure_endpoint=os.environ.get("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
+            api_key=os.environ.get("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
+            api_version=os.environ.get("GPT4_TURBO_OPENAI_API_VERSION")
         )
 
         # Setup Azure Search Index Client
@@ -91,14 +93,14 @@ class AzureSearchIndexManager:
         print(f'Index {result.name} created')
 
     def generate_embeddings(self, text):
-        response = self.openai_client.embeddings.create(input=text, model=os.getenv("AZURE_OPENAI_EMB_DEPLOYMENT"))
+        response = self.openai_client.embeddings.create(input=text, model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"))
         return response.data[0].embedding
 
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts(self, file_id):
-        pdf_data = self.user_file_service.download_file(file_id=file_id)
+    def process_and_store_texts(self, pdf_data):
+        # pdf_data = self.user_file_service.download_file(file_id=file_id)
         extracted_texts = self.text_processor.extract_texts(pdf_data)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -144,3 +146,9 @@ class AzureSearchIndexManager:
     def invoke(self, pdf_data, file_id, prompt):
         self.process_and_store_texts(pdf_data=pdf_data, file_id=file_id)
         return self.search_documents(prompt, self.chat_id, file_id)
+
+
+
+
+# filter = user_id, chat_id, file_id  --> file attach
+# filter = user_id, chat_id 

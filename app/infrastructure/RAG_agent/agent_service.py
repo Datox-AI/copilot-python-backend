@@ -60,7 +60,7 @@ def get_documents_from_azure_search(user_query: str):
     credential = AzureKeyCredential(os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"))
     azure_client = SearchClient(
         endpoint=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
-        index_name=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_NAME"),
+        index_name=os.getenv("AZURE_COGNITIVE_SEARCH_SHAREPOINT_INDEX_NAME"),
         credential=credential,
     )
     results = azure_client.search(
