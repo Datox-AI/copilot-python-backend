@@ -30,7 +30,7 @@ def get_documents(prompt):
     for doc in relevant_docs:
         final_docs_content = (
             final_docs_content
-            + f"FILE CONTENT NAME: {doc['metadata_spo_item_name']}\nFILE CONTENT: {doc['content']}\n\n"
+            + f"FILE NAME: {doc['metadata_spo_item_name']}\nFILE CONTENT: {doc['content']}\n\n"
         )
     return final_docs_content, relevant_docs
 
