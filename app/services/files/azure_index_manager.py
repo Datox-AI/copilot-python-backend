@@ -99,9 +99,9 @@ class AzureSearchIndexManager:
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts(self, pdf_data):
+    def process_and_store_texts(self, file, file_id):
         # pdf_data = self.user_file_service.download_file(file_id=file_id)
-        extracted_texts = self.text_processor.extract_texts(pdf_data)
+        extracted_texts = self.text_processor.extract_texts(file)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
         file_id = file_id

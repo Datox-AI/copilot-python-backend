@@ -18,9 +18,9 @@ async def create_message(
     message_service: Annotated[UserMessageService, Depends()],
     prompt: str = Form(...),
     replyTo: UUID = Form(None),
-    files: List[UploadFile] = File(None),
+    file: UploadFile = File(None),
 ):
-    request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, files=files)
+    request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, file=file)
     return await message_service.create_message(request, background_tasks)
 
 

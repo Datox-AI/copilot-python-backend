@@ -3,8 +3,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
+from pathlib import Path
+import shutil
+import tempfile
 
-from fastapi import BackgroundTasks, Depends, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -33,7 +36,7 @@ class UserMessageService:
         self.user = user
         self.chat_id = chat_id
         self.streamer = OpenAIChatStream()
-        self.file_service = UserFileService(user, session)
+        self.file_service = UserFileService(session, user)
         self.azure_indexer = AzureSearchIndexManager(user, session, self.chat_id)
 
     async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
@@ -55,46 +58,60 @@ class UserMessageService:
         )
         self.session.add(new_user_message)
         self.session.commit()
+        file_id = ''
+        if request.file:
+            temp_file_path, file_extension = await self.save_temp_file(request.file)
+            file_id = uuid.uuid4()
+            background_tasks.add_task(
+                self.file_service.upload_file_callback,
+                file_path=temp_file_path,
+                file_id=file_id,
+                file_extension=file_extension,
+                callback=save_file_id_to_db
+            )
 
-        if request.files:
-            for file in request.files:
-                background_tasks.add_task(self.file_service.upload_file, file, callback=save_file_id_to_db)
-            # result = self.azure_indexer.process_and_store_texts(file_id=file_id)
-            pdf_file = "file"
-
-            def response_generator():
-                full_response = self.azure_indexer.process_and_store_texts(file=pdf_file)
+            full_response = self.azure_indexer.process_and_store_texts(request.file, file_id)
                 # for response_text in self.azure_indexer.process_and_store_texts(
                 #     file_id
                 # ):
                 #     if response_text:
                 #         full_response += response_text
                 #         yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
-
-                if full_response:
-                    new_assistant_message = Message(
-                        id=uuid.uuid4(),
-                        chat_id=self.chat_id,
-                        text=full_response,
-                        follow_up_questions=None,
-                        status=MessageStatus.Success,
-                        role=MessageRole.Assistant,
-                        prompt_id=new_user_message.id,
-                    )
-                    self.session.add(new_assistant_message)
-                    self.session.commit()
-                return response_generator()
+                # print(file_id)
+                # if full_response:
+                #     new_assistant_message = Message(
+                #         id=uuid.uuid4(),
+                #         chat_id=self.chat_id,
+                #         text=full_response,
+                #         follow_up_questions=None,
+                #         status=MessageStatus.Success,
+                #         role=MessageRole.Assistant,
+                #         prompt_id=new_user_message.id,
+                #     )
+                #     self.session.add(new_assistant_message)
+                #     self.session.commit()
 
             # print(result)
-            return StreamingResponse(
-                response_generator(),
-                media_type="text/event-stream",
-            )
+            # return StreamingResponse(
+            #     response_generator(),
+            #     media_type="text/event-stream",
+            # )
+            return full_response
         else:
             return StreamingResponse(
                 self._process_text_query_and_respond(request, new_user_message, reply_message),
                 media_type="text/event-stream",
             )
+
+    async def save_temp_file(self, upload_file: UploadFile):
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
+                shutil.copyfileobj(upload_file.file, temp_file)
+                temp_file_path = temp_file.name
+                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
+        finally:
+            upload_file.file.close()
+        return temp_file_path, file_extension
 
     def _process_text_query_and_respond(self, request, new_user_message, reply_message):
         def response_generator():
