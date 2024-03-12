@@ -1,0 +1,267 @@
+{
+  "@odata.context": "https://search-copilot.search.windows.net/$metadata#indexes/$entity",
+  "@odata.etag": "\"0x8DC3ED17EB0811F\"",
+  "name": "sharepoint-staging-index",
+  "defaultScoringProfile": null,
+  "fields": [
+    {
+      "name": "id",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": true,
+      "key": true,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_name",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_path",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_content_type",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": true,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_last_modified",
+      "type": "Edm.DateTimeOffset",
+      "searchable": false,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": true,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_size",
+      "type": "Edm.Int64",
+      "searchable": false,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "content",
+      "type": "Edm.String",
+      "searchable": true,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "metadata_spo_item_weburi",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "contentVector",
+      "type": "Collection(Edm.Single)",
+      "searchable": true,
+      "filterable": false,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": 1536,
+      "vectorSearchProfile": "my-default-vector-profile",
+      "synonymMaps": []
+    },
+    {
+      "name": "parent_id",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": false,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    },
+    {
+      "name": "keyword",
+      "type": "Edm.String",
+      "searchable": false,
+      "filterable": true,
+      "retrievable": true,
+      "sortable": false,
+      "facetable": false,
+      "key": false,
+      "indexAnalyzer": null,
+      "searchAnalyzer": null,
+      "analyzer": null,
+      "normalizer": null,
+      "dimensions": null,
+      "vectorSearchProfile": null,
+      "synonymMaps": []
+    }
+  ],
+  "scoringProfiles": [],
+  "corsOptions": null,
+  "suggesters": [],
+  "analyzers": [],
+  "normalizers": [],
+  "tokenizers": [],
+  "tokenFilters": [],
+  "charFilters": [],
+  "encryptionKey": null,
+  "similarity": {
+    "@odata.type": "#Microsoft.Azure.Search.BM25Similarity",
+    "k1": null,
+    "b": null
+  },
+  "semantic": {
+    "defaultConfiguration": null,
+    "configurations": [
+      {
+        "name": "semantic_search",
+        "prioritizedFields": {
+          "titleField": {
+            "fieldName": "metadata_spo_item_name"
+          },
+          "prioritizedContentFields": [
+            {
+              "fieldName": "content"
+            }
+          ],
+          "prioritizedKeywordsFields": [
+            {
+              "fieldName": "metadata_spo_item_name"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "vectorSearch": {
+    "algorithms": [
+      {
+        "name": "my-hnsw-config-1",
+        "kind": "hnsw",
+        "hnswParameters": {
+          "metric": "cosine",
+          "m": 4,
+          "efConstruction": 400,
+          "efSearch": 500
+        },
+        "exhaustiveKnnParameters": null
+      }
+    ],
+    "profiles": [
+      {
+        "name": "my-default-vector-profile",
+        "algorithm": "my-hnsw-config-1",
+        "vectorizer": "vectorizer-1709724001033"
+      }
+    ],
+    "vectorizers": [
+      {
+        "name": "vectorizer-1709724001033",
+        "kind": "azureOpenAI",
+        "azureOpenAIParameters": {
+          "resourceUri": "[place_holder]",
+          "deploymentId": "[place_holder]",
+          "apiKey": "[place_holder]",
+          "authIdentity": null
+        },
+        "customWebApiParameters": null
+      }
+    ]
+  }
+}

@@ -1,5 +1,5 @@
 from typing import Any, Dict, Literal, Sequence, Union
-
+import sqlparse
 import pandas as pd
 from langchain.tools.sql_database.tool import QuerySQLDataBaseTool
 from langchain.utilities.sql_database import truncate_word
@@ -160,3 +160,19 @@ class QuerySaveSQLDataBaseTool(QuerySQLDataBaseTool):
     ) -> str:
         """Execute the query, return the results with stored id, or an error message."""
         return self.db.run_and_save_no_throw(query, message_id)
+
+
+
+
+forbidden_keywords = ["alter", "drop", "modify", "create", "insert", "delete", "update", "truncate", "rename"]
+
+def is_query_allowed(sql_query):
+    parsed = sqlparse.parse(sql_query)[0]
+    tokens = [token for token in parsed.tokens if not token.is_whitespace]
+
+    for token in tokens:
+        if token.ttype is sqlparse.tokens.DDL or token.ttype is sqlparse.tokens.DML:
+            for keyword in forbidden_keywords:
+                if keyword.upper() == token.value.upper():
+                    return False, keyword
+    return True
