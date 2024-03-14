@@ -1,13 +1,15 @@
 from typing import List, Optional
 from uuid import UUID
 
+from fastapi import UploadFile
 from pydantic import BaseModel
 
 
 class CreateMessageRequest(BaseModel):
     prompt: str
     replyTo: Optional[UUID] = None
-    files: Optional[List[UUID]] = None
+    file: Optional[UploadFile] = None
+    # files: Optional[List[UploadFile]] = None
 
 
 class UpdateMessageRequest(BaseModel):

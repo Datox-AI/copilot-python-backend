@@ -3,8 +3,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID
+from pathlib import Path
+import shutil
+import tempfile
 
-from fastapi import Depends, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -16,8 +19,9 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
 from app.services.files.azure_index_manager import AzureSearchIndexManager
-from app.services.files.user_files_services import UserFileService
+from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
+from app.infrastructure.ChatGPT_assistant.agent_service import ChatGPTAssistant
 
 from .message_create_stream import OpenAIChatStream
 
@@ -33,10 +37,23 @@ class UserMessageService:
         self.user = user
         self.chat_id = chat_id
         self.streamer = OpenAIChatStream()
-        self.file_service = UserFileService(user, session)
-        self.azure_indexer = AzureSearchIndexManager(user, session, self.chat_id)
+        self.file_service = UserFileService(session, user)
+        self.azure_indexer = AzureSearchIndexManager(user=user, session=session, chat_id=self.chat_id)
+        thread_id = self._get_thread_id()
+        self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
 
-    def create_message(self, request: CreateMessageRequest):
+    def _get_thread_id(self):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
+        return chat_obj.assistant_thread_id
+
+    def _update_thread_id(self, thread_id: str):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
+        if not chat_obj.assistant_thread_id: 
+            chat_obj.assistant_thread_id = thread_id
+            self.session.commit()
+
+
+    async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
@@ -55,43 +72,56 @@ class UserMessageService:
         )
         self.session.add(new_user_message)
         self.session.commit()
-
-        if request.files:
-            file_id = request.files[0]
-            # result = self.azure_indexer.process_and_store_texts(file_id=file_id)
-
-            def response_generator():
-                full_response = self.azure_indexer.process_and_store_texts(file_id=file_id)
-                # for response_text in self.azure_indexer.process_and_store_texts(
-                #     file_id
-                # ):
-                #     if response_text:
-                #         full_response += response_text
-                #         yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
-
-                if full_response:
-                    new_assistant_message = Message(
-                        id=uuid.uuid4(),
-                        chat_id=self.chat_id,
-                        text=full_response,
-                        follow_up_questions=None,
-                        status=MessageStatus.Success,
-                        role=MessageRole.Assistant,
-                        prompt_id=new_user_message.id,
-                    )
-                    self.session.add(new_assistant_message)
-                    self.session.commit()
-                return response_generator()
-            # print(result)
-            return StreamingResponse(
-                response_generator(),
-                media_type="text/event-stream",
+        file_id = None
+        if request.file:
+            temp_file_path, file_extension = await self.save_temp_file(request.file)
+            file_id = uuid.uuid4()
+            background_tasks.add_task(
+                self.file_service.upload_file_callback,
+                file_path=temp_file_path,
+                file_id=file_id,
+                file_extension=file_extension,
+                callback=save_file_id_to_db
             )
+            file_data = open(temp_file_path, "rb").read()
+            self.azure_indexer.process_and_store_texts(file_data, file_id)
+            
+        assistant_response = self.chatgpt_assistant.execute_agent(
+            user_input=request.prompt,
+            user_id=self.user.user_id,
+            chat_id=self.chat_id,
+            file_id=file_id   
+        )
+        if type(assistant_response) == dict:
+            thread_id = assistant_response["thread_id"]
+            self._update_thread_id(thread_id=thread_id)
+            # saving response 
+            new_assistant_message = Message(
+                id=uuid.uuid4(),
+                chat_id=self.chat_id,
+                text=assistant_response["output"],
+                follow_up_questions=assistant_response["followup_questions"],
+                status=MessageStatus.Success,
+                role=MessageRole.Assistant,
+                prompt_id=new_user_message.id,
+            )
+            self.session.add(new_assistant_message)
+            self.session.commit()
+            
+            return assistant_response
         else:
-            return StreamingResponse(
-                self._process_text_query_and_respond(request, new_user_message, reply_message),
-                media_type="text/event-stream",
-            )
+            raise HTTPException(status_code=500, detail=assistant_response)
+        
+        
+    async def save_temp_file(self, upload_file: UploadFile):
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
+                shutil.copyfileobj(upload_file.file, temp_file)
+                temp_file_path = temp_file.name
+                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
+        finally:
+            upload_file.file.close()
+        return temp_file_path, file_extension
 
     def _process_text_query_and_respond(self, request, new_user_message, reply_message):
         def response_generator():
