@@ -16,6 +16,6 @@ class MessageSharepointDocument(BaseAudit):
     item_url = Column(String, nullable=False)
     content_type = Column(String, nullable=False)
     last_modified = Column(DateTime, nullable=False)
-    item_size = Column(BigInteger, nullable=False)
+    item_size = Column(BigInteger, nullable=True)
 
     message = relationship("Message", back_populates="message_sharepoint_documents")

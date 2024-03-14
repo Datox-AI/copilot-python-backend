@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Union
 from uuid import UUID
 
 from app.enums.message_enums import MessageRole
@@ -23,7 +23,7 @@ class SharePointFilesResponse(BaseSchema):
     item_url: str
     content_type: str
     last_modified: datetime.datetime
-    item_size: int
+    item_size: Union[int, None]
 
 
 class RAGAgentMessageResponse(BaseSchema):
