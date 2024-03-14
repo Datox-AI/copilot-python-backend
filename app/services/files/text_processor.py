@@ -3,9 +3,8 @@ import unicodedata
 from io import BytesIO
 
 import tiktoken
-# from unstructured.partition.auto import partition
+from unstructured.partition.auto import partition
 
-partition = None
 
 class TextProcessor:
     CHARS_PER_TOKEN = 3

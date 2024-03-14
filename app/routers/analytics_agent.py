@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
-from app.infrastructure.sql_analytics_agent_with_assistant.assistant_agent import DataAnalyticAssistant 
+from app.infrastructure.sql_analytics_agent_with_assistant.agent_service import DataAnalyticAssistant 
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
