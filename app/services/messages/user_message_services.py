@@ -1,11 +1,11 @@
 import json
-import uuid
-from datetime import datetime
-from typing import Annotated
-from uuid import UUID
-from pathlib import Path
 import shutil
 import tempfile
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated
+from uuid import UUID
 
 from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
+from app.infrastructure.ChatGPT_assistant.agent_service import ChatGPTAssistant
 from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
@@ -21,7 +22,6 @@ from app.schemas.message.message_request import CreateMessageRequest, UpdateMess
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
-from app.infrastructure.ChatGPT_assistant.agent_service import ChatGPTAssistant
 
 from .message_create_stream import OpenAIChatStream
 
@@ -48,13 +48,12 @@ class UserMessageService:
 
     def _update_thread_id(self, thread_id: str):
         print("updating, --- ", thread_id)
-        
+
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
-        if not chat_obj.assistant_thread_id: 
+        if not chat_obj.assistant_thread_id:
             print("chat doesnt have id")
             chat_obj.assistant_thread_id = thread_id
             self.session.commit()
-
 
     async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
         self._check_chat_exists(chat_id=self.chat_id)
@@ -86,25 +85,21 @@ class UserMessageService:
                 file_path=temp_file_path,
                 file_id=file_id,
                 file_extension=file_extension,
-                callback=save_file_id_to_db
+                callback=save_file_id_to_db,
             )
             print(datetime.now(), "  ----background task")
-            
+
             file_data = open(temp_file_path, "rb").read()
             self.azure_indexer.process_and_store_texts(file_data, file_id)
             print(datetime.now(), "  ----processing and storing")
-            
-            
+
         assistant_response = self.chatgpt_assistant.execute_agent(
-            user_input=request.prompt,
-            user_id=self.user.user_id,
-            chat_id=self.chat_id,
-            file_id=file_id   
+            user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_id=file_id
         )
         if type(assistant_response) == dict:
             thread_id = assistant_response["thread_id"]
             self._update_thread_id(thread_id=thread_id)
-            # saving response 
+            # saving response
             new_assistant_message = Message(
                 id=uuid.uuid4(),
                 chat_id=self.chat_id,
@@ -117,11 +112,10 @@ class UserMessageService:
             self.session.add(new_assistant_message)
             self.session.commit()
             return MessageMapper.map_to_user_message_response(message=new_assistant_message)
-        
+
         else:
             raise HTTPException(status_code=500, detail=assistant_response)
-        
-        
+
     async def save_temp_file(self, upload_file: UploadFile):
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
