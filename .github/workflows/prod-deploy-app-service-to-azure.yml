@@ -52,19 +52,34 @@ jobs:
               --build-arg AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER=${{ secrets.AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER }} \
               --build-arg SQL_ANALYTIC_AZURE_ASSISTANT_ID=${{ secrets.SQL_ANALYTIC_AZURE_ASSISTANT_ID }} \
               --build-arg GPT4_ASSISTANT_OPENAI_API_VERSION=${{ secrets.GPT4_ASSISTANT_OPENAI_API_VERSION }} \
-              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }} .
+              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }} .
 
-            docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}          
-  production:
+            docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}          
+  
+  staging:
     runs-on: ubuntu-latest
   
     needs: build
+    environment: staging 
+    name: "[STAGING] Pull and Deploy App Service"
+    steps:
+      - uses: azure/webapps-deploy@v2
+        with:
+          app-name: 'NewCopilotWebApi'
+          slot-name: newcopilotwebapi-staging
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_STAGING }}
+          images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}'
+
+  production:
+    runs-on: ubuntu-latest
+  
+    needs: staging
     environment: prod 
-    name: Pull and Deploy Prod App Service
+    name: "[PROD] Pull and Deploy App Service"
     steps:
       - uses: azure/webapps-deploy@v2
         with:
           app-name: 'NewCopilotWebApi'
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/test2datoxcopilotsite:${{ github.run_id }}'
+          images: '${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}'
             
