@@ -62,16 +62,15 @@ ENV CHATGPT_AGENT_AZURE_ASSISTANT_ID $CHATGPT_AGENT_AZURE_ASSISTANT_ID
 
 WORKDIR /code
 # this installs cv2 dependency
-RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
-
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 libgl1 libgl1-mesa-glx -y
 COPY ./requirements.txt /code/requirements.txt
+# COPY ./.env /code/.env
 
 
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY ./app /code/app
 # only for local tests
-# COPY ./.env /code/.env
 COPY ./migrations /code/migrations
 COPY ./alembic.ini /code/alembic.ini
 # only for local tests
