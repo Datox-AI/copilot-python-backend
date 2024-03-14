@@ -47,8 +47,11 @@ class UserMessageService:
         return chat_obj.assistant_thread_id
 
     def _update_thread_id(self, thread_id: str):
+        print("updating, --- ", thread_id)
+        
         chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
         if not chat_obj.assistant_thread_id: 
+            print("chat doesnt have id")
             chat_obj.assistant_thread_id = thread_id
             self.session.commit()
 
@@ -74,7 +77,9 @@ class UserMessageService:
         self.session.commit()
         file_id = None
         if request.file:
+            print(datetime.now(), "  ----start")
             temp_file_path, file_extension = await self.save_temp_file(request.file)
+            print(datetime.now(), "  ----saving temp file")
             file_id = uuid.uuid4()
             background_tasks.add_task(
                 self.file_service.upload_file_callback,
@@ -83,8 +88,12 @@ class UserMessageService:
                 file_extension=file_extension,
                 callback=save_file_id_to_db
             )
+            print(datetime.now(), "  ----background task")
+            
             file_data = open(temp_file_path, "rb").read()
             self.azure_indexer.process_and_store_texts(file_data, file_id)
+            print(datetime.now(), "  ----processing and storing")
+            
             
         assistant_response = self.chatgpt_assistant.execute_agent(
             user_input=request.prompt,
@@ -107,8 +116,8 @@ class UserMessageService:
             )
             self.session.add(new_assistant_message)
             self.session.commit()
-            
-            return assistant_response
+            return MessageMapper.map_to_user_message_response(message=new_assistant_message)
+        
         else:
             raise HTTPException(status_code=500, detail=assistant_response)
         
