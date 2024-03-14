@@ -18,8 +18,8 @@ from app.infrastructure.RAG_agent.prompts.system_prompt import (
 )
 
 load_dotenv()
-THRESHOLD = 0.5
-TOP_K = None
+THRESHOLD = 0.3
+TOP_K = 10
 
 @tool
 def get_documents(prompt):
@@ -49,7 +49,8 @@ def filter_data_by_reranker_score(data, difference_threshold=0.5):
         next_score = data[i + 1].get("@search.reranker_score", 0)
 
         filtered_data.append(data[i])
-
+        if next_score == None:
+            break
         if abs(current_score - next_score) >= difference_threshold:
             break
     if TOP_K:
