@@ -1,6 +1,7 @@
 import os
 import uuid
 from typing import Annotated
+from datetime import datetime
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -143,6 +144,7 @@ class AzureSearchIndexManager:
             }
             chunk_documents.append(chunk_document)
         print(len(chunk_documents), " --- chunks")
+        print(datetime.now(), "  ----chunking")
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 

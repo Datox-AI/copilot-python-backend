@@ -120,6 +120,10 @@ class ChatGPTAssistant:
                     print("tool using ---------")
                     print("tollinput ----   ", action.tool_input)
                     tool_input = action.tool_input 
+                    # adding user input if assistant misses to add query inside input
+                    if "query" not in tool_input.keys():
+                        print("manually updating query")
+                        tool_input["query"] = user_input
                     tool_input.update({
                         "user_id" : str(user_id),
                         "chat_id": str(chat_id)
