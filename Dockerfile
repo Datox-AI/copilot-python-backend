@@ -61,6 +61,8 @@ ENV CHATGPT_AGENT_AZURE_ASSISTANT_ID $CHATGPT_AGENT_AZURE_ASSISTANT_ID
 
 
 WORKDIR /code
+# this installs cv2 dependency
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 
 COPY ./requirements.txt /code/requirements.txt
 
