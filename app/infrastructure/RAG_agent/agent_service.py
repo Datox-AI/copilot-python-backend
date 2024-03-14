@@ -19,7 +19,7 @@ from app.infrastructure.RAG_agent.prompts.system_prompt import (
 
 load_dotenv()
 THRESHOLD = 0.5
-
+TOP_K = None
 
 @tool
 def get_documents(prompt):
@@ -52,9 +52,9 @@ def filter_data_by_reranker_score(data, difference_threshold=0.5):
 
         if abs(current_score - next_score) >= difference_threshold:
             break
-
+    if TOP_K:
+        return filtered_data[:TOP_K]
     return filtered_data
-
 
 def get_documents_from_azure_search(user_query: str):
     credential = AzureKeyCredential(os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"))

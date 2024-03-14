@@ -21,6 +21,7 @@ from app.schemas.message.message_request import CreateMessageRequest, UpdateMess
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
+from app.infrastructure.ChatGPT_assistant.agent_service import ChatGPTAssistant
 
 from .message_create_stream import OpenAIChatStream
 
@@ -37,7 +38,20 @@ class UserMessageService:
         self.chat_id = chat_id
         self.streamer = OpenAIChatStream()
         self.file_service = UserFileService(session, user)
-        self.azure_indexer = AzureSearchIndexManager(user, session, self.chat_id)
+        self.azure_indexer = AzureSearchIndexManager(user=user, session=session, chat_id=self.chat_id)
+        thread_id = self._get_thread_id()
+        self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
+
+    def _get_thread_id(self):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
+        return chat_obj.assistant_thread_id
+
+    def _update_thread_id(self, thread_id: str):
+        chat_obj = self.session.query(Chat).filter(Chat.id == self.chat_id).first()
+        if not chat_obj.assistant_thread_id: 
+            chat_obj.assistant_thread_id = thread_id
+            self.session.commit()
+
 
     async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
         self._check_chat_exists(chat_id=self.chat_id)
@@ -58,7 +72,7 @@ class UserMessageService:
         )
         self.session.add(new_user_message)
         self.session.commit()
-        file_id = ''
+        file_id = None
         if request.file:
             temp_file_path, file_extension = await self.save_temp_file(request.file)
             file_id = uuid.uuid4()
@@ -69,40 +83,36 @@ class UserMessageService:
                 file_extension=file_extension,
                 callback=save_file_id_to_db
             )
-
-            full_response = self.azure_indexer.process_and_store_texts(request.file, file_id)
-                # for response_text in self.azure_indexer.process_and_store_texts(
-                #     file_id
-                # ):
-                #     if response_text:
-                #         full_response += response_text
-                #         yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
-                # print(file_id)
-                # if full_response:
-                #     new_assistant_message = Message(
-                #         id=uuid.uuid4(),
-                #         chat_id=self.chat_id,
-                #         text=full_response,
-                #         follow_up_questions=None,
-                #         status=MessageStatus.Success,
-                #         role=MessageRole.Assistant,
-                #         prompt_id=new_user_message.id,
-                #     )
-                #     self.session.add(new_assistant_message)
-                #     self.session.commit()
-
-            # print(result)
-            # return StreamingResponse(
-            #     response_generator(),
-            #     media_type="text/event-stream",
-            # )
-            return full_response
-        else:
-            return StreamingResponse(
-                self._process_text_query_and_respond(request, new_user_message, reply_message),
-                media_type="text/event-stream",
+            file_data = open(temp_file_path, "rb").read()
+            self.azure_indexer.process_and_store_texts(file_data, file_id)
+            
+        assistant_response = self.chatgpt_assistant.execute_agent(
+            user_input=request.prompt,
+            user_id=self.user.user_id,
+            chat_id=self.chat_id,
+            file_id=file_id   
+        )
+        if type(assistant_response) == dict:
+            thread_id = assistant_response["thread_id"]
+            self._update_thread_id(thread_id=thread_id)
+            # saving response 
+            new_assistant_message = Message(
+                id=uuid.uuid4(),
+                chat_id=self.chat_id,
+                text=assistant_response["output"],
+                follow_up_questions=assistant_response["followup_questions"],
+                status=MessageStatus.Success,
+                role=MessageRole.Assistant,
+                prompt_id=new_user_message.id,
             )
-
+            self.session.add(new_assistant_message)
+            self.session.commit()
+            
+            return assistant_response
+        else:
+            raise HTTPException(status_code=500, detail=assistant_response)
+        
+        
     async def save_temp_file(self, upload_file: UploadFile):
         try:
             with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:

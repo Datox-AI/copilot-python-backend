@@ -26,15 +26,21 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from .text_processor import TextProcessor
 from .user_files_services import UserFileService
+import shutil
+import tempfile
+from pathlib import Path
+
+from fastapi import Depends, UploadFile
 
 
 
 class AzureSearchIndexManager:
-    def __init__(self,
-                 chat_id: uuid.UUID,
-                 session: Annotated[Session, Depends(create_maindb_session)],
-                 user: Annotated[CurrentUser, Depends(current_user)]
-                 ):
+    def __init__(
+        self,
+        chat_id: uuid.UUID,
+        session: Annotated[Session, Depends(create_maindb_session)],
+        user: Annotated[CurrentUser, Depends(current_user)]
+    ):
         # Load environment variables from a .env file if present
         load_dotenv()
         self.chat_id = chat_id
@@ -59,7 +65,7 @@ class AzureSearchIndexManager:
                                           index_name=self.index_name,
                                           credential=self.credential)
         
-        self.user_file_service = UserFileService(session, user)
+        self.user_file_service = UserFileService(session=session, user=user)
 
     def create_search_index(self):
         fields = [
@@ -99,35 +105,53 @@ class AzureSearchIndexManager:
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts(self, file, file_id):
+    def save_temp_file(self, upload_file: UploadFile):
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
+                shutil.copyfileobj(upload_file.file, temp_file)
+                temp_file_path = temp_file.name
+                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
+        finally:
+            upload_file.file.close()
+        return temp_file_path, file_extension
+
+    def process_and_store_texts(self, pdf_data, file_id):
         # pdf_data = self.user_file_service.download_file(file_id=file_id)
-        extracted_texts = self.text_processor.extract_texts(file)
+        # pdf_data_path = self.save_temp_file(upload_file=pdf_data)[0]
+        # pdf_file_content = open(pdf_data_path, "rb")
+        extracted_texts = self.text_processor.extract_texts(pdf_data)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
-        file_id = file_id
-        chat_id = self.chat_id
+        file_id = str(file_id)
+        chat_id = str(self.chat_id)
+        user_id = str(self.user.user_id)
+        print(file_id, " file_id")
+        print(chat_id, " chat_id")
+        print(user_id, " user_id")
+        
         chunk_documents = []
         for chunk_text in chunked_texts:
             chunk_embeddings = self.generate_embeddings(chunk_text)
             chunk_document = {
                 "id": str(uuid.uuid4()),
                 "file_type": "application/pdf",
+                "userId": user_id,
                 "chatId": chat_id,
                 "fileId": file_id,
                 "content": chunk_text,
                 "contentVector": chunk_embeddings
             }
             chunk_documents.append(chunk_document)
-
+        print(len(chunk_documents), " --- chunks")
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 
-    def search_documents(self, query_text, chat_id, file_id):
-        embedding = self.generate_embeddings(query_text)
+    def search_documents(self, prompt, chat_id, file_id):
+        embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(vector=embedding, k_nearest_neighbors=3,
                                        fields="contentVector")
         if file_id:
-            filter = f"chatId eq '{chat_id}' and fileId eq '{file_id}'",
+            filter = f"chatId eq '{chat_id}' and fileId eq '{file_id}'"
         else:
             filter = f"chatId eq '{chat_id}'"
 
@@ -141,8 +165,8 @@ class AzureSearchIndexManager:
         text_content = ""
         for result in results:
             text_content += f"{result['content']}"
+        print(text_content)
         return text_content
 
-    def invoke(self, pdf_data, file_id, prompt):
-        self.process_and_store_texts(pdf_data=pdf_data, file_id=file_id)
-        return self.search_documents(prompt, self.chat_id, file_id)
+    def invoke(self, file_data, file_id, prompt):
+        chunk_documents = self.process_and_store_texts(pdf_data=file_data, file_id=file_id)

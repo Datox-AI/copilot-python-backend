@@ -29,8 +29,8 @@ class UserFileService:
         session: Annotated[Session, Depends(create_maindb_session)],
         user: Annotated[CurrentUser, Depends(current_user)],
     ):
-        self.user = user
         self.session = session
+        self.user = user
         self.blob_service = AzureBlobStorageManager(os.environ["AZURE_STORAGE_FILE_CONTAINER"])
 
     def upload_file(self, file: UploadFile) -> FilesDetailResponse:
