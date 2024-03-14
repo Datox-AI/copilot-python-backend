@@ -529,6 +529,8 @@ class SnowflakeIntegrationService:
             finally:
                 cursor.close()
                 conn.close()
+        except HTTPException as http_exc:      
+            raise http_exc 
         except Exception as e:
             self.handle_common_errors(e)
 
