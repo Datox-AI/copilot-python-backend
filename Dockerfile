@@ -1,5 +1,5 @@
 # 
-FROM python:3.11
+FROM python:3.10.1
 
 ARG DATOX_DATABASE__MAIN_DSN
 ENV DATOX_DATABASE__MAIN_DSN $DATOX_DATABASE__MAIN_DSN
@@ -63,6 +63,7 @@ ENV CHATGPT_AGENT_AZURE_ASSISTANT_ID $CHATGPT_AGENT_AZURE_ASSISTANT_ID
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
+
 
 RUN pip install --no-cache-dir -r requirements.txt
 
