@@ -34,7 +34,6 @@ from pathlib import Path
 from fastapi import Depends, UploadFile
 
 
-
 class AzureSearchIndexManager:
     def __init__(
         self,
@@ -106,21 +105,8 @@ class AzureSearchIndexManager:
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def save_temp_file(self, upload_file: UploadFile):
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
-                shutil.copyfileobj(upload_file.file, temp_file)
-                temp_file_path = temp_file.name
-                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
-        finally:
-            upload_file.file.close()
-        return temp_file_path, file_extension
-
-    def process_and_store_texts(self, pdf_data, file_id):
-        # pdf_data = self.user_file_service.download_file(file_id=file_id)
-        # pdf_data_path = self.save_temp_file(upload_file=pdf_data)[0]
-        # pdf_file_content = open(pdf_data_path, "rb")
-        extracted_texts = self.text_processor.extract_texts(pdf_data)
+    def process_and_store_texts(self, pdf_data, file_id, file_type):
+        extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
         file_id = str(file_id)
