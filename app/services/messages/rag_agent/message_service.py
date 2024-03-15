@@ -50,7 +50,7 @@ class RAGAgentMessageService:
         output = result['output']
         thread_id = result['thread_id']
         relevant_docs = result['relevant_docs']
-        print(relevant_docs, " relevant docs")
+        
         self.chat_obj.assistant_thread_id = thread_id
         new_user_message = Message(
             id=uuid.uuid4(),

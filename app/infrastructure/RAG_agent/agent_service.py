@@ -35,6 +35,7 @@ def get_documents(prompt):
     return final_docs_content, relevant_docs
 
 
+
 def filter_data_by_reranker_score(data, difference_threshold=0.5):
     """
     Filters a list of numbers by removing all elements after finding a difference greater or equal to 'difference_threshold' between consecutive numbers.
@@ -94,6 +95,17 @@ class RAGAssistantAgent:
 
         self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=client, as_agent=True)
 
+
+    def unique_relevant_docs(self, docs):
+        unique_file_paths = set()
+        filtered_docs = []
+        for doc in docs:
+            if doc["metadata_spo_item_weburi"] not in unique_file_paths:
+                filtered_docs.append(doc)
+                unique_file_paths.add(doc["metadata_spo_item_weburi"])
+        return filtered_docs
+
+
     def invoke(self, input: str):
         response = self.agent.invoke(input={"content": input, "thread_id": self.thread_id})
         relevant_docs = []
@@ -109,9 +121,9 @@ class RAGAssistantAgent:
                     "thread_id": action.thread_id,
                 }
             )
-
+        filtered_relevant_docs = self.unique_relevant_docs(relevant_docs)
         return {
             "output": response.return_values["output"],
             "thread_id": response.return_values["thread_id"],
-            "relevant_docs": relevant_docs,
+            "relevant_docs": filtered_relevant_docs,
         }
