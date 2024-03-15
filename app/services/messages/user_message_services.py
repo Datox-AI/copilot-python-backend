@@ -25,6 +25,17 @@ from app.shared.auth.azure_scheme import current_user
 
 from .message_create_stream import OpenAIChatStream
 
+MIME_TYPE_MAP = {
+    'application/pdf': 'pdf',
+    'text/csv': 'csv',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+    'application/vnd.ms-powerpoint': 'ppt',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
+    'text/plain': 'txt',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+    'application/msword': 'doc',
+}
+
 
 class UserMessageService:
     def __init__(
@@ -78,6 +89,7 @@ class UserMessageService:
         if request.file:
             print(datetime.now(), "  ----start")
             temp_file_path, file_extension = await self.save_temp_file(request.file)
+            file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
             print(datetime.now(), "  ----saving temp file")
             file_id = uuid.uuid4()
             background_tasks.add_task(
@@ -90,7 +102,7 @@ class UserMessageService:
             print(datetime.now(), "  ----background task")
 
             file_data = open(temp_file_path, "rb").read()
-            self.azure_indexer.process_and_store_texts(file_data, file_id)
+            self.azure_indexer.process_and_store_texts(file_data, file_id, file_type)
             print(datetime.now(), "  ----processing and storing")
 
         assistant_response = self.chatgpt_assistant.execute_agent(
@@ -125,38 +137,6 @@ class UserMessageService:
         finally:
             upload_file.file.close()
         return temp_file_path, file_extension
-
-    def _process_text_query_and_respond(self, request, new_user_message, reply_message):
-        def response_generator():
-            message_objs = self.session.query(Message).filter(Message.chat_id == self.chat_id).all()
-            full_response = ""
-            for response_text, is_question, follow_up_questions, error_message in self.streamer.stream_responses(
-                message_objs, request.prompt, reply_message
-            ):
-                if error_message:
-                    yield f"data: {json.dumps({'Error': error_message, 'Type': 'Error'})}\n\n"
-                    continue
-
-                if response_text and not is_question:
-                    full_response += response_text
-                    yield f"data: {json.dumps({'Type': 'Text', 'Text': response_text})}\n\n"
-
-                if is_question:
-                    yield f"data: {json.dumps({'Questions': follow_up_questions, 'Type': 'Questions'})}\n\n"
-
-            new_assistant_message = Message(
-                id=uuid.uuid4(),
-                chat_id=self.chat_id,
-                text=full_response,
-                follow_up_questions=follow_up_questions,
-                status=MessageStatus.Success,
-                role=MessageRole.Assistant,
-                prompt_id=new_user_message.id,
-            )
-            self.session.add(new_assistant_message)
-            self.session.commit()
-
-        return response_generator()
 
     def get_messages(self, chat_id: UUID):
         self._check_chat_exists(chat_id=self.chat_id)

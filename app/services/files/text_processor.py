@@ -1,6 +1,9 @@
 import logging
 import unicodedata
 from io import BytesIO
+import pandas as pd
+from docx import Document
+from pptx import Presentation  # Импортируем библиотеку python-pptx
 
 import tiktoken
 from unstructured.partition.auto import partition
@@ -38,11 +41,30 @@ class TextProcessor:
         """Get rid of ligatures"""
         return unicodedata.normalize("NFKC", text)
 
-    def extract_texts(self, data: bytes) -> list[str]:
+    def extract_texts(self, data: bytes, file_type: str = "pdf") -> list[str]:
         file_like = BytesIO(data)
         try:
-            elements = partition(file=file_like)
-            texts = [element.text for element in elements]
+            if file_type == "pdf":
+                elements = partition(file=file_like)
+                texts = [element.text for element in elements]
+            elif file_type in ["csv", "xlsx"]:
+                df = pd.read_csv(file_like, engine='python') if file_type == "csv" else pd.read_excel(file_like)
+                texts = df.applymap(str).apply(lambda x: ' '.join(x), axis=1).tolist()
+            elif file_type == "txt":
+                file_like.seek(0)
+                texts = file_like.read().decode("utf-8").splitlines()
+            elif file_type == "pptx":
+                prs = Presentation(file_like)
+                texts = [shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text")]
+            elif file_type == "docx":
+                doc = Document(file_like)
+                texts = [paragraph.text for paragraph in doc.paragraphs if paragraph.text]
+            elif file_type == "doc":
+                raise ValueError("Please convert your file to docx")
+            elif file_type == "ppt":
+                raise ValueError("Please convert your file to pptx")
+            else:
+                raise ValueError("Unsupported file type")
         except ValueError as ve:
             logging.error(f"Value Error: {str(ve)}")
             return []
