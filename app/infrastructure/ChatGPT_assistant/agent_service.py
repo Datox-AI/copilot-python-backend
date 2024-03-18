@@ -43,16 +43,24 @@ def get_documents(query: str, user_id: str, chat_id: str, file_id: str = None):
         filter = f"chatId eq '{chat_id}'"
 
     results = search_client.search(
-        search_text=None,
+        search_text=query,
         vector_queries=[vector_query],
         vector_filter_mode=VectorFilterMode.PRE_FILTER,
         filter=filter,
         select=["content", "file_type", "fileId", "chatId"],
     )
     text_content = ""
+    content_dict = {}
     for result in results:
-        text_content += f"{result['content']}"
-    print(text_content, " content")
+        file_id = result["fileId"]
+        if file_id not in content_dict.keys():
+            content_dict[file_id] = result["content"]
+        else:
+            content_dict[file_id] += f"\n{result['content']}"
+
+    for key, value in content_dict.items():
+        text_content += f"FILE_ID: {key}\nFILE_CONTENT:\n{value}\n\n\n"
+        
     return text_content
 
 
@@ -89,29 +97,28 @@ class ChatGPTAssistant:
         user_input: str,
         user_id: UUID,
         chat_id: UUID,
-        file_ids: List[Union[UUID, None]] = None,
+        file_context: str = None,
     ):
-        print("file_ids,    ", file_ids)
         print("user_id,    ", user_id)
         print("chat_id,    ", chat_id)
         print("prompt    ", user_input)
-        if file_id:
-            user_input = f"{user_input}\n\nfile_id is '{str(file_id)}'"
-
+        if file_context:
+            user_input = f"{user_input}\nFILE CONTEXT: {file_context}"
+        
         tool_map = {tool.name: tool for tool in self.tools}
-        response = self.agent.invoke(input={"content": user_input, "thread_id": self.thread_id})
+        response = self.agent.invoke(input={
+            "content": user_input, 
+            "thread_id": self.thread_id
+        })
         while not isinstance(response, AgentFinish):
             tool_outputs = []
             run_id = response[0].run_id
             try:
                 for action in response:
                     print("tool using ---------")
-                    print("tollinput ----   ", action.tool_input)
+                    print("toll input ----   ", action.tool_input)
                     tool_input = action.tool_input
                     # adding user input if assistant misses to add query inside input
-                    if "query" not in tool_input.keys():
-                        print("manually updating query")
-                        tool_input["query"] = user_input
                     tool_input.update({"user_id": str(user_id), "chat_id": str(chat_id)})
                     tool_output = tool_map[action.tool].invoke(tool_input)
                     tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})

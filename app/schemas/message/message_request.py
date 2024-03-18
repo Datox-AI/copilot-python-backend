@@ -8,7 +8,6 @@ from pydantic import BaseModel
 class CreateMessageRequest(BaseModel):
     prompt: str
     replyTo: Optional[UUID] = None
-    # file: Optional[UploadFile] = None
     files: Optional[List[UploadFile]] = None
 
 
