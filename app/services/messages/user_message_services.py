@@ -154,34 +154,15 @@ class UserMessageService:
         uploaded_file_ids = None
         if request.files:
             uploaded_file_ids = [str(uuid.uuid4()) for _ in request.files]
-            # upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, file, file_id) for file, file_id in zip(request.files, uploaded_file_ids)]
-            # await asyncio.gather(*upload_tasks)
-
-            # for file_id, upload_file in zip(uploaded_file_ids, request.files):
-            #     async with aiofiles.tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
-            #         content = await upload_file.read()
-            #         await temp_file.write(content)
-            #         temp_file_path = temp_file.name
-
-            #     async with aiofiles.open(temp_file_path, "rb") as f:
-            #         file_data = await f.read()
-            #         file_extension = Path(upload_file.filename).suffix
-            #         file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-            #         await self.azure_indexer.process_and_store_texts(file_data, file_id, file_type)
-
-            #     await aiofiles.os.remove(temp_file_path)
-            # Сначала читаем и обрабатываем файлы
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
-                print(file_extension, "@@")
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 self.azure_indexer.process_and_store_texts(content, file_id, file_type)
-                
-            # После обработки запускаем асинхронную загрузку в Azure Blob Storage
+                await upload_file.seek(0)
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
-        print("status", "iii"*44)
+            await self.async_blob_service.close()
         for i in uploaded_file_ids:
             print("uploaded_file_ids", uploaded_file_ids)
         # assistant_response = self.chatgpt_assistant.execute_agent(

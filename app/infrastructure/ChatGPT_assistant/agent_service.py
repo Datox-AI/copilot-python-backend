@@ -91,12 +91,6 @@ class ChatGPTAssistant:
         chat_id: UUID,
         file_ids: List[Union[UUID, None]] = None,
     ):
-        print("file_ids,    ", file_ids)
-        print("user_id,    ", user_id)
-        print("chat_id,    ", chat_id)
-        print("prompt    ", user_input)
-        if file_id:
-            user_input = f"{user_input}\n\nfile_id is '{str(file_id)}'"
 
         tool_map = {tool.name: tool for tool in self.tools}
         response = self.agent.invoke(input={"content": user_input, "thread_id": self.thread_id})
@@ -105,8 +99,7 @@ class ChatGPTAssistant:
             run_id = response[0].run_id
             try:
                 for action in response:
-                    print("tool using ---------")
-                    print("tollinput ----   ", action.tool_input)
+
                     tool_input = action.tool_input
                     # adding user input if assistant misses to add query inside input
                     if "query" not in tool_input.keys():
