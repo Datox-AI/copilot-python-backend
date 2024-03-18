@@ -99,8 +99,11 @@ class UserMessageService:
                 file_extension = upload_file.content_type
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 self.azure_indexer.process_and_store_texts(content, file_id, file_type)
+                await upload_file.seek(0)
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
+            await self.async_blob_service.close()
+            print(uploaded_file_ids)
             file_context = self.azure_indexer.search_documents(
                 prompt=request.prompt, 
                 file_ids=uploaded_file_ids,
