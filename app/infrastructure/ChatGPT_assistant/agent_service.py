@@ -99,12 +99,6 @@ class ChatGPTAssistant:
         chat_id: UUID,
         file_context: str = None,
     ):
-        print("user_id,    ", user_id)
-        print("chat_id,    ", chat_id)
-        print("prompt    ", user_input)
-        if file_context:
-            user_input = f"{user_input}\nFILE CONTEXT: {file_context}"
-        
         tool_map = {tool.name: tool for tool in self.tools}
         response = self.agent.invoke(input={
             "content": user_input, 
@@ -115,8 +109,6 @@ class ChatGPTAssistant:
             run_id = response[0].run_id
             try:
                 for action in response:
-                    print("tool using ---------")
-                    print("toll input ----   ", action.tool_input)
                     tool_input = action.tool_input
                     # adding user input if assistant misses to add query inside input
                     tool_input.update({"user_id": str(user_id), "chat_id": str(chat_id)})
