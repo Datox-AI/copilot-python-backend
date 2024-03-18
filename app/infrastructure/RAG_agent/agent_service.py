@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
 
 from app.infrastructure.RAG_agent.prompts.system_prompt import (
     SYSTEM_MESSAGE_TEMPLATE,
@@ -25,7 +26,10 @@ TOP_K = 5
 def get_documents(prompt):
     """This tool for get relevant documents from sharepoint"""
     print(prompt, "---prompt")
-    relevant_docs = get_documents_from_azure_search(prompt)
+    relevant_docs = get_documents_from_azure_search(
+        user_query=prompt,
+        search_type="hybrid"
+    )
     final_docs_content = ""
     for doc in relevant_docs:
         final_docs_content = (
@@ -58,21 +62,68 @@ def filter_data_by_reranker_score(data, difference_threshold=0.5):
         return filtered_data[:TOP_K]
     return filtered_data
 
-def get_documents_from_azure_search(user_query: str):
+def get_embeddings(text: str):
+    # There are a few ways to get embeddings. This is just one example.
+    import openai
+
+    open_ai_endpoint = os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT")
+    open_ai_key = os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY")
+
+    client = openai.AzureOpenAI(
+        azure_endpoint=open_ai_endpoint,
+        api_key=open_ai_key,
+        api_version="2023-08-01-preview",
+    )
+    embedding = client.embeddings.create(
+        input=[text], 
+        model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
+    )
+    return embedding.data[0].embedding
+
+
+def get_documents_from_azure_search(user_query: str, search_type: str):
     credential = AzureKeyCredential(os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"))
     azure_client = SearchClient(
         endpoint=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
         index_name=os.getenv("AZURE_COGNITIVE_SEARCH_SHAREPOINT_INDEX_NAME"),
         credential=credential,
     )
-    results = azure_client.search(
-        search_text=user_query, query_type="semantic", semantic_configuration_name="semantic_search"
-    )
+    if search_type == "hybrid":
+        vector_query = VectorizedQuery(
+            vector=get_embeddings(user_query), 
+            k_nearest_neighbors=5, 
+            fields="contentVector",            
+        )
 
-    results_list = list(results)
-    filtered_results = filter_data_by_reranker_score(results_list, THRESHOLD)
+        search_result = azure_client.search(
+            search_text=user_query,
+            vector_queries=[vector_query],
+            select=[
+                "id",
+                "content", 
+                "metadata_spo_item_name",
+                "metadata_spo_item_path",
+                "metadata_spo_item_content_type",
+                "metadata_spo_item_last_modified",
+                "metadata_spo_item_size",
+                "metadata_spo_item_weburi"
+            ],
+            top=5
+        )
+        return [doc for doc in search_result]
+    
+    elif search_type == "semantic":
+        search_result = azure_client.search(
+            search_text=user_query, 
+            query_type="semantic", 
+            semantic_configuration_name="semantic_search",
+            top=5
+        )
 
-    return filtered_results
+        results = [doc for doc in search_result]
+        filtered_results = filter_data_by_reranker_score(results, THRESHOLD)
+        return filtered_results
+
 
 
 class RAGAssistantAgent:

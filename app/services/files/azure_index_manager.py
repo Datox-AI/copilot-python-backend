@@ -106,8 +106,6 @@ class AzureSearchIndexManager:
         self.search_client.merge_or_upload_documents(documents=documents)
 
     def process_and_store_texts(self, pdf_data, file_id, file_type):
-        print(pdf_data, "&&"*55)
-        print(file_type, "$$"*55)
         extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -131,8 +129,6 @@ class AzureSearchIndexManager:
                 "contentVector": chunk_embeddings
             }
             chunk_documents.append(chunk_document)
-        print(len(chunk_documents), " --- chunks")
-        print(datetime.now(), "  ----chunking")
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 

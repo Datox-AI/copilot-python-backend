@@ -171,19 +171,22 @@ class UserMessageService:
 
             #     await aiofiles.os.remove(temp_file_path)
             # Сначала читаем и обрабатываем файлы
+            print(datetime.now(), "   before azure")
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
                 print(file_extension, "@@")
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 self.azure_indexer.process_and_store_texts(content, file_id, file_type)
-                
+            print(datetime.now(), "   after azure")
             # После обработки запускаем асинхронную загрузку в Azure Blob Storage
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
+            print(datetime.now(), "   after blob")
         print("status", "iii"*44)
         for i in uploaded_file_ids:
             print("uploaded_file_ids", uploaded_file_ids)
+        return "hello world"
         # assistant_response = self.chatgpt_assistant.execute_agent(
         #     user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_ids=uploaded_file_ids
         # )
