@@ -106,8 +106,6 @@ class AzureSearchIndexManager:
         self.search_client.merge_or_upload_documents(documents=documents)
 
     def process_and_store_texts(self, pdf_data, file_id, file_type):
-        print(pdf_data, "&&"*55)
-        print(file_type, "$$"*55)
         extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -131,32 +129,42 @@ class AzureSearchIndexManager:
                 "contentVector": chunk_embeddings
             }
             chunk_documents.append(chunk_document)
-        print(len(chunk_documents), " --- chunks")
-        print(datetime.now(), "  ----chunking")
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 
-    def search_documents(self, prompt, chat_id, file_id):
+    def search_documents(self, prompt, chat_id, file_ids):
         embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(vector=embedding, k_nearest_neighbors=3,
                                        fields="contentVector")
-        if file_id:
-            filter = f"chatId eq '{chat_id}' and fileId eq '{file_id}'"
+        files_ids_str = None
+        if file_ids:
+            files_ids_str = ",".join(file_ids)
+            
+        if files_ids_str:
+            filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
         else:
             filter = f"chatId eq '{chat_id}'"
 
         results = self.search_client.search(
-            search_text=None,
+            search_text=prompt,
             vector_queries=[vector_query],
             vector_filter_mode=VectorFilterMode.PRE_FILTER,
             filter=filter,
             select=["content", "fileId", "chatId"],
         )
+        
         text_content = ""
+        content_dict = {}
         for result in results:
-            text_content += f"{result['content']}"
-        print(text_content)
-        return text_content
+            file_id = result["fileId"]
+            if file_id not in content_dict.keys():
+                content_dict[file_id] = result["content"]
+            else:
+                content_dict[file_id] += f"\n{result['content']}"
 
-    def invoke(self, file_data, file_id, prompt):
-        chunk_documents = self.process_and_store_texts(pdf_data=file_data, file_id=file_id)
+
+        for key, value in content_dict.items():
+            text_content += f"FILE_ID: {key}\nFILE_CONTENT:\n{value}\n\n\n"
+            
+            
+        return text_content

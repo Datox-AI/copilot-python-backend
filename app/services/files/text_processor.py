@@ -49,7 +49,7 @@ class TextProcessor:
                 texts = [element.text for element in elements]
             elif file_type in ["csv", "xlsx"]:
                 df = pd.read_csv(file_like, engine='python') if file_type == "csv" else pd.read_excel(file_like)
-                texts = df.applymap(str).apply(lambda x: ' '.join(x), axis=1).tolist()
+                texts = df.map(str).apply(lambda x: ' '.join(x), axis=1).tolist()
             elif file_type == "txt":
                 file_like.seek(0)
                 texts = file_like.read().decode("utf-8").splitlines()

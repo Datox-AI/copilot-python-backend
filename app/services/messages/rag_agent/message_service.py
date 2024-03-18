@@ -1,7 +1,7 @@
 import uuid
+import datetime
 from typing import Annotated
 from uuid import UUID
-import json
 from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -43,6 +43,15 @@ class RAGAgentMessageService:
         self,
         message_text: str,
     ):
+        new_user_message = Message(
+            id=uuid.uuid4(),
+            created_at=datetime.datetime.now(),
+            chat_id=self.chat_id,
+            text=message_text,
+            status=MessageStatus.Success,
+            role=MessageRole.User,
+        )
+        
         # rag_agent_service
         thread_id = self.chat_obj.assistant_thread_id
         rag_agent_service = RAGAssistantAgent(thread_id=thread_id)
@@ -52,16 +61,11 @@ class RAGAgentMessageService:
         relevant_docs = result['relevant_docs']
         
         self.chat_obj.assistant_thread_id = thread_id
-        new_user_message = Message(
-            id=uuid.uuid4(),
-            chat_id=self.chat_id,
-            text=message_text,
-            status=MessageStatus.Success,
-            role=MessageRole.User,
-        )
+
         new_agent_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
+            created_at=datetime.datetime.now(),
             text=output,
             status=MessageStatus.Success,
             role=MessageRole.Assistant,
@@ -79,8 +83,8 @@ class RAGAgentMessageService:
                 message=new_agent_message,
             )
             sharepoint_document_objs.append(sharepoint_document_obj)
-        self.session.add(new_user_message)
         self.session.add(new_agent_message)
+        self.session.add(new_user_message)
         self.session.add_all(sharepoint_document_objs)
         self.session.commit()
 
