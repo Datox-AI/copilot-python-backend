@@ -19,7 +19,7 @@ from app.infrastructure.RAG_agent.prompts.system_prompt import (
 
 load_dotenv()
 THRESHOLD = 0.3
-TOP_K = 10
+TOP_K = 5
 
 @tool
 def get_documents(prompt):
