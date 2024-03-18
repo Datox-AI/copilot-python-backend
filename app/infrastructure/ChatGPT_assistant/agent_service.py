@@ -1,5 +1,5 @@
 import os, json
-from typing import Union
+from typing import Union, List
 from uuid import UUID
 from dotenv import load_dotenv
 from openai import AzureOpenAI
@@ -89,9 +89,9 @@ class ChatGPTAssistant:
         user_input: str,
         user_id: UUID,
         chat_id: UUID,
-        file_id: Union[UUID, None] = None,
+        file_ids: List[Union[UUID, None]] = None,
     ):
-        print("file_id,    ", file_id)
+        print("file_ids,    ", file_ids)
         print("user_id,    ", user_id)
         print("chat_id,    ", chat_id)
         print("prompt    ", user_input)

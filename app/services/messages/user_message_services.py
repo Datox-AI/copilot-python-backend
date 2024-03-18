@@ -1,7 +1,9 @@
 import json
+import asyncio
 import shutil
 import tempfile
 import uuid
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -10,7 +12,7 @@ from uuid import UUID
 from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-
+from dotenv import load_dotenv
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
@@ -19,10 +21,11 @@ from app.models.maindb import Chat, Message
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureAsyncBlobStorageManager
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
-
+import aiofiles
 from .message_create_stream import OpenAIChatStream
 
 MIME_TYPE_MAP = {
@@ -36,6 +39,7 @@ MIME_TYPE_MAP = {
     'application/msword': 'doc',
 }
 
+load_dotenv()
 
 class UserMessageService:
     def __init__(
@@ -49,6 +53,7 @@ class UserMessageService:
         self.chat_id = chat_id
         self.streamer = OpenAIChatStream()
         self.file_service = UserFileService(session, user)
+        self.async_blob_service = AzureAsyncBlobStorageManager(os.environ["AZURE_STORAGE_FILE_CONTAINER"])
         self.azure_indexer = AzureSearchIndexManager(user=user, session=session, chat_id=self.chat_id)
         thread_id = self._get_thread_id()
         self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
@@ -66,7 +71,68 @@ class UserMessageService:
             chat_obj.assistant_thread_id = thread_id
             self.session.commit()
 
-    async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
+    # async def create_message(self, request: CreateMessageRequest, background_tasks: BackgroundTasks):
+    #     self._check_chat_exists(chat_id=self.chat_id)
+    #     reply_message = None
+    #     if request.replyTo:
+    #         reply_message = self.session.query(Message).filter(Message.id == request.replyTo).first()
+    #         if not reply_message:
+    #             raise HTTPException(
+    #                 status_code=404, detail=f"Message object under {request.replyTo} id does not exist"
+    #             )
+    #     new_user_message = Message(
+    #         id=uuid.uuid4(),
+    #         chat_id=self.chat_id,
+    #         text=request.prompt,
+    #         status=MessageStatus.Success,
+    #         role=MessageRole.User,
+    #         reply_to_id=request.replyTo if request.replyTo else None,
+    #     )
+    #     self.session.add(new_user_message)
+    #     self.session.commit()
+    #     file_id = None
+    #     if request.file:
+    #         print(datetime.now(), "  ----start")
+    #         temp_file_path, file_extension = await self.save_temp_file(request.file)
+    #         file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
+    #         print(datetime.now(), "  ----saving temp file")
+    #         file_id = uuid.uuid4()
+    #         background_tasks.add_task(
+    #             self.file_service.upload_file_callback,
+    #             file_path=temp_file_path,
+    #             file_id=file_id,
+    #             file_extension=file_extension,
+    #             callback=save_file_id_to_db,
+    #         )
+    #         print(datetime.now(), "  ----background task")
+
+    #         file_data = open(temp_file_path, "rb").read()
+    #         self.azure_indexer.process_and_store_texts(file_data, file_id, file_type)
+    #         print(datetime.now(), "  ----processing and storing")
+
+    #     assistant_response = self.chatgpt_assistant.execute_agent(
+    #         user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_id=file_id
+    #     )
+    #     if type(assistant_response) == dict:
+    #         thread_id = assistant_response["thread_id"]
+    #         self._update_thread_id(thread_id=thread_id)
+    #         # saving response
+    #         new_assistant_message = Message(
+    #             id=uuid.uuid4(),
+    #             chat_id=self.chat_id,
+    #             text=assistant_response["output"],
+    #             follow_up_questions=assistant_response["followup_questions"],
+    #             status=MessageStatus.Success,
+    #             role=MessageRole.Assistant,
+    #             prompt_id=new_user_message.id,
+    #         )
+    #         self.session.add(new_assistant_message)
+    #         self.session.commit()
+    #         return MessageMapper.map_to_user_message_response(message=new_assistant_message)
+
+    #     else:
+    #         raise HTTPException(status_code=500, detail=assistant_response)
+    async def create_message(self, request: CreateMessageRequest):
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
@@ -85,48 +151,61 @@ class UserMessageService:
         )
         self.session.add(new_user_message)
         self.session.commit()
-        file_id = None
-        if request.file:
-            print(datetime.now(), "  ----start")
-            temp_file_path, file_extension = await self.save_temp_file(request.file)
-            file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-            print(datetime.now(), "  ----saving temp file")
-            file_id = uuid.uuid4()
-            background_tasks.add_task(
-                self.file_service.upload_file_callback,
-                file_path=temp_file_path,
-                file_id=file_id,
-                file_extension=file_extension,
-                callback=save_file_id_to_db,
-            )
-            print(datetime.now(), "  ----background task")
+        uploaded_file_ids = None
+        if request.files:
+            uploaded_file_ids = [str(uuid.uuid4()) for _ in request.files]
+            # upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, file, file_id) for file, file_id in zip(request.files, uploaded_file_ids)]
+            # await asyncio.gather(*upload_tasks)
 
-            file_data = open(temp_file_path, "rb").read()
-            self.azure_indexer.process_and_store_texts(file_data, file_id, file_type)
-            print(datetime.now(), "  ----processing and storing")
+            # for file_id, upload_file in zip(uploaded_file_ids, request.files):
+            #     async with aiofiles.tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
+            #         content = await upload_file.read()
+            #         await temp_file.write(content)
+            #         temp_file_path = temp_file.name
 
-        assistant_response = self.chatgpt_assistant.execute_agent(
-            user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_id=file_id
-        )
-        if type(assistant_response) == dict:
-            thread_id = assistant_response["thread_id"]
-            self._update_thread_id(thread_id=thread_id)
-            # saving response
-            new_assistant_message = Message(
-                id=uuid.uuid4(),
-                chat_id=self.chat_id,
-                text=assistant_response["output"],
-                follow_up_questions=assistant_response["followup_questions"],
-                status=MessageStatus.Success,
-                role=MessageRole.Assistant,
-                prompt_id=new_user_message.id,
-            )
-            self.session.add(new_assistant_message)
-            self.session.commit()
-            return MessageMapper.map_to_user_message_response(message=new_assistant_message)
+            #     async with aiofiles.open(temp_file_path, "rb") as f:
+            #         file_data = await f.read()
+            #         file_extension = Path(upload_file.filename).suffix
+            #         file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
+            #         await self.azure_indexer.process_and_store_texts(file_data, file_id, file_type)
 
-        else:
-            raise HTTPException(status_code=500, detail=assistant_response)
+            #     await aiofiles.os.remove(temp_file_path)
+            # Сначала читаем и обрабатываем файлы
+            for file_id, upload_file in zip(uploaded_file_ids, request.files):
+                content = await upload_file.read()
+                file_extension = upload_file.content_type
+                print(file_extension, "@@")
+                file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
+                self.azure_indexer.process_and_store_texts(content, file_id, file_type)
+                
+            # После обработки запускаем асинхронную загрузку в Azure Blob Storage
+            upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
+            await asyncio.gather(*upload_tasks)
+        print("status", "iii"*44)
+        for i in uploaded_file_ids:
+            print("uploaded_file_ids", uploaded_file_ids)
+        # assistant_response = self.chatgpt_assistant.execute_agent(
+        #     user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_ids=uploaded_file_ids
+        # )
+        # if type(assistant_response) == dict:
+        #     thread_id = assistant_response["thread_id"]
+        #     self._update_thread_id(thread_id=thread_id)
+        #     # saving response
+        #     new_assistant_message = Message(
+        #         id=uuid.uuid4(),
+        #         chat_id=self.chat_id,
+        #         text=assistant_response["output"],
+        #         follow_up_questions=assistant_response["followup_questions"],
+        #         status=MessageStatus.Success,
+        #         role=MessageRole.Assistant,
+        #         prompt_id=new_user_message.id,
+        #     )
+        #     self.session.add(new_assistant_message)
+        #     self.session.commit()
+        #     return MessageMapper.map_to_user_message_response(message=new_assistant_message)
+
+        # else:
+        #     raise HTTPException(status_code=500, detail=assistant_response)
 
     async def save_temp_file(self, upload_file: UploadFile):
         try:
