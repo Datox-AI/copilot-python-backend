@@ -4,8 +4,14 @@ import uuid
 import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient
+from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
+from app.models.maindb.file import File
+from sqlalchemy.orm import Session
+from typing import List
+from tempfile import NamedTemporaryFile
+import aiofiles
 
 load_dotenv()
 
@@ -67,3 +73,35 @@ class AzureBlobStorageManager:
         stream = blob_client.download_blob().readall()
 
         return stream, media_type
+
+
+class AzureAsyncBlobStorageManager:
+    def __init__(self, container_name):
+        # initiating blob service client
+        az_storage_connection_string = os.environ["AZURE_STORAGE_CONNECTION_STRING"]
+        blob_service_client = AsyncBlobServiceClient.from_connection_string(az_storage_connection_string)
+
+        self.container_client = blob_service_client.get_container_client(container=container_name)
+
+    async def save_and_upload_file(self, session: Session, file: UploadFile, file_id: str):
+        file_name = file.filename
+        file_extension = file_name.split('.')[-1]
+        blob_name = f"{file_id}.{file_extension}"
+
+        with NamedTemporaryFile(delete=False) as temp_file:
+            content = await file.read()
+            temp_file.write(content)
+            temp_file_path = temp_file.name
+
+        async with aiofiles.open(temp_file_path, 'rb') as af:
+            content = await af.read()
+            blob_client = self.container_client.get_blob_client(blob=file_id)
+            await blob_client.upload_blob(content)
+
+        os.remove(temp_file_path)
+
+        new_file = File(id=file_id, file_name=file_name, blob_name=blob_name, file_extension=file_extension)
+        session.add(new_file)
+        session.commit()
+
+        return file_id

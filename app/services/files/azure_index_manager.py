@@ -106,6 +106,8 @@ class AzureSearchIndexManager:
         self.search_client.merge_or_upload_documents(documents=documents)
 
     def process_and_store_texts(self, pdf_data, file_id, file_type):
+        print(pdf_data, "&&"*55)
+        print(file_type, "$$"*55)
         extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -121,7 +123,7 @@ class AzureSearchIndexManager:
             chunk_embeddings = self.generate_embeddings(chunk_text)
             chunk_document = {
                 "id": str(uuid.uuid4()),
-                "file_type": "application/pdf",
+                "file_type": file_type,
                 "userId": user_id,
                 "chatId": chat_id,
                 "fileId": file_id,
