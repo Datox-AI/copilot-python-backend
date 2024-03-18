@@ -91,7 +91,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
     if search_type == "hybrid":
         vector_query = VectorizedQuery(
             vector=get_embeddings(user_query), 
-            k_nearest_neighbors=5, 
+            k_nearest_neighbors=TOP_K, 
             fields="contentVector",            
         )
 
@@ -108,7 +108,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
                 "metadata_spo_item_size",
                 "metadata_spo_item_weburi"
             ],
-            top=5
+            top=TOP_K
         )
         return [doc for doc in search_result]
     
@@ -117,7 +117,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
             search_text=user_query, 
             query_type="semantic", 
             semantic_configuration_name="semantic_search",
-            top=5
+            top=TOP_K
         )
 
         results = [doc for doc in search_result]
