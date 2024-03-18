@@ -96,7 +96,6 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
         )
 
         search_result = azure_client.search(
-            search_text=user_query,
             vector_queries=[vector_query],
             select=[
                 "id",
