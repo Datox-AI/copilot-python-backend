@@ -70,6 +70,7 @@ class UserMessageService:
             self.session.commit()
 
     async def create_message(self, request: CreateMessageRequest):
+        
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
@@ -125,10 +126,18 @@ class UserMessageService:
             await self.async_blob_service.close()
             print(uploaded_file_ids)
             file_context = self.azure_indexer.search_documents(
-                prompt=request.prompt, 
+                prompt="*", 
                 file_ids=uploaded_file_ids,
                 chat_id=self.chat_id,
             )
+            if file_context == "":
+                file_context = self.azure_indexer.search_documents(
+                    prompt="*",
+                    file_ids=uploaded_file_ids,
+                    chat_id=self.chat_id,
+                    semantic=True
+                )
+            
             print(file_context, " ----context")
     
         assistant_response = self.chatgpt_assistant.execute_agent(

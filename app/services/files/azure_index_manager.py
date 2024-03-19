@@ -53,7 +53,7 @@ class AzureSearchIndexManager:
         )
         self.text_processor = TextProcessor()
 
-        self.index_name = "index_for_copilot_gpt"
+        self.index_name = os.getenv("AZURE_COGNITIVE_SEARCH_CHATGPT_INDEX_NAME")
         self.search_client = SearchClient(os.environ.get("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
                                           index_name=self.index_name,
                                           credential=self.credential)
@@ -99,6 +99,7 @@ class AzureSearchIndexManager:
         self.search_client.merge_or_upload_documents(documents=documents)
 
     def process_and_store_texts(self, pdf_data, file_id, file_type, file_extension, file_name):
+        print(self.index_name, "   ----- azure ai index name")
         extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -127,10 +128,13 @@ class AzureSearchIndexManager:
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 
-    def search_documents(self, prompt, chat_id, file_ids):
+    def search_documents(self, prompt, chat_id, file_ids, semantic=False):
         embedding = self.generate_embeddings(prompt)
-        vector_query = VectorizedQuery(vector=embedding, k_nearest_neighbors=3,
-                                       fields="contentVector")
+        vector_query = VectorizedQuery(
+            vector=embedding, 
+            k_nearest_neighbors=3,
+            fields="contentVector"
+        )
         files_ids_str = None
         if file_ids:
             files_ids_str = ",".join(file_ids)
@@ -139,18 +143,27 @@ class AzureSearchIndexManager:
             filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
         else:
             filter = f"chatId eq '{chat_id}'"
-
-        results = self.search_client.search(
-            search_text=prompt,
-            vector_queries=[vector_query],
-            vector_filter_mode=VectorFilterMode.PRE_FILTER,
-            filter=filter,
-            select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-        )
-        
+        if semantic:
+            results = self.search_client.search(
+                search_text=prompt,
+                query_type="semantic",
+                semantic_configuration_name='semantic_search',
+                filter=filter
+            )            
+        else:
+            results = self.search_client.search(
+                # search_text=prompt,
+                vector_queries=[vector_query],
+                vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                filter=filter,
+                select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
+                top=3
+            )
+        results = [x for x in results]
         text_content = ""
         content_dict = {}
         for result in results:
+            print(result['@search.score'], " reuslt")
             file_id = result["file_name"]
             if file_id not in content_dict.keys():
                 content_dict[file_id] = result["content"]
@@ -161,6 +174,9 @@ class AzureSearchIndexManager:
         for key, value in content_dict.items():
             text_content += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
          
-        print(len(content_dict.values()), " ----- len values")
+        print(len(results), "   ----- len results")
         
         return text_content
+    
+    
+
