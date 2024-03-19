@@ -72,6 +72,9 @@ class UserMessageService:
             self.session.commit()
 
     async def create_message(self, request: CreateMessageRequest):
+        print(request.files, " ----- uploaded files") 
+        print(len(request.files), " ------------ len uploaded files") 
+        
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
