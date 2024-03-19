@@ -60,6 +60,7 @@ class AnalyticsAgentFileService:
         if chat_message_with_store_id:
             downloaded_stream = self.blob_service.download_csv_file(stored_file_id=stored_file_id)[0]
             df = pd.read_csv(downloaded_stream)
+            df = df.fillna('')
             df_data = df.to_dict(orient="records")
             if len(df_data) > 10:
                 return {"data_status": "incomplete", "data": df_data[:10]}
