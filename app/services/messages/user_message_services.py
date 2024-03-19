@@ -114,7 +114,7 @@ class UserMessageService:
                 new_message_file = MessageFile(
                     message_id=new_user_message.id,
                     file_id=new_file.id,
-                    content=content,
+                    content=None,
                     token=None 
                 )
                 
