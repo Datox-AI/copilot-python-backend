@@ -97,8 +97,9 @@ class UserMessageService:
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
+                file_name = upload_file.filename
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-                self.azure_indexer.process_and_store_texts(content, file_id, file_type)
+                self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
                 await upload_file.seek(0)
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
