@@ -72,8 +72,6 @@ class UserMessageService:
             self.session.commit()
 
     async def create_message(self, request: CreateMessageRequest):
-        print(request.files, " ----- uploaded files") 
-        print(len(request.files), " ------------ len uploaded files") 
         
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
@@ -109,7 +107,7 @@ class UserMessageService:
             await self.async_blob_service.close()
             print(uploaded_file_ids)
             file_context = self.azure_indexer.search_documents(
-                prompt=request.prompt, 
+                prompt="*", 
                 file_ids=uploaded_file_ids,
                 chat_id=self.chat_id,
             )
@@ -117,7 +115,8 @@ class UserMessageService:
                 file_context = self.azure_indexer.search_documents(
                     prompt="*",
                     file_ids=uploaded_file_ids,
-                    chat_id=self.chat_id
+                    chat_id=self.chat_id,
+                    semantic=True
                 )
             
             print(file_context, " ----context")

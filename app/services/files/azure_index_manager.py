@@ -128,7 +128,7 @@ class AzureSearchIndexManager:
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
 
-    def search_documents(self, prompt, chat_id, file_ids):
+    def search_documents(self, prompt, chat_id, file_ids, semantic=False):
         embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(
             vector=embedding, 
@@ -143,15 +143,22 @@ class AzureSearchIndexManager:
             filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
         else:
             filter = f"chatId eq '{chat_id}'"
-
-        results = self.search_client.search(
-            # search_text=prompt,
-            vector_queries=[vector_query],
-            vector_filter_mode=VectorFilterMode.PRE_FILTER,
-            filter=filter,
-            select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-            top=3
-        )
+        if semantic:
+            results = self.search_client.search(
+                search_text=prompt,
+                query_type="semantic",
+                semantic_configuration_name='semantic_search',
+                filter=filter
+            )            
+        else:
+            results = self.search_client.search(
+                # search_text=prompt,
+                vector_queries=[vector_query],
+                vector_filter_mode=VectorFilterMode.PRE_FILTER,
+                filter=filter,
+                select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
+                top=3
+            )
         results = [x for x in results]
         text_content = ""
         content_dict = {}
@@ -170,3 +177,6 @@ class AzureSearchIndexManager:
         print(len(results), "   ----- len results")
         
         return text_content
+    
+    
+
