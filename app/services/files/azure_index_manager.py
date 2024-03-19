@@ -145,13 +145,13 @@ class AzureSearchIndexManager:
             vector_queries=[vector_query],
             vector_filter_mode=VectorFilterMode.PRE_FILTER,
             filter=filter,
-            select=["content", "fileId", "chatId"],
+            select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
         )
         
         text_content = ""
         content_dict = {}
         for result in results:
-            file_id = result["fileId"]
+            file_id = result["file_name"]
             if file_id not in content_dict.keys():
                 content_dict[file_id] = result["content"]
             else:
@@ -159,7 +159,8 @@ class AzureSearchIndexManager:
 
 
         for key, value in content_dict.items():
-            text_content += f"FILE_ID: {key}\nFILE_CONTENT:\n{value}\n\n\n"
-            
+            text_content += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
+         
         print(len(content_dict.values()), " ----- len values")
+        
         return text_content
