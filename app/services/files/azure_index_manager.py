@@ -156,6 +156,7 @@ class AzureSearchIndexManager:
         text_content = ""
         content_dict = {}
         for result in results:
+            print(result['@search.score'], " reuslt")
             file_id = result["file_name"]
             if file_id not in content_dict.keys():
                 content_dict[file_id] = result["content"]
