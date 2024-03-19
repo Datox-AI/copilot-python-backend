@@ -110,6 +110,7 @@ class UserMessageService:
                 file_ids=uploaded_file_ids,
                 chat_id=self.chat_id,
             )
+            print(file_context, " ----context")
     
         assistant_response = self.chatgpt_assistant.execute_agent(
             user_input=request.prompt, 

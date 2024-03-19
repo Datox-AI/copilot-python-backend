@@ -161,5 +161,5 @@ class AzureSearchIndexManager:
         for key, value in content_dict.items():
             text_content += f"FILE_ID: {key}\nFILE_CONTENT:\n{value}\n\n\n"
             
-            
+        print(len(content_dict.values()), " ----- len values")
         return text_content
