@@ -110,6 +110,13 @@ class UserMessageService:
                 file_ids=uploaded_file_ids,
                 chat_id=self.chat_id,
             )
+            if file_context == "":
+                file_context = self.azure_indexer.search_documents(
+                    prompt="*",
+                    file_ids=uploaded_file_ids,
+                    chat_id=self.chat_id
+                )
+            
             print(file_context, " ----context")
     
         assistant_response = self.chatgpt_assistant.execute_agent(
