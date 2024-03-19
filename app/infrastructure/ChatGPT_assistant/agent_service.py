@@ -99,6 +99,8 @@ class ChatGPTAssistant:
         chat_id: UUID,
         file_context: str = None,
     ):
+        if file_context:
+            user_input = f"{user_input}\n\n{file_context}" 
         tool_map = {tool.name: tool for tool in self.tools}
         response = self.agent.invoke(input={
             "content": user_input, 
