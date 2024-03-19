@@ -1,7 +1,6 @@
 import os
 import uuid
 from typing import Annotated
-from datetime import datetime
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -17,7 +16,6 @@ from azure.search.documents.indexes.models import (
     VectorSearchProfile,
 )
 from azure.search.documents.models import VectorFilterMode, VectorizedQuery
-from langchain.tools import tool
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from app.schemas.identity.current_user import CurrentUser
@@ -27,11 +25,6 @@ from fastapi import Depends
 from sqlalchemy.orm import Session
 from .text_processor import TextProcessor
 from .user_files_services import UserFileService
-import shutil
-import tempfile
-from pathlib import Path
-
-from fastapi import Depends, UploadFile
 
 
 class AzureSearchIndexManager:
@@ -60,7 +53,7 @@ class AzureSearchIndexManager:
         )
         self.text_processor = TextProcessor()
 
-        self.index_name = "test-index-1"
+        self.index_name = "index_for_copilot_gpt"
         self.search_client = SearchClient(os.environ.get("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
                                           index_name=self.index_name,
                                           credential=self.credential)
@@ -105,7 +98,7 @@ class AzureSearchIndexManager:
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts(self, pdf_data, file_id, file_type):
+    def process_and_store_texts(self, pdf_data, file_id, file_type, file_extension, file_name):
         extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
@@ -122,6 +115,8 @@ class AzureSearchIndexManager:
             chunk_document = {
                 "id": str(uuid.uuid4()),
                 "file_type": file_type,
+                "file_extension": file_extension,
+                "file_name": file_name,
                 "userId": user_id,
                 "chatId": chat_id,
                 "fileId": file_id,
