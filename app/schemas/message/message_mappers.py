@@ -51,6 +51,17 @@ class MessageMapper:
 
     @staticmethod
     def map_to_user_message_response(message: Message):
+        files_info = []
+        if message.message_files:
+            files_info = [
+                {
+                    "file_id": file.file_id,
+                    "file_name": file.file.file_name,
+                    "file_extension": file.file.file_extension,
+                    "blob_name": file.file.blob_name
+                }
+                for file in message.message_files
+            ]
         return UserMessageResponse(
             id=message.id.hex,
             chat_id=message.chat_id,
@@ -63,4 +74,5 @@ class MessageMapper:
             questions=message.follow_up_questions,
             created_at=message.created_at,
             prompt_id=message.prompt_id,
+            files=files_info
         )

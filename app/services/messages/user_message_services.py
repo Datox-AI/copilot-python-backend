@@ -1,4 +1,3 @@
-import json
 import asyncio
 import shutil
 import tempfile
@@ -9,8 +8,7 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from app.backend.session import create_maindb_session
@@ -103,7 +101,7 @@ class UserMessageService:
                 self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
                 
                 new_file = File(
-                    id=file_id,
+                    id=uuid.uuid4(),
                     file_name=file_name,
                     blob_name=file_id,
                     file_extension=file_type
@@ -158,16 +156,6 @@ class UserMessageService:
 
         else:
             raise HTTPException(status_code=500, detail=assistant_response)
-
-    async def save_temp_file(self, upload_file: UploadFile):
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
-                shutil.copyfileobj(upload_file.file, temp_file)
-                temp_file_path = temp_file.name
-                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
-        finally:
-            upload_file.file.close()
-        return temp_file_path, file_extension
 
     def get_messages(self, chat_id: UUID):
         self._check_chat_exists(chat_id=self.chat_id)
