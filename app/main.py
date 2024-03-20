@@ -31,6 +31,7 @@ add_pagination(app)
 # Adding CORS middleware
 origins = os.environ["ALLOWED_ORIGINS"].split(",")
 print(origins, " ----------origins")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
