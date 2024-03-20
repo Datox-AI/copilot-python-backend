@@ -127,6 +127,7 @@ class AzureSearchIndexManager:
             chunk_documents.append(chunk_document)
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
+        return chunk_documents
 
     def search_documents(self, prompt, chat_id, file_ids, semantic=False):
         embedding = self.generate_embeddings(prompt)

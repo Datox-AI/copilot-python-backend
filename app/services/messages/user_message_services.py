@@ -94,13 +94,14 @@ class UserMessageService:
         if request.files:
             uploaded_file_ids = [str(uuid.uuid4()) for _ in request.files]
             message_files_to_add = []
+            all_chunks = []
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
                 file_name = upload_file.filename
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-                self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
-                
+                chunk_docs = self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
+                all_chunks += chunk_docs
                 new_file = File(
                     id=uuid.uuid4(),
                     file_name=file_name,
@@ -124,19 +125,26 @@ class UserMessageService:
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
             await self.async_blob_service.close()
-            print(uploaded_file_ids)
             file_context = self.azure_indexer.search_documents(
-                prompt="*", 
+                prompt=request.prompt, 
                 file_ids=uploaded_file_ids,
                 chat_id=self.chat_id,
             )
             if file_context == "":
-                file_context = self.azure_indexer.search_documents(
-                    prompt="*",
-                    file_ids=uploaded_file_ids,
-                    chat_id=self.chat_id,
-                    semantic=True
-                )
+                content_dict = {}
+                for chunk_doc in all_chunks:
+
+                    file_id = chunk_doc["file_name"]
+                    if file_id not in content_dict.keys():
+                        content_dict[file_id] = chunk_doc["content"]
+                    else:
+                        content_dict[file_id] += f"\n{chunk_doc['content']}"
+
+
+                for key, value in content_dict.items():
+                    file_context += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
+                
+
             
             print(file_context, " ----context")
     
