@@ -129,53 +129,62 @@ class AzureSearchIndexManager:
         self.add_or_update_documents(chunk_documents)
         return chunk_documents
 
-    def search_documents(self, prompt, chat_id, file_ids, semantic=False):
+    def search_documents(self, prompt, chat_id, file_ids):
         embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(
             vector=embedding, 
             k_nearest_neighbors=3,
             fields="contentVector"
         )
-        files_ids_str = None
-        if file_ids:
-            files_ids_str = ",".join(file_ids)
+        # files_ids_str = None
+        # if file_ids:
+        #     files_ids_str = ",".join(file_ids)
             
-        if files_ids_str:
-            filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
-        else:
-            filter = f"chatId eq '{chat_id}'"
-        if semantic:
-            results = self.search_client.search(
-                search_text=prompt,
-                query_type="semantic",
-                semantic_configuration_name='semantic_search',
-                filter=filter
-            )            
-        else:
-            results = self.search_client.search(
+        # if files_ids_str:
+        #     filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
+        # else:
+        docs = []
+        for file_id in file_ids:
+            filter = f"chatId eq '{chat_id}' and fileId eq '{file_id}'"
+            result = self.search_client.search(
                 # search_text=prompt,
                 vector_queries=[vector_query],
                 vector_filter_mode=VectorFilterMode.PRE_FILTER,
                 filter=filter,
                 select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-                top=5
+                top=1
             )
-        results = [x for x in results]
+
+            result = [x for x in result]          
+            print(len(result), ' found in 1')
+            if result == []:
+                result = self.search_client.search(
+                    search_text="*",
+                    query_type="semantic",
+                    semantic_configuration_name='semantic_search',
+                    filter=filter,
+                    top=1
+                )  
+                result = [x for x in result]
+                print(len(result), ' found in 2')
+                
+            docs.append(result[0])
+        print(docs, " doc")
         text_content = ""
         content_dict = {}
-        for result in results:
-            print(result['@search.score'], " reuslt")
-            file_id = result["file_name"]
+        for doc in docs:
+            print(doc['@search.score'], " reuslt")
+            file_id = doc["file_name"]
             if file_id not in content_dict.keys():
-                content_dict[file_id] = result["content"]
+                content_dict[file_id] = doc["content"]
             else:
-                content_dict[file_id] += f"\n{result['content']}"
+                content_dict[file_id] += f"\n{doc['content']}"
 
 
         for key, value in content_dict.items():
             text_content += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
          
-        print(len(results), "   ----- len results")
+        print(len(docs), "   ----- len results")
         
         return text_content
     
