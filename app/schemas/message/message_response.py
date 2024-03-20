@@ -47,3 +47,4 @@ class UserMessageResponse(BaseSchema):
     questions: Optional[List[str]] = None
     created_at: datetime.datetime
     prompt_id: UUID | None
+    files: Optional[List[dict]] = None
