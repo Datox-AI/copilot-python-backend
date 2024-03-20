@@ -56,8 +56,8 @@ class MessageMapper:
             files_info = [
                 {
                     "file_id": file.file_id,
-                    "file_name": file.file.file_name,
-                    "file_extension": file.file.file_extension,
+                    "fileName": file.file.file_name,
+                    "fileType": file.file.file_extension,
                     "blob_name": file.file.blob_name
                 }
                 for file in message.message_files
