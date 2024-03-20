@@ -1,4 +1,3 @@
-import json
 import asyncio
 import shutil
 import tempfile
@@ -9,15 +8,14 @@ from pathlib import Path
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import BackgroundTasks, Depends, HTTPException, UploadFile
-from fastapi.responses import StreamingResponse
+from fastapi import Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
 from app.infrastructure.ChatGPT_assistant.agent_service import ChatGPTAssistant
-from app.models.maindb import Chat, Message
+from app.models.maindb import Chat, Message, MessageFile, File
 from app.schemas.identity.current_user import CurrentUser
 from app.schemas.message import MessageMapper
 from app.schemas.message.message_request import CreateMessageRequest, UpdateMessageRequest
@@ -25,7 +23,7 @@ from app.infrastructure.analytics_agent.azure_storage_manager import AzureAsyncB
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.files.user_files_services import UserFileService, save_file_id_to_db
 from app.shared.auth.azure_scheme import current_user
-import aiofiles
+
 from .message_create_stream import OpenAIChatStream
 
 MIME_TYPE_MAP = {
@@ -95,13 +93,34 @@ class UserMessageService:
         file_context = None
         if request.files:
             uploaded_file_ids = [str(uuid.uuid4()) for _ in request.files]
+            message_files_to_add = []
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
                 file_name = upload_file.filename
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
+                
+                new_file = File(
+                    id=uuid.uuid4(),
+                    file_name=file_name,
+                    blob_name=file_id,
+                    file_extension=file_type
+                )
+                self.session.add(new_file)
+                self.session.commit()
+
+                new_message_file = MessageFile(
+                    message_id=new_user_message.id,
+                    file_id=new_file.id,
+                    content=None,
+                    token=None 
+                )
+                
+                message_files_to_add.append(new_message_file)
                 await upload_file.seek(0)
+            new_user_message.message_files.extend(message_files_to_add)
+            self.session.commit()
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
             await self.async_blob_service.close()
@@ -146,16 +165,6 @@ class UserMessageService:
 
         else:
             raise HTTPException(status_code=500, detail=assistant_response)
-
-    async def save_temp_file(self, upload_file: UploadFile):
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=Path(upload_file.filename).suffix) as temp_file:
-                shutil.copyfileobj(upload_file.file, temp_file)
-                temp_file_path = temp_file.name
-                file_extension = upload_file.content_type  # Используем MIME тип как "расширение"
-        finally:
-            upload_file.file.close()
-        return temp_file_path, file_extension
 
     def get_messages(self, chat_id: UUID):
         self._check_chat_exists(chat_id=self.chat_id)
