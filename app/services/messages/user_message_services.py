@@ -125,27 +125,11 @@ class UserMessageService:
             upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
             await asyncio.gather(*upload_tasks)
             await self.async_blob_service.close()
-            # file_context = self.azure_indexer.search_documents(
-            #     prompt=request.prompt, 
-            #     file_ids=uploaded_file_ids,
-            #     chat_id=self.chat_id,
-            # )
-            file_context = ""
-            if file_context == "":
-                content_dict = {}
-                for chunk_doc in all_chunks:
-
-                    file_id = chunk_doc["file_name"]
-                    if file_id not in content_dict.keys():
-                        content_dict[file_id] = chunk_doc["content"]
-                    else:
-                        content_dict[file_id] += f"\n{chunk_doc['content']}"
-
-
-                for key, value in content_dict.items():
-                    file_context += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
-                
-
+            file_context = self.azure_indexer.search_documents(
+                prompt=request.prompt, 
+                file_ids=uploaded_file_ids,
+                chat_id=self.chat_id,
+            )
             
             print(file_context, " ----context")
     
