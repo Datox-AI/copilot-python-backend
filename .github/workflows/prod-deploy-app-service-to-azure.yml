@@ -76,7 +76,6 @@ jobs:
   production:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: staging
     environment: prod 
     name: "[PROD] Pull and Deploy App Service"
     steps:
