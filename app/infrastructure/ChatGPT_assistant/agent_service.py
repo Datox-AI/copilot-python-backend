@@ -47,19 +47,20 @@ def get_documents(query: str, user_id: str, chat_id: str, file_id: str = None):
         vector_queries=[vector_query],
         vector_filter_mode=VectorFilterMode.PRE_FILTER,
         filter=filter,
-        select=["content", "file_type", "fileId", "chatId"],
+        select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
+        top=5
     )
     text_content = ""
     content_dict = {}
     for result in results:
-        file_id = result["fileId"]
+        file_id = result["fileName"]
         if file_id not in content_dict.keys():
             content_dict[file_id] = result["content"]
         else:
             content_dict[file_id] += f"\n{result['content']}"
 
     for key, value in content_dict.items():
-        text_content += f"FILE_ID: {key}\nFILE_CONTENT:\n{value}\n\n\n"
+        text_content += f"FILE NAME: {key}\nFILE_CONTENT:\n{value}\n\n\n"
         
     return text_content
 
