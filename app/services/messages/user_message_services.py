@@ -171,7 +171,6 @@ class UserMessageService:
         message_objs = (
             self.session.query(Message).filter(Message.chat_id == chat_id).order_by(Message.created_at.asc())
         )
-
         return [MessageMapper.map_to_user_message_response(message_obj) for message_obj in message_objs]
 
     def delete_message(self, chat_id: UUID, message_id: UUID):
