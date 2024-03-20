@@ -158,7 +158,7 @@ class AzureSearchIndexManager:
                 vector_filter_mode=VectorFilterMode.PRE_FILTER,
                 filter=filter,
                 select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-                top=3
+                top=5
             )
         results = [x for x in results]
         text_content = ""
