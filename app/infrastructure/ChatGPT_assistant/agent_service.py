@@ -53,7 +53,7 @@ def get_documents(query: str, user_id: str, chat_id: str, file_id: str = None):
     text_content = ""
     content_dict = {}
     for result in results:
-        file_id = result["fileName"]
+        file_id = result["file_name"]
         if file_id not in content_dict.keys():
             content_dict[file_id] = result["content"]
         else:
