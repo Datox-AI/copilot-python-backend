@@ -167,8 +167,8 @@ class AzureSearchIndexManager:
                 )  
                 result = [x for x in result]
                 print(len(result), ' found in 2')
-                
-            docs.append(result[0])
+            if result != []:
+                docs.append(result[0])
         print(docs, " doc")
         text_content = ""
         content_dict = {}
