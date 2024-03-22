@@ -129,6 +129,17 @@ class AzureSearchIndexManager:
         self.add_or_update_documents(chunk_documents)
         return chunk_documents
 
+    @staticmethod
+    def get_longest_content_document(docs):
+        max_length = -1 
+        doc_with_longest_content = None
+        for doc in docs:
+            if len(doc["content"]) > max_length:
+                doc_with_longest_content = doc
+                max_length = len(doc["content"])
+        return doc_with_longest_content
+    
+    
     def search_documents(self, prompt, chat_id, file_ids):
         embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(
@@ -152,23 +163,26 @@ class AzureSearchIndexManager:
                 vector_filter_mode=VectorFilterMode.PRE_FILTER,
                 filter=filter,
                 select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-                top=1
+                top=2
             )
 
-            result = [x for x in result]          
-            print(len(result), ' found in 1')
-            if result == []:
+            results = [x for x in result]          
+            print(len(results), ' found in 1')
+            if results == []:
                 result = self.search_client.search(
                     search_text="*",
                     query_type="semantic",
                     semantic_configuration_name='semantic_search',
                     filter=filter,
-                    top=1
+                    top=5
                 )  
-                result = [x for x in result]
-                print(len(result), ' found in 2')
-            if result != []:
-                docs.append(result[0])
+                results = [x for x in result]
+                doc_with_longest_content = self.get_longest_content_document(results)
+                if doc_with_longest_content:
+                    docs.append(doc_with_longest_content)
+            else:                
+                docs.append(results[0])
+                
         print(docs, " doc")
         text_content = ""
         content_dict = {}
