@@ -3,7 +3,7 @@ from typing import Annotated
 from urllib.parse import urlencode
 import httpx, ast
 import snowflake.connector
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from httpx import ConnectTimeout, HTTPStatusError, NetworkError, ReadTimeout
 from snowflake.connector.errors import DatabaseError, ForbiddenError
 from sqlalchemy.orm import Session
@@ -21,8 +21,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 app = FastAPI()
 
-
-REDIRECT_URI = "https://ashy-wave-0c6d0ea0f-dev.eastus2.4.azurestaticapps.net/callback/snowflake"
+# REDIRECT_URI = None
 
 
 def is_url_reachable(url: str) -> bool:
@@ -106,7 +105,7 @@ class SnowflakeIntegrationService:
         self.session.commit()
 
     # Endpoint to initialize OAuth configuration
-    def init_oauth_logic(self, config: OAuthConfig):
+    def init_oauth_logic(self, config: OAuthConfig, request: Request):
         if len(config.client_id) != 28:
             raise HTTPException(status_code=400, detail="Please review Client ID for typos")
         if len(config.client_secret) != 44:
@@ -137,10 +136,12 @@ class SnowflakeIntegrationService:
         self.session.add(snowflake_identifier_obj)
         self.session.add(warehouse_obj)
         self.session.commit()
+        redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        
         params = {
             "response_type": "code",
             "client_id": config.client_id,
-            "redirect_uri": REDIRECT_URI,
+            "redirect_uri": redirect_url,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -149,14 +150,16 @@ class SnowflakeIntegrationService:
         else:
             raise HTTPException(status_code=400, detail="Authorization URL is not reachable")
 
-    def get_oauth_logic(self):
+    def get_oauth_logic(self, request: Request):
         existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
         authorization_endpoint = existing_snowflake_identifier_obj.token_endpoint.replace("token-request", "authorize")
+        redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        
         params = {
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
-            "redirect_uri": REDIRECT_URI,
+            "redirect_uri": redirect_url,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -166,7 +169,7 @@ class SnowflakeIntegrationService:
             authorization_url=authorization_url,
         )
 
-    def update_oauth_logic(self, config: OAuthConfig):
+    def update_oauth_logic(self, config: OAuthConfig, request: Request):
 
         config.account_identifier = config.account_identifier.replace(".", "-")
         
@@ -189,10 +192,12 @@ class SnowflakeIntegrationService:
             snowflake_identifier_obj=existing_snowflake_identifier_obj, warehouse_name=config.warehouse
         )
         self.session.commit()
+        
+        redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         params = {
             "response_type": "code",
             "client_id": config.client_id,
-            "redirect_uri": REDIRECT_URI,
+            "redirect_uri": redirect_url,
         }
         authorization_url = f"{authorization_endpoint}?{urlencode(params)}"
 
@@ -209,12 +214,12 @@ class SnowflakeIntegrationService:
         self.session.delete(existing_snowflake_identifier_obj)
         self.session.commit()
 
-    async def oauth_callback_logic(self, code: str):
+    async def oauth_callback_logic(self, code: str, request: Request):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         if not code:
             raise HTTPException(status_code=400, detail="Authorization code not provided")
 
-        token_response = await self.exchange_code_for_token(code)
+        token_response = await self.exchange_code_for_token(code=code, request=request)
         # saving user role to DB
         if not snowflake_identifier_obj.user_role:
             scope = token_response["scope"]
@@ -230,8 +235,9 @@ class SnowflakeIntegrationService:
             self.handle_common_errors(e)
 
     # Exchanges an authorization code for an access token
-    async def exchange_code_for_token(self, code: str):
+    async def exchange_code_for_token(self, code: str, request: Request):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
+        redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -239,7 +245,7 @@ class SnowflakeIntegrationService:
                     data={
                         "grant_type": "authorization_code",
                         "code": code,
-                        "redirect_uri": REDIRECT_URI,
+                        "redirect_uri": redirect_url,
                         "client_id": snowflake_identifier_obj.client_id,
                         "client_secret": snowflake_identifier_obj.client_secret,
                     },

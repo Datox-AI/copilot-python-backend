@@ -32,7 +32,8 @@ class AzureSearchIndexManager:
         self,
         chat_id: uuid.UUID,
         session: Annotated[Session, Depends(create_maindb_session)],
-        user: Annotated[CurrentUser, Depends(current_user)]
+        user: Annotated[CurrentUser, Depends(current_user)],
+        index_name: str
     ):
         # Load environment variables from a .env file if present
         load_dotenv()
@@ -53,7 +54,7 @@ class AzureSearchIndexManager:
         )
         self.text_processor = TextProcessor()
 
-        self.index_name = os.getenv("AZURE_COGNITIVE_SEARCH_CHATGPT_INDEX_NAME")
+        self.index_name = index_name 
         self.search_client = SearchClient(os.environ.get("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
                                           index_name=self.index_name,
                                           credential=self.credential)
@@ -98,9 +99,16 @@ class AzureSearchIndexManager:
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts(self, pdf_data, file_id, file_type, file_extension, file_name):
+    def process_and_store_texts_for_chatgpt_index(
+        self, 
+        file_id, 
+        file_content, 
+        file_type, 
+        file_extension, 
+        file_name
+    ):
         print(self.index_name, "   ----- azure ai index name")
-        extracted_texts = self.text_processor.extract_texts(pdf_data, file_type)
+        extracted_texts = self.text_processor.extract_texts(file_content, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
 
         file_id = str(file_id)
@@ -129,6 +137,28 @@ class AzureSearchIndexManager:
         self.add_or_update_documents(chunk_documents)
         return chunk_documents
 
+    def process_and_store_texts_for_assistant_index(
+        self, file_id, file_content, file_type, file_name, assistant_id
+    ):
+        extracted_texts = self.text_processor.extract_texts(file_content, file_type)
+        chunked_texts = self.text_processor.chunk_texts(extracted_texts)
+        
+        chunk_documents = []
+        for chunk_text in chunked_texts:
+            chunk_embeddings = self.generate_embeddings(chunk_text)
+            chunk_document = {
+                "id": str(uuid.uuid4()),
+                "assistant_id": assistant_id,
+                "is_deleted": False,
+                "fileType": file_type,
+                "fileName": file_name,
+                "fileId": file_id,
+                "content": chunk_text,
+                "contentVector": chunk_embeddings
+            }
+            chunk_documents.append(chunk_document)
+        self.add_or_update_documents(chunk_documents)
+        
     @staticmethod
     def get_longest_content_document(docs):
         max_length = -1 
