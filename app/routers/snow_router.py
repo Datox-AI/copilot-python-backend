@@ -1,7 +1,6 @@
 from typing import Annotated
 from urllib.parse import urlencode
-from fastapi import Header, HTTPException
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -13,18 +12,23 @@ router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integra
 
 # Endpoint to initialize OAuth configuration
 @router.post("/init_oauth")
-def init_oauth(config: OAuthConfig, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return snow_integration_service.init_oauth_logic(config)
+def init_oauth(config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+    return snow_integration_service.init_oauth_logic(config=config, request=request)
 
 
 @router.get("/get_oauth")
-def get_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return snow_integration_service.get_oauth_logic()
+def get_oauth(
+    request: Request,
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
+    
+    
+    return snow_integration_service.get_oauth_logic(request=request)
 
 
 @router.put("/update_oauth")
-def update_oauth(config: OAuthConfig, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return snow_integration_service.update_oauth_logic(config)
+def update_oauth(config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+    return snow_integration_service.update_oauth_logic(config=config, request=request)
 
 
 @router.delete("/delete_oauth")
@@ -43,8 +47,8 @@ def change_role(
 
 
 @router.get("/callback")
-async def oauth_callback(code: str, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
-    return await snow_integration_service.oauth_callback_logic(code)
+async def oauth_callback(code: str, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+    return await snow_integration_service.oauth_callback_logic(code=code, request=request)
 
 
 @router.post("/refresh_token")

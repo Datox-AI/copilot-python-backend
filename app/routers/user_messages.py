@@ -11,18 +11,6 @@ from app.services.messages import UserMessageService
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
 
 
-# @router.post("/{chat_id}/messages")
-# async def create_message(
-#     background_tasks: BackgroundTasks,
-#     chat_id: UUID,
-#     message_service: Annotated[UserMessageService, Depends()],
-#     prompt: str = Form(...),
-#     replyTo: UUID = Form(None),
-#     file: UploadFile = File(None),
-# ):
-#     request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, file=file)
-#     return await message_service.create_message(request, background_tasks)
-
 
 @router.post("/{chat_id}/messages")
 async def create_message(

@@ -5,6 +5,7 @@ class ChatType(Enum):
     Analytics = "Analytics"
     FileSearch = "FileSearch"
     DataAnalytics = "DataAnalytics"
+    Assistants = "Assistants"
 
     @property
     def description(self):
@@ -12,6 +13,8 @@ class ChatType(Enum):
             ChatType.Analytics: "Used for analytics-based chats",
             ChatType.FileSearch: "Used for file search-based chats",
             ChatType.DataAnalytics: "Used for data analytics chats",
+            ChatType.Assistants: "Used for Assistants chats",
+            
         }
         return descriptions[self]
 

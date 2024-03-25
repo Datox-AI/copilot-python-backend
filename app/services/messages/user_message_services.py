@@ -52,7 +52,13 @@ class UserMessageService:
         self.streamer = OpenAIChatStream()
         self.file_service = UserFileService(session, user)
         self.async_blob_service = AzureAsyncBlobStorageManager(os.environ["AZURE_STORAGE_FILE_CONTAINER"])
-        self.azure_indexer = AzureSearchIndexManager(user=user, session=session, chat_id=self.chat_id)
+        chat_gpt_azure_index_name = os.getenv("AZURE_COGNITIVE_SEARCH_CHATGPT_INDEX_NAME")
+        self.azure_indexer = AzureSearchIndexManager(
+            user=user, 
+            session=session, 
+            chat_id=self.chat_id,
+            index_name=chat_gpt_azure_index_name
+        )
         thread_id = self._get_thread_id()
         self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
 
@@ -101,7 +107,13 @@ class UserMessageService:
                 file_extension = upload_file.content_type
                 file_name = upload_file.filename
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-                chunk_docs = self.azure_indexer.process_and_store_texts(content, file_id, file_type, file_extension, file_name)
+                chunk_docs = self.azure_indexer.process_and_store_texts_for_chatgpt_index(
+                    file_id=file_id,
+                    file_content=content,
+                    file_type=file_type,
+                    file_extension=file_extension,
+                    file_name=file_name
+                )
                 all_chunks += chunk_docs
                 new_file = File(
                     id=uuid.uuid4(),
