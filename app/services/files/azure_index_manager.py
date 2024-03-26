@@ -170,7 +170,7 @@ class AzureSearchIndexManager:
         return doc_with_longest_content
     
     
-    def search_documents(self, prompt, chat_id, file_ids):
+    def search_documents(self, prompt, chat_id, file_ids, chunks):
         embedding = self.generate_embeddings(prompt)
         vector_query = VectorizedQuery(
             vector=embedding, 
@@ -196,28 +196,18 @@ class AzureSearchIndexManager:
                 top=2
             )
 
-            results = [x for x in result]          
+            results = [x for x in result]    
             print(len(results), ' found in 1')
             if results == []:
-                result = self.search_client.search(
-                    search_text="*",
-                    query_type="semantic",
-                    semantic_configuration_name='semantic_search',
-                    filter=filter,
-                    top=5
-                )  
-                results = [x for x in result]
-                doc_with_longest_content = self.get_longest_content_document(results)
+                doc_with_longest_content = self.get_longest_content_document(chunks)
                 if doc_with_longest_content:
                     docs.append(doc_with_longest_content)
             else:                
                 docs.append(results[0])
                 
-        print(docs, " doc")
         text_content = ""
         content_dict = {}
         for doc in docs:
-            print(doc['@search.score'], " reuslt")
             file_id = doc["file_name"]
             if file_id not in content_dict.keys():
                 content_dict[file_id] = doc["content"]
