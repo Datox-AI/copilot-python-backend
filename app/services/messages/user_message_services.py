@@ -143,6 +143,7 @@ class UserMessageService:
             file_context = self.azure_indexer.search_documents(
                 prompt=request.prompt, 
                 file_ids=uploaded_file_ids,
+                chunks=all_chunks,
                 chat_id=self.chat_id,
             )
             
