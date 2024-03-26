@@ -20,8 +20,9 @@ async def create_message(
     replyTo: UUID = Form(None),
     files: List[UploadFile] = File(None),
 ):
-    if len(files) > 5:
-        raise HTTPException(status_code=400, detail="Max number of files must be 5")
+    if files:
+        if len(files) > 5:
+            raise HTTPException(status_code=400, detail="Max number of files must be 5")
     request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, files=files)
     return await message_service.create_message(request)
 
