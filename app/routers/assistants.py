@@ -1,19 +1,9 @@
-import uuid, io
-import asyncio
 from typing import Annotated, List
-from uuid import UUID
-import urllib 
-
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.engine import create_engine
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile, status
-from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
-from json.decoder import JSONDecodeError
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.schemas.assistants import CreateAssistantSchema
+from app.schemas.assistants import CreateAssistantSchema, AssistantResponseSchema
 from app.services.assistant import AssistantService
 
 
@@ -22,27 +12,52 @@ router = APIRouter(prefix="/api/assistants", tags=["Assistants"])
 
 @router.post("/create-assistant")
 async def create_assistant(
-    request: CreateAssistantSchema,
-    assistant_service: AssistantService
+    assistant_service: Annotated[AssistantService, Depends()],
+    assistant_name: str = Form(...),
+    assistant_description: str = Form(...),
+    assistant_instruction: str = Form(...),    
+    knowledge_files: List[UploadFile] = File(None),
 ):
-    if len(request.knowledge_files) > 40:
+    if knowledge_files is not None and len(knowledge_files) > 40:
         raise HTTPException(status_code=400, detail="Max number of files must be 40")
     
-    return assistant_service.create_assistant(request=request)
+    request = CreateAssistantSchema(
+        name=assistant_name,
+        description=assistant_description,
+        instruction=assistant_instruction
+    )
+    if knowledge_files is None:
+        knowledge_files = []
+    return await assistant_service.create_assistant(request=request, knowledge_files=knowledge_files)
 
 
 
-@router.post("/update-assistant-files")
+@router.get("/get-assistants")
+async def get_assistants(assistant_service: Annotated[AssistantService, Depends()]):
+    return assistant_service.get_assistants()
+
+@router.get("/get-assistant-chats/{assistant_id}")
+async def get_assistant_chats(
+    assistant_service: Annotated[AssistantService, Depends()],
+    assistant_id: str
+):
+    return assistant_service.get_assistant_chats(assistant_id=assistant_id)
+
+@router.patch("/update-assistant-files/{assistant_id}")
 async def update_message_files(
-    assistant_id: int,
-    files_to_delete: List[UUID] = Form(...),
+    assistant_id: str,
+    assistant_service: Annotated[AssistantService, Depends()],
+    files_to_delete: List[str] = Form(None),
     new_files: List[UploadFile] = File(None)
 ):
-    # Example processing steps:
-    # 1. Validate chat_id and message_id
-    # 2. Delete files as specified
-    # 3. Upload new files
-    # 4. Update the database accordingly
-    # 5. Respond with the updated file list
-    pass
+    print(files_to_delete, " files to delete")
+    if files_to_delete == [""]:
+        files_to_delete = []
+    if new_files is None:
+        new_files = []
+    return await assistant_service.update_assistant_files(
+        assistant_id=assistant_id,
+        files_to_delete=files_to_delete, 
+        new_files=new_files
+    )  
 

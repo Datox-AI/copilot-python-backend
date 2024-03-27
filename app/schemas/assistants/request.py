@@ -6,4 +6,4 @@ class CreateAssistantSchema(BaseSchema):
     name: str
     description: str
     instruction: Union[str]
-    knowledge_files: List[UploadFile]
+

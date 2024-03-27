@@ -35,3 +35,17 @@ class AssistantMapper:
             type=knowledge_file.type,
             is_deleted=knowledge_file.is_deleted   
         )
+        
+    @staticmethod
+    def map_to_assistant_chats_response(
+        assistant: Assistant
+    ):
+        knowledge_files = [AssistantMapper.map_to_assistant_file_response(knowledge_file) for knowledge_file in assistant.knowledge_files]
+        return AssistantResponseSchema(
+            id=assistant.id,
+            assistant_id=assistant.assistant_id,
+            name=assistant.name,
+            description=assistant.description,
+            instructions=assistant.instructions,
+            knowledge_files=knowledge_files
+        )

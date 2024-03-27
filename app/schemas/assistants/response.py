@@ -14,7 +14,7 @@ class AssistantResponseSchema(BaseSchema):
     name: str
     description: str
     instructions: str
-    assistant_id: UUID
+    assistant_id: str
     knowledge_files: List[AssistantKnowledgeFileSchema]
 
 
