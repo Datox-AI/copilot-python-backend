@@ -38,7 +38,7 @@ class AzureSearchIndexManager:
         
     ):
         # Load environment variables from a .env file if present
-        load_dotenv()
+        load_dotenv(override=True)
         self.chat_id = chat_id
         self.user = user
         self.session = session

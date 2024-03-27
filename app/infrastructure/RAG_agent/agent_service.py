@@ -18,7 +18,7 @@ from app.infrastructure.RAG_agent.prompts.system_prompt import (
     SYSTEM_MESSAGE_TEMPLATE,
 )
 
-load_dotenv()
+load_dotenv(override=True)
 THRESHOLD = 0.3
 TOP_K = 5
 

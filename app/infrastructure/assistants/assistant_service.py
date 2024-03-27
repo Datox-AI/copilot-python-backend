@@ -13,7 +13,7 @@ from app.infrastructure.assistants.tool import get_documents
 from app.infrastructure.ChatGPT_assistant.prompt import FOLLOWUP_QUESTIONS_PROMPT
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 class AssistantAgent:
     def __init__(self, assistant_id, thread_id):

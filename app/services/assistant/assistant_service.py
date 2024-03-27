@@ -21,7 +21,7 @@ from app.services.messages.user_message_services import MIME_TYPE_MAP
 from app.infrastructure.assistants.tool import get_documents
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class AssistantService:

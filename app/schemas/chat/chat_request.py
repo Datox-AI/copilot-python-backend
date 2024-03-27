@@ -31,7 +31,7 @@ class CreateChatRequest(BaseSchema):
     def check_assistant_id(self):
         chat_type = self.type
         assistant_id = self.assistant_id
-        if chat_type == ChatType.Assistants and not assistant_id:
+        if chat_type == ChatType.Assistant and not assistant_id:
             raise ValueError("assistant_id is required for Assistants chat type")
         return self
 

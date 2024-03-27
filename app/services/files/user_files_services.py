@@ -14,7 +14,7 @@ from app.schemas.files.file_response import FilesDetailResponse
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 def save_file_id_to_db(session, file_id: UUID, file_name: str, blob_name: UUID, file_extension: str):

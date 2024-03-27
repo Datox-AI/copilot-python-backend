@@ -21,7 +21,7 @@ from app.shared.auth import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme
 from .const import OPEN_API_DESCRIPTION, OPEN_API_TITLE
 from .version import __version__
 
-load_dotenv()
+load_dotenv(override=True)
 
 app = FastAPI(
     title=OPEN_API_TITLE,

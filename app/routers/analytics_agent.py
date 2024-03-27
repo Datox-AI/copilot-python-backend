@@ -39,7 +39,7 @@ from app.models.maindb.chat import Chat
         #     print(f"NEW ASSISTANT CREATED, ID - {self.agent.assistant_id}")
         # else:
 
-load_dotenv()
+load_dotenv(override=True)
 
 router = APIRouter(prefix="/api/analytics_agent", tags=["Data analytics agent"])
 

@@ -9,11 +9,12 @@ from openai import AzureOpenAI
 
 from app.backend.session import create_maindb_session
 from app.models.maindb import Chat, ChatSnowflakeData, Assistant
+from app.enums.chat_enums import ChatType
 from app.schemas.chat import ChatMapper, ChatResponse, CreateChatRequest
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 
-load_dotenv()
+load_dotenv(override=True)
 
 class CreateChat:
     def __init__(
@@ -26,7 +27,7 @@ class CreateChat:
 
     def invoke(self, model: CreateChatRequest) -> ChatResponse:
         new_chat = Chat(id=uuid.uuid4(), name="New Chat", type=model.type)
-        if model.snowflake_data:
+        if model.snowflake_data and model.type == ChatType.DataAnalytics:
             snowflake_data = ChatSnowflakeData(
                 id=uuid.uuid4(),
                 snowflake_account=model.snowflake_data.snowflake_account,
@@ -35,9 +36,10 @@ class CreateChat:
                 warehouse=model.snowflake_data.warehouse,
             )
             new_chat.snowflake_data = snowflake_data
-        if model.assistant_id:
+            
+        if model.assistant_id and model.type == ChatType.Assistant:
             # checking assistant id 
-            assistant_obj = self.session.query(Assistant).filter(Assistant.id == model.assistant_id, Assistant.created_by == self.user.user_id).first()
+            assistant_obj = self.session.query(Assistant).filter(Assistant.assistant_id == model.assistant_id, Assistant.created_by == self.user.user_id).first()
             if assistant_obj is None:
                 raise HTTPException(status_code=404, detail=f"Assistant object under {model.assistant_id} id does not exist")
             client = AzureOpenAI(
@@ -52,7 +54,7 @@ class CreateChat:
                 print(f"thread creation failed: {e}")
                 raise HTTPException(detail=f"thread creation failed: {e}", status_code=500)
             #assigning assistant and thread id 
-            new_chat.assistant_id = model.assistant_id
+            new_chat.assistant = assistant_obj
             new_chat.assistant_thread_id = thread.id
             
 

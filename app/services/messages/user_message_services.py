@@ -37,7 +37,7 @@ MIME_TYPE_MAP = {
     'application/msword': 'doc',
 }
 
-load_dotenv()
+load_dotenv(override=True)
 
 class UserMessageService:
     def __init__(

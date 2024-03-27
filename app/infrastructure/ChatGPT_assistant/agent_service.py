@@ -13,7 +13,7 @@ from azure.core.credentials import AzureKeyCredential
 from app.infrastructure.ChatGPT_assistant.prompt import FOLLOWUP_QUESTIONS_PROMPT
 
 
-load_dotenv()
+load_dotenv(override=True)
 
 openai_client = AzureOpenAI(
     azure_endpoint=os.environ.get("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),

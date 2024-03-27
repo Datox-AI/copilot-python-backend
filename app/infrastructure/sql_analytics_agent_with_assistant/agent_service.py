@@ -19,7 +19,7 @@ from app.infrastructure.analytics_agent.token_counter import TokenCounter
 from app.infrastructure.sql_analytics_agent_with_assistant.prompts import FOLLOWUP_QUESTIONS_PROMPT
 from app.infrastructure.sql_analytics_agent_with_assistant.sql_tool import CustomQuerySQLDataBaseTool
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class DataAnalyticAssistant:
