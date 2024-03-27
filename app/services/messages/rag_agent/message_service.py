@@ -55,7 +55,7 @@ class RAGAgentMessageService:
         # rag_agent_service
         thread_id = self.chat_obj.assistant_thread_id
         rag_agent_service = RAGAssistantAgent(thread_id=thread_id)
-        result = rag_agent_service.invoke(message_text)
+        result = rag_agent_service.execute_agent(message_text)
         output = result['output']
         thread_id = result['thread_id']
         relevant_docs = result['relevant_docs']

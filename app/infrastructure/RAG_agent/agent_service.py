@@ -156,7 +156,7 @@ class RAGAssistantAgent:
         return filtered_docs
 
 
-    def invoke(self, input: str):
+    def execute_agent(self, input: str):
         response = self.agent.invoke(input={"content": input, "thread_id": self.thread_id})
         relevant_docs = []
         while not isinstance(response, AgentFinish):

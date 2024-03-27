@@ -9,8 +9,8 @@ THRESHOLD = 0.3
 TOP_K = 5
 
 @tool
-def get_documents(prompt):
-    """This tool for get relevant documents"""
+def get_documents(prompt: str):
+    """This tool is for getting relevant documents"""
     print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(
         user_query=prompt,

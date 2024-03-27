@@ -4,10 +4,23 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
 from app.schemas.assistants import CreateAssistantSchema, AssistantResponseSchema
+from app.services.messages import AssistantMessageService
 from app.services.assistant import AssistantService
 
-
 router = APIRouter(prefix="/api/assistants", tags=["Assistants"])
+
+
+# Assistant routes
+@router.get("/get-assistants")
+async def get_assistants(assistant_service: Annotated[AssistantService, Depends()]):
+    return assistant_service.get_assistants()
+
+@router.get("/get-assistant-chats/{assistant_id}")
+async def get_assistant_chats(
+    assistant_service: Annotated[AssistantService, Depends()],
+    assistant_id: str
+):
+    return assistant_service.get_assistant_chats(assistant_id=assistant_id)
 
 
 @router.post("/create-assistant")
@@ -31,20 +44,8 @@ async def create_assistant(
     return await assistant_service.create_assistant(request=request, knowledge_files=knowledge_files)
 
 
-
-@router.get("/get-assistants")
-async def get_assistants(assistant_service: Annotated[AssistantService, Depends()]):
-    return assistant_service.get_assistants()
-
-@router.get("/get-assistant-chats/{assistant_id}")
-async def get_assistant_chats(
-    assistant_service: Annotated[AssistantService, Depends()],
-    assistant_id: str
-):
-    return assistant_service.get_assistant_chats(assistant_id=assistant_id)
-
 @router.patch("/update-assistant-files/{assistant_id}")
-async def update_message_files(
+async def update_assistant_files(
     assistant_id: str,
     assistant_service: Annotated[AssistantService, Depends()],
     files_to_delete: List[str] = Form(None),
@@ -61,3 +62,24 @@ async def update_message_files(
         new_files=new_files
     )  
 
+
+# Assistant message routes
+@router.post("/{chat_id}/messages")
+async def create(
+    assistant_message_service: Annotated[AssistantMessageService, Depends()],
+    chat_id: str,
+    assistant_id: str = Form(...),
+    prompt: str = Form(...),
+
+):
+    return assistant_message_service.create_user_message(
+        prompt=prompt
+    )
+
+@router.get("/{chat_id}/messages")
+async def get(
+    assistant_message_service: Annotated[AssistantMessageService, Depends()],
+    chat_id: str,
+    assistant_id: str = Form(...),
+):
+    return assistant_message_service.get_user_message()

@@ -47,20 +47,35 @@ class AssistantService:
     async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile]):
         print("request---- ", request)
         try:
-            # I am using langchain's wrapper since it also supports converting custom tool into openai function
-            agent = OpenAIAssistantRunnable.create_assistant(
-                client=self.openai_client,
-                name=request.name,
+            
+            openai_assistant = self.openai_client.beta.assistants.create(
                 instructions=request.instruction,
-                tools=[get_documents],
+                name=request.name,
+                tools=[
+                    {
+                        "type": "function",
+                        "function":{
+                            "name": "get_documents",
+                            "description": "get_documents(prompt: str) - Use this tool to get relevant documents",
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                "prompt": {}
+                            },
+                            "required": [
+                            "prompt"
+                            ]
+                        }
+                        }
+                    }
+                ],
                 model="gpt-35-turbo-16k",
-                as_agent=True
             )
+                
         except Exception as e:
             raise HTTPException(detail=f"Assistant create function failed: {e}", status_code=500)
 
-        assistant_id = agent.assistant_id
-        print("assistant_id---- ", assistant_id)
+        assistant_id = openai_assistant.id
         try:    
             # uploading files to azure index'
 

@@ -14,6 +14,7 @@ class Assistant(BaseDelete):
     assistant_id = Column(String, nullable=False)
 
     knowledge_files = relationship("AssistantFile", back_populates="assistant")
+    chats = relationship("Chat", back_populates="assistant")
     
     
 class AssistantFile(BaseDelete):

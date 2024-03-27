@@ -1,25 +1,21 @@
 
 import os, json
-from typing import Union, List
+from typing import List
 from uuid import UUID
 from dotenv import load_dotenv
 from openai import AzureOpenAI
 from fastapi import HTTPException
-from langchain.tools import tool
 from langchain.agents.openai_assistant import OpenAIAssistantRunnable
 from langchain_core.agents import AgentFinish
 from langchain_openai import AzureChatOpenAI
-from azure.search.documents.models import VectorFilterMode, VectorizedQuery
-from azure.search.documents import SearchClient
-from azure.core.credentials import AzureKeyCredential
 
-from app.infrastructure.assistants.assistant_service import get_documents
+from app.infrastructure.assistants.tool import get_documents
 from app.infrastructure.ChatGPT_assistant.prompt import FOLLOWUP_QUESTIONS_PROMPT
 
 
 load_dotenv()
 
-class Assistant:
+class AssistantAgent:
     def __init__(self, assistant_id, thread_id):
         self.llm_chat_model = AzureChatOpenAI(
             deployment_name=os.getenv("GPT4_TURBO_DEPLOYMENT_NAME"),
