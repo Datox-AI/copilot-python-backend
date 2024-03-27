@@ -15,6 +15,19 @@ from app.shared.auth.azure_scheme import current_user
 import requests
 import logging
 from fastapi import Header
+import matplotlib.pyplot as plt
+import io
+from fastapi.responses import StreamingResponse
+import matplotlib.pyplot as plt
+import snowflake.connector
+import base64
+import matplotlib.pyplot as plt
+import numpy as np
+from io import BytesIO
+import base64
+import snowflake.connector
+from io import BytesIO
+from typing import List, Dict
 
 # Configure logging at the start of your script/application
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -559,4 +572,93 @@ class SnowflakeIntegrationService:
         except Exception as e:
             self.handle_common_errors(e)
 
+    def preview_data_logic(self, token: str, db_name: str, schema_name: str, table_or_view_name: str, chart_type: str = "bar"):
+        snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
+        ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
+        cursor = ctx.cursor()
 
+        try:
+            cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            cursor.execute(f"USE DATABASE {db_name}")
+            cursor.execute(f"USE SCHEMA {schema_name}")
+
+            # Fetch the column names and data types
+            column_query = f"DESC TABLE {db_name}.{schema_name}.{table_or_view_name}"
+            cursor.execute(column_query)
+            column_info = cursor.fetchall()
+            column_metadata = [{"name": col[0], "type": col[1]} for col in column_info]
+
+            # Fetch data for chart generation
+            data_query = f"SELECT * FROM {table_or_view_name} LIMIT 10"
+            cursor.execute(data_query)
+            rows = cursor.fetchall()
+
+            plt.figure()
+
+            if chart_type == "bar":
+                x_values = [row[0] for row in rows]
+                y_values = [row[1] for row in rows]
+                plt.bar(x_values, y_values)
+            elif chart_type == "line":
+                x_values = [row[0] for row in rows]
+                y_values = [row[1] for row in rows]
+                plt.plot(x_values, y_values)
+            elif chart_type == "scatter":
+                x_values = [row[0] for row in rows]
+                y_values = [row[1] for row in rows]
+                plt.scatter(x_values, y_values)
+            elif chart_type == "heatmap":
+                # For the heatmap, we need a 2D array. This is a simplistic conversion.
+                # Your actual implementation might need to differ based on your data structure.
+                data_matrix = [list(row) for row in rows]
+                plt.imshow(data_matrix, cmap='hot', interpolation='nearest')
+
+            plt.title(f'Data from {table_or_view_name}')
+            plt.tight_layout()
+
+            buf = BytesIO()
+            plt.savefig(buf, format='png')
+            plt.close()
+            buf.seek(0)
+
+            image_base64 = base64.b64encode(buf.read()).decode('utf-8')
+            return {"chart": image_base64, "columns": column_metadata, "data_preview": rows}
+        except Exception as e:
+            # Handle or log the error as needed
+            raise e
+        finally:
+            cursor.close()
+            ctx.close()
+
+    def generate_custom_chart_logic(self, token: str, db_name: str, schema_name: str, table_or_view_name: str, x_column: str, y_columns: List[Dict], chart_type: str):
+        # Establishing connection and setting context
+        snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
+        ctx = self.create_snowflake_connection(token, snowflake_identifier_obj.account_identifier)
+        cursor = ctx.cursor()
+
+        try:
+            # Setting the context for the query
+            cursor.execute(f"USE WAREHOUSE {selected_warehouse_obj.name}")
+            cursor.execute(f"USE DATABASE {db_name}")
+            cursor.execute(f"USE SCHEMA {schema_name}")
+            
+            # Building the query with dynamic aggregation
+            select_clause = f"{x_column}, " + ", ".join([f"{col['aggregation']}({col['name']}) AS {col['name']}" if col.get('aggregation') else col['name'] for col in y_columns])
+            query = f"SELECT {select_clause} FROM {table_or_view_name} GROUP BY {x_column} LIMIT 10"
+            cursor.execute(query)
+
+            # Fetching the results
+            rows = cursor.fetchall()
+
+            # Preparing the data to be JSON serializable
+            data = {
+                "x_values": [row[0] for row in rows],
+                "y_values": {col['name']: [row[i + 1] for row in rows] for i, col in enumerate(y_columns)}
+            }
+
+            return data
+        except Exception as e:
+            raise e
+        finally:
+            cursor.close()
+            ctx.close()
