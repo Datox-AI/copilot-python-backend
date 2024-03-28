@@ -34,7 +34,7 @@ class DeleteChat:
 
         # Mark the chat as deleted
         chat.is_deleted = True
-        chat.deleted_at = datetime.now(timezone.utc)
+        chat.deleted_at = datetime.now()
         chat.deleted_by = self.user.user_id
 
         self.session.add(chat)
