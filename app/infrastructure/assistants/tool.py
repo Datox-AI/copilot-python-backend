@@ -1,4 +1,6 @@
 import os 
+from typing import List
+from uuid import UUID
 from langchain.tools import tool
 
 from azure.core.credentials import AzureKeyCredential
@@ -9,12 +11,13 @@ THRESHOLD = 0.3
 TOP_K = 5
 
 @tool
-def get_documents(prompt: str):
+def get_documents(prompt: str, knowledge_files_ids: List[UUID]):
     """This tool is for getting relevant documents"""
     print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(
         user_query=prompt,
-        search_type="semantic"
+        search_type="semantic",
+        knowledge_files_ids=knowledge_files_ids
     )
     final_docs_content = ""
     for doc in relevant_docs:
@@ -67,7 +70,7 @@ def get_embeddings(text: str):
     return embedding.data[0].embedding
 
 
-def get_documents_from_azure_search(user_query: str, search_type: str):
+def get_documents_from_azure_search(user_query: str, search_type: str, knowledge_files_ids: List[UUID]):
     credential = AzureKeyCredential(os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"))
     azure_client = SearchClient(
         endpoint=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_URL"),

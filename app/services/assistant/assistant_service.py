@@ -18,7 +18,6 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.assistants import CreateAssistantSchema, AssistantMapper
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.messages.user_message_services import MIME_TYPE_MAP
-from app.infrastructure.assistants.tool import get_documents
 
 
 load_dotenv(override=True)

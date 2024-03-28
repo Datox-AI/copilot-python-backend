@@ -35,8 +35,8 @@ class AssistantAgent:
         try:
             self.client.beta.assistants.retrieve(assistant_id=assistant_id)
         except  Exception as e:
-            print(f"Assistant not found: {e}")
-            raise HTTPException(detail=f"Assistant (id={assistant_id}) not found: {e}", status_code=404)
+            print(f"Assistant not found in azure: {e}")
+            raise HTTPException(detail=f"Assistant (id={assistant_id}) not found in azure", status_code=404)
         if thread_id:
             try:
                 self.client.beta.threads.retrieve(thread_id=thread_id)
