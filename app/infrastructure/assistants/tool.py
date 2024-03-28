@@ -16,7 +16,7 @@ def get_documents(prompt: str, knowledge_files_ids: List[UUID]):
     print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(
         user_query=prompt,
-        search_type="semantic",
+        search_type="vector",
         knowledge_files_ids=knowledge_files_ids
     )
     final_docs_content = ""
@@ -25,6 +25,7 @@ def get_documents(prompt: str, knowledge_files_ids: List[UUID]):
             final_docs_content
             + f"FILE NAME: {doc['fileName']}\nFILE CONTENT: {doc['content']}\n\n"
         )
+    print(final_docs_content, "---final docs content")
     return final_docs_content, relevant_docs
 
 
@@ -77,11 +78,14 @@ def get_documents_from_azure_search(user_query: str, search_type: str, knowledge
         index_name=os.getenv("AZURE_COGNITIVE_SEARCH_ASSISTANTS_INDEX_NAME"),
         credential=credential,
     )
-    if search_type == "hybrid":
+    file_ids_str = ",".join(str(file_id) for file_id in knowledge_files_ids)
+    print(file_ids_str, "---file filterrr")
+    search_filter = f"search.in(fileId, '{file_ids_str}', ',')"
+    if search_type == "vector":
         vector_query = VectorizedQuery(
             vector=get_embeddings(user_query), 
             k_nearest_neighbors=TOP_K, 
-            fields="contentVector",            
+            fields="contentVector", 
         )
 
         search_result = azure_client.search(
@@ -89,14 +93,12 @@ def get_documents_from_azure_search(user_query: str, search_type: str, knowledge
             select=[
                 "id",
                 "content", 
-                "metadata_spo_item_name",
-                "metadata_spo_item_path",
-                "metadata_spo_item_content_type",
-                "metadata_spo_item_last_modified",
-                "metadata_spo_item_size",
-                "metadata_spo_item_weburi"
+                "fileType",
+                "fileName",
+                "assistantId",
             ],
-            top=TOP_K
+            top=TOP_K,
+            filter=search_filter           
         )
         return [doc for doc in search_result]
     
@@ -105,7 +107,8 @@ def get_documents_from_azure_search(user_query: str, search_type: str, knowledge
             search_text=user_query, 
             query_type="semantic", 
             semantic_configuration_name="semantic_search",
-            top=TOP_K
+            top=TOP_K,
+            filter=search_filter           
         )
 
         results = [doc for doc in search_result]

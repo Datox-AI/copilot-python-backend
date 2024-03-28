@@ -20,6 +20,7 @@ class AssistantMapper:
         return AssistantResponseSchema(
             id=assistant.id,
             assistant_id=assistant.assistant_id,
+            icon_id=assistant.icon_id,
             name=assistant.name,
             description=assistant.description,
             instructions=assistant.instructions,
@@ -51,6 +52,7 @@ class AssistantMapper:
         return AssistantResponseSchema(
             id=assistant.id,
             assistant_id=assistant.assistant_id,
+            icon_id=assistant.icon_id,
             name=assistant.name,
             description=assistant.description,
             instructions=assistant.instructions,
