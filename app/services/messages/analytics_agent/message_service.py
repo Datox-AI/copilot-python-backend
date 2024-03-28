@@ -35,7 +35,7 @@ class AnalyticsAgentMessageCreateService:
     ):
         new_user_message = Message(
             id=uuid.uuid4(),
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(),
             chat_id=self.chat_id,
             text=message_text,
             status=MessageStatus.Success,
@@ -54,7 +54,7 @@ class AnalyticsAgentMessageCreateService:
         print(agent_response["followup_questions"], " followup questions")
         new_agent_message = Message(
             id=message_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(),
             chat_id=self.chat_id,
             text=agent_response["output"],
             status=MessageStatus.Success,

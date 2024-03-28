@@ -101,7 +101,7 @@ class UserMessageService:
             uploaded_file_ids = [str(uuid.uuid4()) for _ in request.files]
             message_files_to_add = []
             all_chunks = []
-            print(datetime.now(timezone.utc), " ----before index")
+            print(datetime.now(), " ----before index")
             for file_id, upload_file in zip(uploaded_file_ids, request.files):
                 content = await upload_file.read()
                 file_extension = upload_file.content_type
@@ -133,7 +133,7 @@ class UserMessageService:
                 
                 message_files_to_add.append(new_message_file)
                 await upload_file.seek(0)
-            print(datetime.now(timezone.utc), " ----after index")
+            print(datetime.now(), " ----after index")
             
             new_user_message.message_files.extend(message_files_to_add)
             self.session.commit()
@@ -197,7 +197,7 @@ class UserMessageService:
                 raise HTTPException(status_code=400, detail=f"Message id you provided ({message_id}) is wrong")
             message_obj.pinned = updated_data.pinned
             if message_obj.pinned:
-                message_obj.pinned_date = datetime.now(timezone.utc)
+                message_obj.pinned_date = datetime.now()
             self.session.commit()
 
             return message_obj

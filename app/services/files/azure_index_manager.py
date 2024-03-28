@@ -29,6 +29,8 @@ from .user_files_services import UserFileService
 
 
 class AzureSearchIndexManager:
+    MAX_UPLOAD_DOCUMENT_LENGTH = 1000
+    
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
@@ -144,22 +146,33 @@ class AzureSearchIndexManager:
     ):
         extracted_texts = self.text_processor.extract_texts(file_content, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
-        print(len(chunked_texts), "  ---- len chunked texts")
-        chunk_documents = []
-        for chunk_text in chunked_texts:
-            chunk_embeddings = self.generate_embeddings(chunk_text)
-            chunk_document = {
-                "id": str(uuid.uuid4()),
-                "assistantId": assistant_id,
-                "isDeleted": False,
-                "fileType": file_type,
-                "fileName": file_name,
-                "fileId": str(file_id),
-                "content": chunk_text,
-                "contentVector": chunk_embeddings
-            }
-            chunk_documents.append(chunk_document)
-        self.add_or_update_documents(chunk_documents)
+        print(len(chunked_texts), "   ----- chunked_texts")
+        chunked_texts_list = []
+        if len(chunked_texts) < self.MAX_UPLOAD_DOCUMENT_LENGTH:
+            chunked_texts_list.append(chunked_texts)
+        else:
+            start = 0
+            while start < len(chunked_texts):
+                end = start + self.MAX_UPLOAD_DOCUMENT_LENGTH
+                chunked_texts_list.append(chunked_texts[start:end])
+                start = end
+        print(len(chunked_texts_list), "   ----- chunked_texts_list")
+        for chunked_texts in chunked_texts_list:
+            chunk_documents = []
+            for chunk_text in chunked_texts:
+                chunk_embeddings = self.generate_embeddings(chunk_text)
+                chunk_document = {
+                    "id": str(uuid.uuid4()),
+                    "assistantId": assistant_id,
+                    "isDeleted": False,
+                    "fileType": file_type,
+                    "fileName": file_name,
+                    "fileId": str(file_id),
+                    "content": chunk_text,
+                    "contentVector": chunk_embeddings
+                }
+                chunk_documents.append(chunk_document)
+            self.add_or_update_documents(chunk_documents)
     
             
     @staticmethod

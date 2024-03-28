@@ -105,7 +105,7 @@ class AssistantService:
             for file_id, uploaded_file in zip(file_ids, knowledge_files):
                 knowledge_file_obj = AssistantFile(
                     id=file_id,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(),
                     name=uploaded_file.filename,
                     type=uploaded_file.content_type,
                     is_deleted=False,
@@ -161,13 +161,13 @@ class AssistantService:
             ).first()
         if assistant_obj is not None:
             # deleting files
-            print(datetime.now(timezone.utc), " -before deleting files")
+            print(datetime.now(), " -before deleting files")
             for file_id in files_to_delete:
                 file_obj = self.session.query(AssistantFile).filter(AssistantFile.id==file_id).first()
                 if file_obj:
                     file_obj.is_deleted = True                
                     # self.azure_indexer.delete_document(file_id=file_id)
-            print(datetime.now(timezone.utc), " -after deleting files")
+            print(datetime.now(), " -after deleting files")
             # adding new files
             knowledge_file_objs = []
             for uploaded_file in new_files:
@@ -176,7 +176,7 @@ class AssistantService:
                 file_content = await uploaded_file.read()
                 file_extension = uploaded_file.content_type
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
-                bef = datetime.now(timezone.utc)
+                bef = datetime.now()
                 
                 self.azure_indexer.process_and_store_texts_for_assistant_index(
                     file_id=file_id,
@@ -185,12 +185,12 @@ class AssistantService:
                     file_name=file_name,
                     assistant_id=assistant_id,
                 )
-                aft = datetime.now(timezone.utc)
+                aft = datetime.now()
                 print((aft - bef).seconds, " ---seconds for whole file upload")
                 
                 knowledge_file_obj = AssistantFile(
                     id=file_id,
-                    created_at=datetime.now(timezone.utc),
+                    created_at=datetime.now(),
                     name=uploaded_file.filename,
                     type=uploaded_file.content_type,
                     is_deleted=False,
@@ -224,10 +224,10 @@ class AssistantService:
             chat_objs = assistant_obj.chats
             for chat_obj in chat_objs:
                 chat_obj.is_deleted = True
-                assistant_obj.deleted_at = datetime.now(timezone.utc)
+                assistant_obj.deleted_at = datetime.now()
                 assistant_obj.deleted_by = self.user.user_id    
             assistant_obj.is_deleted = True
-            assistant_obj.deleted_at = datetime.now(timezone.utc)
+            assistant_obj.deleted_at = datetime.now()
             assistant_obj.deleted_by = self.user.user_id
             self.session.commit()     
             return Response(status_code=204)
