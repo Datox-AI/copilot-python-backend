@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -60,15 +60,16 @@ class AssistantMessageService:
         request: CreateAssistantMessageSchema,
     ):
         prompt = request.prompt
-        new_user_message = Message(
-            id=uuid.uuid4(),
-            created_at=datetime.now(),
-            chat_id=self.chat_id,
-            text=prompt,
-            status=MessageStatus.Success,
-            role=MessageRole.User,
-        )
+        # new_user_message = Message(
+        #     id=uuid.uuid4(),
+        #     created_at=datetime.now(),
+        #     chat_id=self.chat_id,
+        #     text=prompt,
+        #     status=MessageStatus.Success,
+        #     role=MessageRole.User,
+        # )
         knowledge_file_ids = [obj.id for obj in self.assistant_obj.knowledge_files]
+        print(knowledge_file_ids, " ---knowledge file ids")
         # assistant service
         thread_id = self.chat_obj.assistant_thread_id
         assistant_agent_service = AssistantAgent(assistant_id=self.assistant_id, thread_id=thread_id)
@@ -77,21 +78,23 @@ class AssistantMessageService:
             user_input=prompt,
             knowledge_files_ids=knowledge_file_ids
         )
+        
         output = result['output']
         thread_id = result['thread_id']
+        print(thread_id, " ---thread id")
         relevant_docs = result['relevant_docs']
         for doc in relevant_docs:
             print(doc["fileName"], " ---doc name")
         print(len(relevant_docs), " ---relavant docs")
 
-        new_agent_message = Message(
-            id=uuid.uuid4(),
-            chat_id=self.chat_id,
-            created_at=datetime.now(),
-            text=output,
-            status=MessageStatus.Success,
-            role=MessageRole.Assistant,
-        )
+        # new_agent_message = Message(
+        #     id=uuid.uuid4(),
+        #     chat_id=self.chat_id,
+        #     created_at=datetime.now(),
+        #     text=output,
+        #     status=MessageStatus.Success,
+        #     role=MessageRole.Assistant,
+        # )
         # sharepoint_document_objs = []
         # for document_metadata in relevant_docs:
         #     sharepoint_document_obj = MessageSharepointDocument(
@@ -105,11 +108,11 @@ class AssistantMessageService:
         #         message=new_agent_message,
         #     )
         #     sharepoint_document_objs.append(sharepoint_document_obj)
-        self.session.add(new_agent_message)
-        self.session.add(new_user_message)
-        self.session.commit()
-
-        return MessageMapper.map_to_user_message_response(new_agent_message)
+        # self.session.add(new_agent_message)
+        # self.session.add(new_user_message)
+        # self.session.commit()
+        return Response(content=output, status_code=200)
+        # return MessageMapper.map_to_user_message_response(new_agent_message)
 
     def get_messages(self):
         message_objs = (
