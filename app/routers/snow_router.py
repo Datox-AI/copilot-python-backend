@@ -3,6 +3,14 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+import base64
+from fastapi import APIRouter, Query, Header, Depends, HTTPException
+from fastapi import APIRouter, Query, Header, Depends, HTTPException
+from typing import List, Dict
+
 
 from app.schemas.snowintegration import OAuthConfig, RefreshTokenBody, SnowflakeRole
 from app.services.snowflake_integration.snowintegration import SnowflakeIntegrationService
@@ -144,3 +152,75 @@ def get_available_roles(
     snow_integration_service: SnowflakeIntegrationService = Depends()
 ):
     return snow_integration_service.get_available_roles_logic(token)
+
+@router.get("/preview_data")
+def preview_data(
+    db_name: str,
+    schema_name: str,
+    table_or_view_name: str,
+    chart_type: str = Query("bar", enum=["bar", "line", "scatter", "scorecard", "heatmap"]),
+    token: str = Header(...),
+    snow_integration_service: SnowflakeIntegrationService = Depends()
+):
+    """
+    Endpoint to preview data from a specific table or view in a Snowflake database and generate a chart.
+    Specify the type of chart to generate (bar, line, scatter, scorecard, heatmap).
+    """
+    try:
+        return snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name, chart_type)
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+@router.post("/decode_base64_to_image", responses={200: {"content": {"image/png": {}}}})
+async def decode_base64_to_image(base64_str: str):
+    try:
+        # Decode the base64 string to get the image bytes
+        image_bytes = base64.b64decode(base64_str)
+        # Create a BytesIO buffer from the image bytes
+        image_stream = BytesIO(image_bytes)
+        image_stream.seek(0)
+        # Return the image stream as a response
+        return StreamingResponse(image_stream, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to decode base64 string: {str(e)}")
+
+
+
+
+# Defining the allowed chart types and aggregation functions directly
+allowed_chart_types = ["bar", "line", "scatter", "scorecard", "heatmap"]
+allowed_aggregations = ["SUM", "AVG", "MIN", "MAX", "COUNT", "MEDIAN", "MODE"]
+
+@router.get("/custom_chart", response_model=dict)
+def custom_chart(
+    db_name: str,
+    schema_name: str,
+    table_or_view_name: str,
+    x_column: str,
+    y_columns: List[str] = Query(..., description="Comma-separated list of columns for the y-axis"),
+    aggregations: List[str] = Query(..., description="Comma-separated list of aggregation functions corresponding to y-columns", enum=allowed_aggregations),
+    chart_type: str = Query("line", enum=allowed_chart_types, description="The type of chart to generate"),
+    token: str = Header(..., description="Authentication token"),
+    snow_integration_service: SnowflakeIntegrationService = Depends()
+):
+    """
+    Endpoint to fetch aggregated data from a specific table or view in a Snowflake database.
+    Allows users to specify the columns for the x-axis and y-axis, along with the type of aggregation for each y-axis column.
+    """
+    if len(y_columns) != len(aggregations):
+        raise HTTPException(status_code=400, detail="The number of y_columns must match the number of aggregations provided.")
+
+    # Combine y_columns with their corresponding aggregation functions
+    y_columns_with_aggregations = [{"name": col, "aggregation": agg} for col, agg in zip(y_columns, aggregations)]
+
+    try:
+        data = snow_integration_service.generate_custom_chart_logic(
+            token, db_name, schema_name, table_or_view_name, x_column, y_columns_with_aggregations, chart_type
+        )
+        return {"data": data}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
