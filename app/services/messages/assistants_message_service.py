@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 from fastapi import Depends, HTTPException
@@ -12,6 +12,7 @@ from app.enums.message_enums import MessageRole, MessageStatus
 from app.infrastructure.assistants.assistant_service import AssistantAgent
 from app.models.maindb import Chat, Assistant, Message, MessageSharepointDocument
 from app.schemas.chat import ChatMapper
+from app.schemas.assistants import CreateAssistantMessageSchema   
 from app.schemas.identity.current_user import CurrentUser
 from app.shared.auth.azure_scheme import current_user
 from app.schemas.message import MessageMapper
@@ -56,11 +57,12 @@ class AssistantMessageService:
         
     def create_user_message(
         self,
-        prompt: str,
+        request: CreateAssistantMessageSchema,
     ):
+        prompt = request.prompt
         new_user_message = Message(
             id=uuid.uuid4(),
-            created_at=datetime.datetime.now(),
+            created_at=datetime.now(timezone.utc),
             chat_id=self.chat_id,
             text=prompt,
             status=MessageStatus.Success,
@@ -85,7 +87,7 @@ class AssistantMessageService:
         new_agent_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
-            created_at=datetime.datetime.now(),
+            created_at=datetime.now(timezone.utc),
             text=output,
             status=MessageStatus.Success,
             role=MessageRole.Assistant,

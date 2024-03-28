@@ -7,3 +7,5 @@ class CreateAssistantSchema(BaseSchema):
     description: str
     instruction: Union[str]
 
+class CreateAssistantMessageSchema(BaseSchema):
+    prompt: str

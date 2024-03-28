@@ -3,7 +3,7 @@ from typing import Annotated, List
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from app.schemas.assistants import CreateAssistantSchema, AssistantResponseSchema
+from app.schemas.assistants import CreateAssistantSchema, CreateAssistantMessageSchema
 from app.services.messages import AssistantMessageService
 from app.services.assistant import AssistantService
 
@@ -63,23 +63,27 @@ async def update_assistant_files(
     )  
 
 
+@router.delete("/delete-assistant/{assistant_id}")
+def delete_assistant(
+    assistant_service: Annotated[AssistantService, Depends()],
+    assistant_id: str
+):
+    return assistant_service.delete_assistant(assistant_id=assistant_id)
+
+
 # Assistant message routes
-@router.post("/{chat_id}/messages")
+@router.post("/{assistant_id}/chats/{chat_id}/messages")
 async def create(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],
-    chat_id: str,
-    assistant_id: str = Form(...),
-    prompt: str = Form(...),
+    request: CreateAssistantMessageSchema,
 
 ):
     return assistant_message_service.create_user_message(
-        prompt=prompt
+        request=request
     )
 
-@router.get("/{chat_id}/messages")
+@router.get("/{assistant_id}/chats/{chat_id}/messages")
 async def get(
-    assistant_message_service: Annotated[AssistantMessageService, Depends()],
-    chat_id: str,
-    assistant_id: str = Form(...),
+    assistant_message_service: Annotated[AssistantMessageService, Depends()],    
 ):
     return assistant_message_service.get_user_message()

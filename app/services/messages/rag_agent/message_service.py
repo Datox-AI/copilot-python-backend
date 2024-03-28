@@ -1,5 +1,5 @@
 import uuid
-import datetime
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 from fastapi import Depends, HTTPException
@@ -45,7 +45,7 @@ class RAGAgentMessageService:
     ):
         new_user_message = Message(
             id=uuid.uuid4(),
-            created_at=datetime.datetime.now(),
+            created_at=datetime.now(timezone.utc),
             chat_id=self.chat_id,
             text=message_text,
             status=MessageStatus.Success,
@@ -65,7 +65,7 @@ class RAGAgentMessageService:
         new_agent_message = Message(
             id=uuid.uuid4(),
             chat_id=self.chat_id,
-            created_at=datetime.datetime.now(),
+            created_at=datetime.now(timezone.utc),
             text=output,
             status=MessageStatus.Success,
             role=MessageRole.Assistant,
