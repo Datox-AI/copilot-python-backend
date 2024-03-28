@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import openai
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 def parse_questions(questions_text: str) -> list:

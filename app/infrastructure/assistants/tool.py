@@ -1,40 +1,26 @@
-import os
-import json
-from uuid import UUID
-from typing import Union
-
-from dotenv import load_dotenv
+import os 
 from langchain.tools import tool
-from langchain.agents.openai_assistant import OpenAIAssistantRunnable
-from langchain_core.agents import AgentFinish
 
-from sqlalchemy.orm import Session
-from openai import AzureOpenAI
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
 
-from app.infrastructure.RAG_agent.prompts.system_prompt import (
-    SYSTEM_MESSAGE_TEMPLATE,
-)
-
-load_dotenv(override=True)
 THRESHOLD = 0.3
 TOP_K = 5
 
 @tool
-def get_documents(prompt):
-    """This tool for get relevant documents from sharepoint"""
+def get_documents(prompt: str):
+    """This tool is for getting relevant documents"""
     print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(
         user_query=prompt,
-        search_type="hybrid"
+        search_type="semantic"
     )
     final_docs_content = ""
     for doc in relevant_docs:
         final_docs_content = (
             final_docs_content
-            + f"FILE NAME: {doc['metadata_spo_item_name']}\nFILE CONTENT: {doc['content']}\n\n"
+            + f"FILE NAME: {doc['fileName']}\nFILE CONTENT: {doc['content']}\n\n"
         )
     return final_docs_content, relevant_docs
 
@@ -85,7 +71,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
     credential = AzureKeyCredential(os.getenv("AZURE_COGNITIVE_SEARCH_API_KEY"))
     azure_client = SearchClient(
         endpoint=os.getenv("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
-        index_name=os.getenv("AZURE_COGNITIVE_SEARCH_SHAREPOINT_INDEX_NAME"),
+        index_name=os.getenv("AZURE_COGNITIVE_SEARCH_ASSISTANTS_INDEX_NAME"),
         credential=credential,
     )
     if search_type == "hybrid":
@@ -122,58 +108,3 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
         results = [doc for doc in search_result]
         filtered_results = filter_data_by_reranker_score(results, THRESHOLD)
         return filtered_results
-
-
-
-class RAGAssistantAgent:
-
-    def __init__(self, thread_id: Union[str, None]):
-        # setting up retriever
-        client = AzureOpenAI(
-            api_key=os.getenv("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
-            api_version=os.getenv("GPT4_ASSISTANT_OPENAI_API_VERSION"),
-            azure_endpoint=os.getenv("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
-        )
-
-        assistant_id = os.getenv("RAG_AZURE_ASSISTANT_ID")
-        my_assistant = client.beta.assistants.retrieve(assistant_id)
-        if thread_id:
-            self.thread_id = thread_id
-        else:
-            empty_thread = client.beta.threads.create()
-            self.thread_id = empty_thread.id
-
-        self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=client, as_agent=True)
-
-
-    def unique_relevant_docs(self, docs):
-        unique_file_paths = set()
-        filtered_docs = []
-        for doc in docs:
-            if doc["metadata_spo_item_weburi"] not in unique_file_paths:
-                filtered_docs.append(doc)
-                unique_file_paths.add(doc["metadata_spo_item_weburi"])
-        return filtered_docs
-
-
-    def execute_agent(self, input: str):
-        response = self.agent.invoke(input={"content": input, "thread_id": self.thread_id})
-        relevant_docs = []
-        while not isinstance(response, AgentFinish):
-            tool_outputs = []
-            for action in response:
-                tool_output, relevant_docs = get_documents(action.tool_input)
-                tool_outputs.append({"output": tool_output, "tool_call_id": action.tool_call_id})
-            response = self.agent.invoke(
-                {
-                    "tool_outputs": tool_outputs,
-                    "run_id": action.run_id,
-                    "thread_id": action.thread_id,
-                }
-            )
-        filtered_relevant_docs = self.unique_relevant_docs(relevant_docs)
-        return {
-            "output": response.return_values["output"],
-            "thread_id": response.return_values["thread_id"],
-            "relevant_docs": filtered_relevant_docs,
-        }

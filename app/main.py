@@ -6,13 +6,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 
-from app.routers import analytics_agent, application_users, chats, files, rag_agent, snow_router, user_messages
+from app.routers import (
+    analytics_agent, 
+    application_users, 
+    chats, 
+    files, 
+    rag_agent, 
+    snow_router, 
+    user_messages,
+    assistants
+)
 from app.shared.auth import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme
 
 from .const import OPEN_API_DESCRIPTION, OPEN_API_TITLE
 from .version import __version__
 
-load_dotenv()
+load_dotenv(override=True)
 
 app = FastAPI(
     title=OPEN_API_TITLE,
@@ -47,6 +56,7 @@ app.include_router(files.router)
 app.include_router(user_messages.router)
 app.include_router(snow_router.router)
 app.include_router(application_users.router)
+app.include_router(assistants.router)
 
 
 @app.on_event("startup")

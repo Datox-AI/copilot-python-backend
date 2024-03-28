@@ -13,7 +13,7 @@ from typing import List
 from tempfile import NamedTemporaryFile
 import aiofiles
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class AzureBlobStorageManager:

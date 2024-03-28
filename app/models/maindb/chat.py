@@ -3,7 +3,6 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.enums.chat_enums import ChatModel, ChatType
-
 from ..base_models import BaseDelete
 
 
@@ -18,9 +17,11 @@ class Chat(BaseDelete):
     chat_model = Column(Enum(ChatModel), default=ChatModel.GPT3_16K)
     snowflake_data_id = Column(UUID(as_uuid=True), ForeignKey("chat_snowflake_data.id"), nullable=True)
     assistant_thread_id = Column(String, nullable=True)
+    assistant_id = Column(UUID(as_uuid=True), ForeignKey("assistants.id"), nullable=True)
 
     snowflake_data = relationship("ChatSnowflakeData", back_populates="chat", uselist=False)
     messages = relationship("Message", back_populates="chat", lazy="joined")
+    assistant = relationship("Assistant", back_populates="chats")
 
 
 class ChatSnowflakeData(BaseDelete):

@@ -1,6 +1,7 @@
 import os
 import uuid
-from typing import Annotated
+from datetime import datetime
+from typing import Annotated, Union
 
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
@@ -30,13 +31,14 @@ from .user_files_services import UserFileService
 class AzureSearchIndexManager:
     def __init__(
         self,
-        chat_id: uuid.UUID,
         session: Annotated[Session, Depends(create_maindb_session)],
         user: Annotated[CurrentUser, Depends(current_user)],
-        index_name: str
+        index_name: str,
+        chat_id: Union[uuid.UUID, None]  = None,
+        
     ):
         # Load environment variables from a .env file if present
-        load_dotenv()
+        load_dotenv(override=True)
         self.chat_id = chat_id
         self.user = user
         self.session = session
@@ -142,23 +144,24 @@ class AzureSearchIndexManager:
     ):
         extracted_texts = self.text_processor.extract_texts(file_content, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
-        
+        print(len(chunked_texts), "  ---- len chunked texts")
         chunk_documents = []
         for chunk_text in chunked_texts:
             chunk_embeddings = self.generate_embeddings(chunk_text)
             chunk_document = {
                 "id": str(uuid.uuid4()),
-                "assistant_id": assistant_id,
-                "is_deleted": False,
+                "assistantId": assistant_id,
+                "isDeleted": False,
                 "fileType": file_type,
                 "fileName": file_name,
-                "fileId": file_id,
+                "fileId": str(file_id),
                 "content": chunk_text,
                 "contentVector": chunk_embeddings
             }
             chunk_documents.append(chunk_document)
         self.add_or_update_documents(chunk_documents)
-        
+    
+            
     @staticmethod
     def get_longest_content_document(docs):
         max_length = -1 

@@ -22,7 +22,7 @@ from app.models.base_models.base_audit import Base
 from app.models.maindb import *
 from app.models.admindb import *
 
-load_dotenv()
+load_dotenv(override=True)
 config = context.config
 
 db_name = config.config_ini_section

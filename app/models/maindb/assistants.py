@@ -12,8 +12,9 @@ class Assistant(BaseDelete):
     description = Column(String, nullable=True)
     instructions = Column(String, nullable=False)
     assistant_id = Column(String, nullable=False)
-
+    
     knowledge_files = relationship("AssistantFile", back_populates="assistant")
+    chats = relationship("Chat", back_populates="assistant")
     
     
 class AssistantFile(BaseDelete):
@@ -22,6 +23,6 @@ class AssistantFile(BaseDelete):
     
     name = Column(String)
     type = Column(String)
-    is_deleted = Column(Boolean, default=False)
+    # is_deleted = Column(Boolean, default=False)
     assistant_id = Column(UUID(as_uuid=True), ForeignKey("assistants.id"))
     assistant = relationship("Assistant", back_populates="knowledge_files")

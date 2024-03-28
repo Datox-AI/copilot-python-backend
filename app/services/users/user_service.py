@@ -14,7 +14,7 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.users import ApplicationUserMapper
 from app.shared.auth.azure_scheme import current_user
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class GraphApiClient:

@@ -27,7 +27,7 @@ from app.infrastructure.analytics_agent.token_counter import TokenCounter
 from app.enums.error_enums import SnowflakeTokenErrorEnum
 from app.models.maindb import Chat
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 class DataAnalyticAgent:
