@@ -40,17 +40,19 @@ class AssistantMessageService:
         self.chat_obj = self.session.query(Chat).filter(Chat.id == chat_id, Chat.created_by == self.user.user_id).first()
         if not self.chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
-        if self.chat_obj.type != ChatType.FileSearch:
+        if self.chat_obj.type != ChatType.Assistant:
             raise HTTPException(
-                status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
+                status_code=400, detail=f"Chat object under {chat_id} id does not have Assistant as its chat type"
             )
-        if self.chat_obj.assistant_id != self.assistant_id:
+        print(self.chat_obj.assistant.assistant_id, " ---assistant id")
+        print(self.assistant_id, " ---assistant id")
+        if self.chat_obj.assistant.assistant_id != self.assistant_id:
             raise HTTPException(
                 status_code=400, detail=f"Chat object under {chat_id} id does not have {self.assistant_id} as its assistant id"
             )   
     
     def _check_assistant_id(self, assistant_id):
-        self.assistant_obj = self.session.query(Assistant).filter(Assistant.id == assistant_id, Assistant.created_by == self.user.user_id).first()
+        self.assistant_obj = self.session.query(Assistant).filter(Assistant.assistant_id == assistant_id, Assistant.created_by == self.user.user_id).first()
         if not self.assistant_obj:
             raise HTTPException(status_code=404, detail=f"Assistant object under {assistant_id} id does not exist")
         
@@ -68,25 +70,27 @@ class AssistantMessageService:
         #     status=MessageStatus.Success,
         #     role=MessageRole.User,
         # )
-        knowledge_file_ids = [obj.id for obj in self.assistant_obj.knowledge_files]
-        print(knowledge_file_ids, " ---knowledge file ids")
+        knowledge_files_ids = [obj.id for obj in self.assistant_obj.knowledge_files]
         # assistant service
         thread_id = self.chat_obj.assistant_thread_id
         assistant_agent_service = AssistantAgent(assistant_id=self.assistant_id, thread_id=thread_id)
         
-        result = assistant_agent_service.execute_agent(
+        assistant_result = assistant_agent_service.execute_agent(
             user_input=prompt,
-            knowledge_files_ids=knowledge_file_ids
+            knowledge_files_ids=knowledge_files_ids
         )
-        
-        output = result['output']
-        thread_id = result['thread_id']
-        print(thread_id, " ---thread id")
-        relevant_docs = result['relevant_docs']
-        for doc in relevant_docs:
-            print(doc["fileName"], " ---doc name")
-        print(len(relevant_docs), " ---relavant docs")
+        if type(assistant_result) == dict:
+         
+            output = assistant_result['output']
+            thread_id = assistant_result['thread_id']
+            print(thread_id, " ---thread id")
+            relevant_docs = assistant_result['relevant_docs']
+            for doc in relevant_docs:
+                print(doc["fileName"], " ---doc name")
+            print(len(relevant_docs), " ---relavant docs")
+            return Response(content=output, status_code=200)
 
+        raise HTTPException(status_code=400, detail=f"Assistant failed to respond {assistant_result} ")
         # new_agent_message = Message(
         #     id=uuid.uuid4(),
         #     chat_id=self.chat_id,
@@ -111,7 +115,6 @@ class AssistantMessageService:
         # self.session.add(new_agent_message)
         # self.session.add(new_user_message)
         # self.session.commit()
-        return Response(content=output, status_code=200)
         # return MessageMapper.map_to_user_message_response(new_agent_message)
 
     def get_messages(self):

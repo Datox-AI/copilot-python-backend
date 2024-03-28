@@ -15,9 +15,10 @@ from app.backend.session import create_maindb_session
 from app.models.maindb import Assistant, AssistantFile
 from app.shared.auth.azure_scheme import current_user
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.assistants import CreateAssistantSchema, AssistantMapper
+from app.schemas.assistants import CreateAssistantSchema, AssistantMapper, UpdateAssistantSchema
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.messages.user_message_services import MIME_TYPE_MAP
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
 
 
 load_dotenv(override=True)
@@ -42,11 +43,14 @@ class AssistantService:
             session=session, 
             index_name=assistants_index_name
         )
+        
     
-    async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile]):
-        print("request---- ", request)
+    async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile], icon: UploadFile = None):
+        azure_blob_storage_manager = AzureBlobStorageManager(
+            container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
+        )        
+
         try:
-            
             openai_assistant = self.openai_client.beta.assistants.create(
                 instructions=request.instruction,
                 name=request.name,
@@ -74,9 +78,11 @@ class AssistantService:
         except Exception as e:
             raise HTTPException(detail=f"Assistant create function failed: {e}", status_code=500)
 
+        # uploading icon
+        icon_file_id = azure_blob_storage_manager.upload_file(file=icon)
+        #uploading files to azure index
         assistant_id = openai_assistant.id
         try:    
-            # uploading files to azure index'
             file_ids = []
             for uploaded_file in knowledge_files:
                 file_id = uuid.uuid4()
@@ -92,13 +98,13 @@ class AssistantService:
                     file_name=file_name,
                     assistant_id=assistant_id,
                 )
-            
             # saving objects to database 
             assistant_obj = Assistant(
                 name=request.name,
                 description=request.description,
                 instructions=request.instruction,
-                assistant_id=assistant_id
+                assistant_id=assistant_id,
+                icon_id=icon_file_id
             )
             knowledge_file_objs = []
             for file_id, uploaded_file in zip(file_ids, knowledge_files):
@@ -128,7 +134,13 @@ class AssistantService:
             # raise e
             raise HTTPException(detail=f"Assistant creation failed: {e}", status_code=500)
             
-            
+    def download_icon(self, icon_id: str):
+        azure_blob_storage_manager = AzureBlobStorageManager(
+            container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
+        )       
+        return azure_blob_storage_manager.download_pdf_file(file_id=icon_id)
+        
+    
     def get_assistants(self):
         assistants = self.session.query(Assistant).filter(
             Assistant.created_by==self.user.user_id, Assistant.is_deleted == False
@@ -205,6 +217,40 @@ class AssistantService:
             )        
         raise HTTPException(status_code=404, detail="Assistant not found")
             
+    def update_assistant(
+        self, 
+        assistant_id: str, 
+        request: UpdateAssistantSchema, 
+        icon: UploadFile = None
+        ):
+        assistant_obj = self.session.query(Assistant).filter(
+            Assistant.assistant_id==assistant_id,
+            Assistant.created_by==self.user.user_id,
+            Assistant.is_deleted == False
+            ).first()
+        if assistant_obj is not None:
+            
+            assistant_obj.name = request.name if request.name is not None else assistant_obj.name
+            assistant_obj.description = request.description if request.description is not None else assistant_obj.description
+            assistant_obj.instructions = request.instruction if request.instruction is not None else assistant_obj.instructions
+            res = self.openai_client.beta.assistants.update(
+                assistant_id=assistant_id,
+                instructions=assistant_obj.instructions,
+                name=assistant_obj.name
+            )
+            print(res)
+            if icon:
+                azure_blob_storage_manager = AzureBlobStorageManager(
+                    container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
+                )        
+                icon_id = azure_blob_storage_manager.upload_file(file=icon)
+                assistant_obj.icon_id = icon_id
+            
+            self.session.commit()
+            return AssistantMapper.map_to_assistant_response(
+                assistant=assistant_obj, knowledge_file_objs=assistant_obj.knowledge_files
+            )
+        raise HTTPException(status_code=404, detail="Assistant not found")
             
             
     def delete_assistant(self, assistant_id):

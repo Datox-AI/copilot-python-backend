@@ -6,6 +6,13 @@ class CreateAssistantSchema(BaseSchema):
     name: str
     description: str
     instruction: Union[str]
+    
+    
+class UpdateAssistantSchema(BaseSchema):
+    name: str | None = None
+    description: str | None = None
+    instruction: Union[str] | None = None
+
 
 class CreateAssistantMessageSchema(BaseSchema):
     prompt: str
