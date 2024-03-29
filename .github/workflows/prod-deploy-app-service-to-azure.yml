@@ -74,6 +74,8 @@ jobs:
     environment: staging 
     name: "[STAGING] Pull and Deploy App Service"
     steps:
+      - name: Check skipProd input
+        run: echo "skipProd is ${{ github.event.inputs.skipProd }}"
       - uses: azure/webapps-deploy@v2
         with:
           app-name: 'NewCopilotWebApi'
@@ -88,8 +90,6 @@ jobs:
     environment: prod 
     name: "[PROD] Pull and Deploy App Service"
     steps:
-      - name: Check skipProd input
-        run: echo "skipProd is ${{ github.event.inputs.skipProd }}"
       - uses: azure/webapps-deploy@v2
         with:
           app-name: 'NewCopilotWebApi'
