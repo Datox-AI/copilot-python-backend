@@ -19,25 +19,39 @@ async def get_assistants(assistant_service: Annotated[AssistantService, Depends(
     return assistant_service.get_assistants()
 
 
-@router.get("/get-assistant-chats/{assistant_id}")
-async def get_assistant_chats(
+@router.get("/get-assistant/{assistant_id}")
+async def get_assistant(
     assistant_service: Annotated[AssistantService, Depends()],
     assistant_id: str
 ):
-    return assistant_service.get_assistant_chats(assistant_id=assistant_id)
+    return assistant_service.get_assistant(assistant_id=assistant_id)
 
 
 @router.get("/download-icon/{icon_id}")
-def download_icon(
+async def download_icon(
     assistant_service: Annotated[AssistantService, Depends()],
     icon_id: str
 ):
     try:
-        file_data, media_type = assistant_service.download_icon(icon_id=icon_id)
+        file_data, media_type = await assistant_service.download_icon(icon_id=icon_id)
         file = io.BytesIO(file_data)
         return StreamingResponse(file, media_type=media_type)
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Icon not found: {e}")
+
+
+@router.post("/download-knowledge_file/{assistant_id}")
+async def download_knowledge_file(
+    assistant_service: Annotated[AssistantService, Depends()],
+    assistant_id: str,
+    knowledge_blob_name: str = Form(...)
+):
+    file_data, media_type = await assistant_service.download_knowledge_file(
+        assistant_id=assistant_id,
+        knowledge_blob_name=knowledge_blob_name
+    )
+    file = io.BytesIO(file_data)
+    return StreamingResponse(file, media_type=media_type)
 
 
 @router.post("/create-assistant")
@@ -63,7 +77,7 @@ async def create_assistant(
 
 
 @router.patch("/update-assistant/{assistant_id}")
-def update_assistant(
+async def update_assistant(
     assistant_service: Annotated[AssistantService, Depends()],
     assistant_id: str,
     assistant_name: str = Form(None),
@@ -76,7 +90,7 @@ def update_assistant(
         description=assistant_description,
         instruction=assistant_instruction
     )
-    return assistant_service.update_assistant(
+    return await assistant_service.update_assistant(
         assistant_id=assistant_id, 
         request=request, 
         icon=icon
@@ -101,7 +115,6 @@ async def update_assistant_files(
         new_files=new_files
     )  
 
-    
 
 @router.delete("/delete-assistant/{assistant_id}")
 def delete_assistant(

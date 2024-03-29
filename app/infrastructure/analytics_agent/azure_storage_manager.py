@@ -1,13 +1,15 @@
 import os
 import uuid
-
 import pandas as pd
+from datetime import datetime
+
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
 from app.models.maindb.file import File
+from app.models.maindb.assistants import AssistantFile, Assistant
 from sqlalchemy.orm import Session
 from typing import List
 from tempfile import NamedTemporaryFile
@@ -106,3 +108,60 @@ class AzureAsyncBlobStorageManager:
         session.commit()
 
         return file_id
+    
+    async def save_and_upload_assistant_file(
+        self, 
+        file_id: str, 
+        file_content: bytes,
+        session: Session, 
+        uploaded_file: UploadFile, 
+        assistant_obj: Assistant
+    ):
+        file_name = uploaded_file.filename
+        if "." not in file_name:
+            raise ValueError("Uploaded file has no extension")
+        file_extension = file_name.split('.')[-1]
+        blob_name = f"{file_id}.{file_extension}"
+        print(blob_name, " blob_name")
+        # try:
+        metadata = {"media_type": uploaded_file.content_type}
+        blob_client = self.container_client.get_blob_client(blob=file_id)
+        await blob_client.upload_blob(data=file_content, metadata=metadata, overwrite=True)
+        # except Exception as e:
+            # raise ValueError(f"Error during file upload: {e}")
+
+        knowledge_file_obj = AssistantFile(
+            id=file_id,
+            created_at=datetime.now(),
+            name=uploaded_file.filename,
+            type=uploaded_file.content_type,
+            blob_name=blob_name,
+            is_deleted=False,
+            assistant_id=assistant_obj.assistant_id,
+            assistant=assistant_obj,
+        )
+        session.add(knowledge_file_obj)
+        session.commit()
+
+        return file_id
+
+
+    async def upload_file(self, file: UploadFile) -> str:
+        file_id = str(uuid.uuid4())
+        blob_client = self.container_client.get_blob_client(blob=file_id)
+        file_content_type = file.content_type
+        print(file_content_type, " content")
+        metadata = {"media_type": file.content_type}
+        await blob_client.upload_blob(file.file, metadata=metadata)
+        return file_id
+    
+    async def download_file(self, file_id: uuid.UUID):
+        try:
+            blob_client = self.container_client.get_blob_client(blob=str(file_id))
+            properties = await blob_client.get_blob_properties()
+            media_type = properties.metadata.get("media_type", None)
+            downloaded_blob = await blob_client.download_blob()
+            stream = await downloaded_blob.readall()
+            return stream, media_type
+        except ResourceNotFoundError:
+            raise HTTPException(status_code=404, detail=f"File (name: {file_id}) not found")
