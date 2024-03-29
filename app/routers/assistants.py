@@ -1,43 +1,53 @@
-import io
+import io, os
 from uuid import UUID
 from typing import Annotated, List
 
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, Request
 from fastapi.responses import StreamingResponse
 
 from app.schemas.assistants import CreateAssistantSchema, CreateAssistantMessageSchema, UpdateAssistantSchema
 from app.services.messages import AssistantMessageService
 from app.services.assistant import AssistantService
+from app.const import ICON_API_PATH, STATIC_FILES_DESTINATION
+
 
 router = APIRouter(prefix="/api/assistants", tags=["Assistants"])
 
 
 # Assistant routes
 @router.get("/get-assistants")
-async def get_assistants(assistant_service: Annotated[AssistantService, Depends()]):
-    return assistant_service.get_assistants()
+async def get_assistants(
+    request: Request,
+    assistant_service: Annotated[AssistantService, Depends()]
+):
+    download_icon_api_url = _get_icon_path(request=request)
+    
+    return assistant_service.get_assistants(download_icon_api_url=download_icon_api_url)
 
 
 @router.get("/get-assistant/{assistant_id}")
 async def get_assistant(
+    request: Request,
     assistant_service: Annotated[AssistantService, Depends()],
     assistant_id: str
 ):
-    return assistant_service.get_assistant(assistant_id=assistant_id)
+    download_icon_api_url = _get_icon_path(request=request)
+    
+    return assistant_service.get_assistant(assistant_id=assistant_id, download_icon_api_url=download_icon_api_url)
 
 
-@router.get("/download-icon/{icon_id}")
-async def download_icon(
-    assistant_service: Annotated[AssistantService, Depends()],
+@router.get("/icons/{icon_id}")
+async def get_icon(
     icon_id: str
 ):
-    try:
-        file_data, media_type = await assistant_service.download_icon(icon_id=icon_id)
-        file = io.BytesIO(file_data)
-        return StreamingResponse(file, media_type=media_type)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Icon not found: {e}")
+    file_path = os.path.join(STATIC_FILES_DESTINATION, "assistant_icons", icon_id)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Icon file not found")
+    print(file_path, " file path")
+    return FileResponse(path=file_path)
+
 
 
 @router.post("/download-knowledge_file/{assistant_id}")
@@ -56,28 +66,35 @@ async def download_knowledge_file(
 
 @router.post("/create-assistant")
 async def create_assistant(
+    request: Request,
     assistant_service: Annotated[AssistantService, Depends()],
     assistant_name: str = Form(...),
     assistant_description: str = Form(...),
     assistant_instruction: str = Form(...),    
     icon: UploadFile = File(None),
     knowledge_files: List[UploadFile] = File(None),
-):
+):    
+    download_icon_api_url = _get_icon_path(request=request)
     if knowledge_files is not None and len(knowledge_files) > 40:
         raise HTTPException(status_code=400, detail="Max number of files must be 40")
-    
-    request = CreateAssistantSchema(
+    request_schema = CreateAssistantSchema(
         name=assistant_name,
         description=assistant_description,
         instruction=assistant_instruction
     )
     if knowledge_files is None:
         knowledge_files = []
-    return await assistant_service.create_assistant(request=request, knowledge_files=knowledge_files, icon=icon)
+    return await assistant_service.create_assistant(
+        request_schema=request_schema, 
+        knowledge_files=knowledge_files, 
+        icon=icon, 
+        download_icon_api_url=download_icon_api_url
+    )
 
 
 @router.patch("/update-assistant/{assistant_id}")
 async def update_assistant(
+    request: Request,
     assistant_service: Annotated[AssistantService, Depends()],
     assistant_id: str,
     assistant_name: str = Form(None),
@@ -85,20 +102,24 @@ async def update_assistant(
     assistant_instruction: str = Form(None),
     icon: UploadFile = File(None)
 ):
-    request = UpdateAssistantSchema(
+    download_icon_api_url = _get_icon_path(request=request)
+    
+    request_schema = UpdateAssistantSchema(
         name=assistant_name,
         description=assistant_description,
         instruction=assistant_instruction
     )
     return await assistant_service.update_assistant(
         assistant_id=assistant_id, 
-        request=request, 
-        icon=icon
+        request_schema=request_schema, 
+        icon=icon,
+        download_icon_api_url=download_icon_api_url
     )
 
 
 @router.patch("/update-assistant-files/{assistant_id}")
 async def update_assistant_files(
+    request: Request,
     assistant_id: str,
     assistant_service: Annotated[AssistantService, Depends()],
     files_to_delete: List[str] = Form(None),
@@ -109,10 +130,13 @@ async def update_assistant_files(
         files_to_delete = []
     if new_files is None:
         new_files = []
+    download_icon_api_url = _get_icon_path(request=request)
+    
     return await assistant_service.update_assistant_files(
         assistant_id=assistant_id,
         files_to_delete=files_to_delete, 
-        new_files=new_files
+        new_files=new_files,
+        download_icon_api_url=download_icon_api_url
     )  
 
 
@@ -140,3 +164,10 @@ async def get(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],    
 ):
     return assistant_message_service.get_user_message()
+
+
+
+
+def _get_icon_path(request: Request):
+    return f"{request.url.scheme}://{request.url.netloc}/{ICON_API_PATH}"
+    
