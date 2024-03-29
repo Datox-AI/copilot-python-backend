@@ -93,6 +93,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str, knowledge
             select=[
                 "id",
                 "content", 
+                "fileId",
                 "fileType",
                 "fileName",
                 "assistantId",

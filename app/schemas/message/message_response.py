@@ -25,6 +25,11 @@ class SharePointFilesResponse(BaseSchema):
     last_modified: datetime.datetime
     item_size: Union[int, None]
 
+class AssistantMessageDocument(BaseSchema):
+    name: str
+    type: str
+    blob_name: str
+
 
 class RAGAgentMessageResponse(BaseSchema):
     id: UUID
@@ -48,3 +53,4 @@ class UserMessageResponse(BaseSchema):
     created_at: datetime.datetime
     prompt_id: UUID | None
     files: Optional[List[dict]] = None
+    searched_files: List[AssistantMessageDocument] | None

@@ -134,7 +134,7 @@ class AzureAsyncBlobStorageManager:
             id=file_id,
             created_at=datetime.now(),
             name=uploaded_file.filename,
-            type=uploaded_file.content_type,
+            type=uploaded_file.content_type.split("/")[0] if uploaded_file.content_type else None,
             blob_name=blob_name,
             is_deleted=False,
             assistant_id=assistant_obj.assistant_id,

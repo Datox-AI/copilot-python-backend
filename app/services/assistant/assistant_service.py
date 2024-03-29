@@ -56,7 +56,7 @@ class AssistantService:
         download_icon_api_url: str,
         request_schema: CreateAssistantSchema, 
         knowledge_files: List[UploadFile], 
-        icon: UploadFile = None,
+        icon_file: UploadFile = None,
     ): 
         try:
             instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(user_instruction=request_schema.instruction)
@@ -88,7 +88,10 @@ class AssistantService:
             raise HTTPException(detail=f"Assistant create function failed: {e}", status_code=500)
 
         # uploading icon
-        icon_file_name = self._upload_icon_image(icon=icon)
+        if icon_file:
+            icon_file_name = self._upload_icon_image(icon_file=icon_file)
+        else:
+            icon_file_name = None
         #uploading files to azure index
         assistant_id = openai_assistant.id
         try:    
@@ -204,7 +207,7 @@ class AssistantService:
         assistant_id: str, 
         download_icon_api_url: str,
         request_schema: UpdateAssistantSchema, 
-        icon: UploadFile = None
+        icon_file: UploadFile = None
         ):
         assistant_obj = self.session.query(Assistant).filter(
             Assistant.assistant_id==assistant_id,
@@ -222,8 +225,8 @@ class AssistantService:
                 name=assistant_obj.name
             )
             print(res)
-            if icon:
-                icon_file_name = self._upload_icon_image(icon=icon)
+            if icon_file:
+                icon_file_name = self._upload_icon_image(icon_file=icon_file)
                 assistant_obj.icon_file_name = icon_file_name
             
             self.session.commit()
@@ -303,18 +306,18 @@ class AssistantService:
         raise HTTPException(status_code=404, detail="Assistant not found")
     
     
-    def _upload_icon_image(self, icon: UploadFile):
+    def _upload_icon_image(self, icon_file: UploadFile):
         image_directory = f"{STATIC_FILES_DESTINATION}/assistant_icons"
         os.makedirs(image_directory, exist_ok=True)
         icon_file_id = uuid.uuid4()
-        icon_file_name = f"{icon_file_id}.{icon.content_type.split('/')[1]}"
+        icon_file_name = f"{icon_file_id}.{icon_file.content_type.split('/')[1]}"
         try:
             file_location = f"{image_directory}/{icon_file_name}"
             with open(file_location, "wb") as buffer:
-                shutil.copyfileobj(icon.file, buffer)
+                shutil.copyfileobj(icon_file.file, buffer)
         except:
             return None
         finally:
-            icon.file.close()
+            icon_file.file.close()
             
         return icon_file_name

@@ -82,7 +82,7 @@ class AssistantAgent:
                     print("nahh")
                     pass
                 finally:
-                    return f"Agent failed: {e}"
+                    raise HTTPException(status_code=500, detail=f"Agent failed: {e}")
 
         # followup_questions = self.generate_followup_questions(
         #     question=input,

@@ -71,7 +71,7 @@ async def create_assistant(
     assistant_name: str = Form(...),
     assistant_description: str = Form(...),
     assistant_instruction: str = Form(...),    
-    icon: UploadFile = File(None),
+    icon_file: UploadFile = File(None),
     knowledge_files: List[UploadFile] = File(None),
 ):    
     download_icon_api_url = _get_icon_path(request=request)
@@ -87,7 +87,7 @@ async def create_assistant(
     return await assistant_service.create_assistant(
         request_schema=request_schema, 
         knowledge_files=knowledge_files, 
-        icon=icon, 
+        icon_file=icon_file, 
         download_icon_api_url=download_icon_api_url
     )
 
@@ -163,9 +163,7 @@ async def create(
 async def get(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],    
 ):
-    return assistant_message_service.get_user_message()
-
-
+    return assistant_message_service.get_messages()
 
 
 def _get_icon_path(request: Request):
