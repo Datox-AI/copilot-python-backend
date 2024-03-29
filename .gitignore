@@ -13,6 +13,8 @@ __pycache__/
 migrations/admin_local
 migrations/main_local
 
+# Static files
+app/static_files/
 
 # Distribution / packaging
 .Python
