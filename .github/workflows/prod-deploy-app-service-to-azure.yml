@@ -83,7 +83,7 @@ jobs:
 
   production:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && false
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && ${{ inputs.skipProd }} != 'true'
     needs: staging
     environment: prod 
     name: "[PROD] Pull and Deploy App Service"
