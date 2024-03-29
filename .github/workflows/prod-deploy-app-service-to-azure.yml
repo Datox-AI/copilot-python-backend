@@ -12,7 +12,7 @@ on:
     inputs:
       skipProd:
         description: 'Skip production deployment (true/false)'
-        required: false
+        required: true
         default: 'true'
 
 jobs:
@@ -83,7 +83,7 @@ jobs:
 
   production:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && ${{ inputs.skipProd }} != 'true'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.event.inputs.skipProd != 'true'
     needs: staging
     environment: prod 
     name: "[PROD] Pull and Deploy App Service"
