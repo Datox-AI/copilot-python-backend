@@ -12,7 +12,7 @@ class Assistant(BaseDelete):
     description = Column(String, nullable=True)
     instructions = Column(String, nullable=False)
     assistant_id = Column(String, nullable=False)
-    icon_id = Column(UUID(as_uuid=True), nullable=True)
+    icon_file_name = Column(String, nullable=True)
     
     knowledge_files = relationship("AssistantFile", back_populates="assistant")
     chats = relationship("Chat", back_populates="assistant")

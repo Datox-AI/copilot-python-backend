@@ -15,7 +15,7 @@ class AssistantResponseSchema(BaseSchema):
     description: str
     instructions: str
     assistant_id: str
-    icon_id: UUID | None = None
+    icon_file_path: str | None = None
     knowledge_files: List[AssistantKnowledgeFileSchema]
 
 

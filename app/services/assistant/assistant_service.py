@@ -1,6 +1,7 @@
 import uuid
 import os
 import asyncio
+import shutil
 from datetime import datetime
 from typing import Annotated, List
 from uuid import UUID
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 from openai import AzureOpenAI
 from langchain.agents.openai_assistant import OpenAIAssistantRunnable
 
+from app.const import STATIC_FILES_DESTINATION
 from app.backend.session import create_maindb_session
 from app.models.maindb import Assistant, AssistantFile
 from app.shared.auth.azure_scheme import current_user
@@ -49,12 +51,18 @@ class AssistantService:
         )
 
     
-    async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile], icon: UploadFile = None): 
+    async def create_assistant(
+        self, 
+        download_icon_api_url: str,
+        request_schema: CreateAssistantSchema, 
+        knowledge_files: List[UploadFile], 
+        icon: UploadFile = None,
+    ): 
         try:
-            instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(user_instruction=request.instruction)
+            instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(user_instruction=request_schema.instruction)
             openai_assistant = self.openai_client.beta.assistants.create(
                 instructions=instructions,
-                name=request.name,
+                name=request_schema.name,
                 tools=[
                     {
                         "type": "function",
@@ -80,7 +88,7 @@ class AssistantService:
             raise HTTPException(detail=f"Assistant create function failed: {e}", status_code=500)
 
         # uploading icon
-        icon_file_id = await self.async_blob_storage_manager.upload_file(file=icon)
+        icon_file_name = self._upload_icon_image(icon=icon)
         #uploading files to azure index
         assistant_id = openai_assistant.id
         try:    
@@ -103,11 +111,11 @@ class AssistantService:
                 )
             # saving objects to database 
             assistant_obj = Assistant(
-                name=request.name,
-                description=request.description,
-                instructions=request.instruction,
+                name=request_schema.name,
+                description=request_schema.description,
+                instructions=request_schema.instruction,
                 assistant_id=assistant_id,
-                icon_id=icon_file_id
+                icon_file_name=icon_file_name
             )
             upload_tasks = [
                 self.async_blob_storage_manager.save_and_upload_assistant_file(
@@ -123,7 +131,7 @@ class AssistantService:
             
             self.session.add(assistant_obj)
             self.session.commit()
-            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj, request_url=download_icon_api_url)
         
         except Exception as e:
             # deleting assistant if any error occurs
@@ -133,7 +141,13 @@ class AssistantService:
             raise HTTPException(detail=f"Assistant creation failed: {e}", status_code=500)
             
 
-    async def update_assistant_files(self, assistant_id: str, files_to_delete: List[str], new_files: List[UploadFile]):
+    async def update_assistant_files(
+        self, 
+        assistant_id: str, 
+        files_to_delete: List[str], 
+        new_files: List[UploadFile],
+        download_icon_api_url: str
+    ):
         assistant_obj = self.session.query(Assistant).filter(
             Assistant.assistant_id==assistant_id,
             Assistant.created_by==self.user.user_id,
@@ -182,13 +196,14 @@ class AssistantService:
             await self.async_blob_storage_manager.close()   
                 
             self.session.commit()
-            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)        
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj, request_url=download_icon_api_url)        
         raise HTTPException(status_code=404, detail="Assistant not found")
             
     async def update_assistant(
         self, 
         assistant_id: str, 
-        request: UpdateAssistantSchema, 
+        download_icon_api_url: str,
+        request_schema: UpdateAssistantSchema, 
         icon: UploadFile = None
         ):
         assistant_obj = self.session.query(Assistant).filter(
@@ -198,9 +213,9 @@ class AssistantService:
             ).first()
         if assistant_obj is not None:
             
-            assistant_obj.name = request.name if request.name is not None else assistant_obj.name
-            assistant_obj.description = request.description if request.description is not None else assistant_obj.description
-            assistant_obj.instructions = request.instruction if request.instruction is not None else assistant_obj.instructions
+            assistant_obj.name = request_schema.name if request_schema.name is not None else assistant_obj.name
+            assistant_obj.description = request_schema.description if request_schema.description is not None else assistant_obj.description
+            assistant_obj.instructions = request_schema.instruction if request_schema.instruction is not None else assistant_obj.instructions
             res = self.openai_client.beta.assistants.update(
                 assistant_id=assistant_id,
                 instructions=assistant_obj.instructions,
@@ -208,12 +223,11 @@ class AssistantService:
             )
             print(res)
             if icon:
-                icon_id = await self.async_blob_storage_manager.upload_file(file=icon)
-                assistant_obj.icon_id = icon_id
-                await self.async_blob_storage_manager.close()   
+                icon_file_name = self._upload_icon_image(icon=icon)
+                assistant_obj.icon_file_name = icon_file_name
             
             self.session.commit()
-            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj, request_url=download_icon_api_url)
         raise HTTPException(status_code=404, detail="Assistant not found")
             
             
@@ -243,23 +257,24 @@ class AssistantService:
         raise HTTPException(status_code=404, detail="Assistant not found")   
              
 
-    def get_assistants(self):
+    def get_assistants(self, download_icon_api_url: str):
+        print(download_icon_api_url, " ---download_icon_api_url")
         assistants = self.session.query(Assistant).filter(
             Assistant.created_by==self.user.user_id, Assistant.is_deleted == False
         ).all()
         return [
-            AssistantMapper.map_to_assistant_response(assistant=assistant) 
+            AssistantMapper.map_to_assistant_response(assistant=assistant, request_url=download_icon_api_url) 
             for assistant in assistants
         ]
         
-    def get_assistant(self, assistant_id: str):
+    def get_assistant(self, assistant_id: str, download_icon_api_url: str):
         assistant = self.session.query(Assistant).filter(
             Assistant.assistant_id==assistant_id, Assistant.is_deleted == False
         ).first()
         if assistant:
             if assistant.created_by != self.user.user_id:
                 raise HTTPException(status_code=403, detail="You are not authorized to view this assistant")
-            return AssistantMapper.map_to_assistant_response(assistant=assistant)
+            return AssistantMapper.map_to_assistant_response(assistant=assistant, request_url=download_icon_api_url)
         raise HTTPException(status_code=404, content="Assistant not found") 
     
     
@@ -286,4 +301,20 @@ class AssistantService:
             await self.async_blob_storage_manager.close()
             return stream, media_type
         raise HTTPException(status_code=404, detail="Assistant not found")
+    
+    
+    def _upload_icon_image(self, icon: UploadFile):
+        image_directory = f"{STATIC_FILES_DESTINATION}/assistant_icons"
+        os.makedirs(image_directory, exist_ok=True)
+        icon_file_id = uuid.uuid4()
+        icon_file_name = f"{icon_file_id}.{icon.content_type.split('/')[1]}"
+        try:
+            file_location = f"{image_directory}/{icon_file_name}"
+            with open(file_location, "wb") as buffer:
+                shutil.copyfileobj(icon.file, buffer)
+        except:
+            return None
+        finally:
+            icon.file.close()
             
+        return icon_file_name
