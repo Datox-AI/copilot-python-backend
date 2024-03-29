@@ -57,10 +57,8 @@ jobs:
               --build-arg SQL_ANALYTIC_AZURE_ASSISTANT_ID=${{ secrets.SQL_ANALYTIC_AZURE_ASSISTANT_ID }} \
               --build-arg CHATGPT_AGENT_AZURE_ASSISTANT_ID=${{ secrets.CHATGPT_AGENT_AZURE_ASSISTANT_ID }} \
               --build-arg GPT4_ASSISTANT_OPENAI_API_VERSION=${{ secrets.GPT4_ASSISTANT_OPENAI_API_VERSION }} \
-
-
-              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }} .
-
+              -t ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }} . 
+              
             docker push ${{ secrets.DOCKER_REGISTRY_SERVER_URL }}/copilot-backend:${{ github.run_id }}          
   
   staging:
