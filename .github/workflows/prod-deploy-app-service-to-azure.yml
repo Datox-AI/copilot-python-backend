@@ -76,7 +76,7 @@ jobs:
     name: "[STAGING] Pull and Deploy App Service"
     steps:
       - name: Check skipProd input
-        run: echo "skipProd is ${{ github.event.inputs.skipProd }}"
+        run: echo "skipProd is ${{ inputs.skipProd }}"
       - uses: azure/webapps-deploy@v2
         with:
           app-name: 'NewCopilotWebApi'
@@ -86,7 +86,7 @@ jobs:
 
   production:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && ${{ inputs.skipProd }}github.event.inputs.skipProd != true
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && ${{ inputs.skipProd }} != true
     needs: staging
     environment: prod 
     name: "[PROD] Pull and Deploy App Service"
