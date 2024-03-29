@@ -37,17 +37,13 @@ class AssistantAgent:
         except  Exception as e:
             print(f"Assistant not found in azure: {e}")
             raise HTTPException(detail=f"Assistant (id={assistant_id}) not found in azure", status_code=404)
-        if thread_id:
-            try:
-                self.client.beta.threads.retrieve(thread_id=thread_id)
-            except Exception as e:
-                print(f"Thread not found: {e}")
-                raise HTTPException(detail=f"Thread (id={thread_id}) not found", status_code=404)
-            self.thread_id = thread_id
-        else:
-            empty_thread = self.client.beta.threads.create()
-            self.thread_id = empty_thread.id
-
+        try:
+            self.client.beta.threads.retrieve(thread_id=thread_id)
+        except Exception as e:
+            print(f"Thread not found: {e}")
+            raise HTTPException(detail=f"Thread (id={thread_id}) not found", status_code=404)
+        
+        self.thread_id = thread_id
         self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=self.client, as_agent=True)
 
     def execute_agent(

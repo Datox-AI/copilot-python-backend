@@ -47,4 +47,4 @@ class Message(BaseDelete):
     message_files = relationship("MessageFile", back_populates="message")
     message_sharepoint_documents = relationship("MessageSharepointDocument", back_populates="message")
     # message_assistant_documents = relationship("MessageAssistantDocument", back_populates="message")
-    
+

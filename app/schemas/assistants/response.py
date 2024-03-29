@@ -7,7 +7,7 @@ class AssistantKnowledgeFileSchema(BaseSchema):
     id: UUID
     name: str 
     type: str
-    is_deleted: bool
+    blob_name: str | None = None
 
 class AssistantResponseSchema(BaseSchema):
     id: UUID

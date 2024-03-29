@@ -1,7 +1,7 @@
 import uuid
 import os
-from datetime import datetime, timezone
-from pathlib import Path
+import asyncio
+from datetime import datetime
 from typing import Annotated, List
 from uuid import UUID
 
@@ -18,13 +18,14 @@ from app.schemas.identity.current_user import CurrentUser
 from app.schemas.assistants import CreateAssistantSchema, AssistantMapper, UpdateAssistantSchema
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.messages.user_message_services import MIME_TYPE_MAP
-from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureBlobStorageManager, AzureAsyncBlobStorageManager
+from app.infrastructure.assistants.prompt import ASSISTANT_INSTRUCTION_TEMPLATE
 
 
 load_dotenv(override=True)
 
 
-class AssistantService:
+class AssistantService:    
     def __init__(
         self,
         user: Annotated[CurrentUser, Depends(current_user)],
@@ -43,16 +44,16 @@ class AssistantService:
             session=session, 
             index_name=assistants_index_name
         )
-        
-    
-    async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile], icon: UploadFile = None):
-        azure_blob_storage_manager = AzureBlobStorageManager(
-            container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
-        )        
+        self.async_blob_storage_manager = AzureAsyncBlobStorageManager(
+            container_name=os.environ["AZURE_STORAGE_ASSISTANT_FILE_CONTAINER"]
+        )
 
+    
+    async def create_assistant(self, request: CreateAssistantSchema, knowledge_files: List[UploadFile], icon: UploadFile = None): 
         try:
+            instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(user_instruction=request.instruction)
             openai_assistant = self.openai_client.beta.assistants.create(
-                instructions=request.instruction,
+                instructions=instructions,
                 name=request.name,
                 tools=[
                     {
@@ -79,16 +80,18 @@ class AssistantService:
             raise HTTPException(detail=f"Assistant create function failed: {e}", status_code=500)
 
         # uploading icon
-        icon_file_id = azure_blob_storage_manager.upload_file(file=icon)
+        icon_file_id = await self.async_blob_storage_manager.upload_file(file=icon)
         #uploading files to azure index
         assistant_id = openai_assistant.id
         try:    
             file_ids = []
+            file_contents = []
             for uploaded_file in knowledge_files:
                 file_id = uuid.uuid4()
                 file_ids.append(file_id)
                 file_name = uploaded_file.filename
                 file_content = await uploaded_file.read()
+                file_contents.append(file_content)
                 file_extension = uploaded_file.content_type
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 self.azure_indexer.process_and_store_texts_for_assistant_index(
@@ -106,26 +109,21 @@ class AssistantService:
                 assistant_id=assistant_id,
                 icon_id=icon_file_id
             )
-            knowledge_file_objs = []
-            for file_id, uploaded_file in zip(file_ids, knowledge_files):
-                knowledge_file_obj = AssistantFile(
-                    id=file_id,
-                    created_at=datetime.now(),
-                    name=uploaded_file.filename,
-                    type=uploaded_file.content_type,
-                    is_deleted=False,
-                    assistant_id=assistant_id,
-                    assistant=assistant_obj,
-                )
-                knowledge_file_objs.append(knowledge_file_obj)
+            upload_tasks = [
+                self.async_blob_storage_manager.save_and_upload_assistant_file(
+                    file_id=str(file_id), 
+                    file_content=file_content,
+                    session=self.session, 
+                    uploaded_file=uploaded_file, 
+                    assistant_obj=assistant_obj
+                ) for uploaded_file, file_id, file_content in zip(knowledge_files, file_ids, file_contents)
+                ]
+            await asyncio.gather(*upload_tasks)
+            await self.async_blob_storage_manager.close()
             
             self.session.add(assistant_obj)
-            self.session.add_all(knowledge_file_objs)
             self.session.commit()
-            
-            return AssistantMapper.map_to_assistant_response(
-                assistant=assistant_obj, knowledge_file_objs=knowledge_file_objs
-            )
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)
         
         except Exception as e:
             # deleting assistant if any error occurs
@@ -134,36 +132,7 @@ class AssistantService:
             # raise e
             raise HTTPException(detail=f"Assistant creation failed: {e}", status_code=500)
             
-    def download_icon(self, icon_id: str):
-        azure_blob_storage_manager = AzureBlobStorageManager(
-            container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
-        )       
-        return azure_blob_storage_manager.download_pdf_file(file_id=icon_id)
-        
-    
-    def get_assistants(self):
-        assistants = self.session.query(Assistant).filter(
-            Assistant.created_by==self.user.user_id, Assistant.is_deleted == False
-        ).all()
-        return [
-            AssistantMapper.map_to_assistant_response(
-                assistant=assistant,
-                knowledge_file_objs=assistant.knowledge_files  
-            ) 
-            for assistant in assistants
-        ]
-        
-    def get_assistant_chats(self, assistant_id: str):
-        assistant = self.session.query(Assistant).filter(
-            Assistant.assistant_id==assistant_id, Assistant.is_deleted == False
-        ).first()
-        if assistant:
-            if assistant.created_by != self.user.user_id:
-                raise HTTPException(status_code=403, detail="You are not authorized to view this assistant")
-            return AssistantMapper.map_to_assistant_chats_response(assistant=assistant)
-        return Response(status_code=404, content="Assistant not found")
-    
-    
+
     async def update_assistant_files(self, assistant_id: str, files_to_delete: List[str], new_files: List[UploadFile]):
         assistant_obj = self.session.query(Assistant).filter(
             Assistant.assistant_id==assistant_id,
@@ -172,19 +141,20 @@ class AssistantService:
             ).first()
         if assistant_obj is not None:
             # deleting files
-            print(datetime.now(), " -before deleting files")
             for file_id in files_to_delete:
                 file_obj = self.session.query(AssistantFile).filter(AssistantFile.id==file_id).first()
                 if file_obj:
                     file_obj.is_deleted = True                
                     # self.azure_indexer.delete_document(file_id=file_id)
-            print(datetime.now(), " -after deleting files")
             # adding new files
-            knowledge_file_objs = []
+            file_ids = []
+            file_contents = []
             for uploaded_file in new_files:
                 file_id = uuid.uuid4()
+                file_ids.append(file_id)
                 file_name = uploaded_file.filename
                 file_content = await uploaded_file.read()
+                file_contents.append(file_content)
                 file_extension = uploaded_file.content_type
                 file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
                 bef = datetime.now()
@@ -198,26 +168,24 @@ class AssistantService:
                 )
                 aft = datetime.now()
                 print((aft - bef).seconds, " ---seconds for whole file upload")
+
+            upload_tasks = [
+                self.async_blob_storage_manager.save_and_upload_assistant_file(
+                    file_id=str(file_id), 
+                    file_content=file_content,
+                    session=self.session, 
+                    uploaded_file=uploaded_file, 
+                    assistant_obj=assistant_obj
+                ) for uploaded_file, file_id, file_content in zip(new_files, file_ids, file_contents)
+                ]
+            await asyncio.gather(*upload_tasks)
+            await self.async_blob_storage_manager.close()   
                 
-                knowledge_file_obj = AssistantFile(
-                    id=file_id,
-                    created_at=datetime.now(),
-                    name=uploaded_file.filename,
-                    type=uploaded_file.content_type,
-                    is_deleted=False,
-                    assistant_id=assistant_id,
-                    assistant=assistant_obj,
-                )
-                knowledge_file_objs.append(knowledge_file_obj)
-                
-            self.session.add_all(knowledge_file_objs)
             self.session.commit()
-            return AssistantMapper.map_to_assistant_response(
-                assistant=assistant_obj, knowledge_file_objs=assistant_obj.knowledge_files
-            )        
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)        
         raise HTTPException(status_code=404, detail="Assistant not found")
             
-    def update_assistant(
+    async def update_assistant(
         self, 
         assistant_id: str, 
         request: UpdateAssistantSchema, 
@@ -240,16 +208,12 @@ class AssistantService:
             )
             print(res)
             if icon:
-                azure_blob_storage_manager = AzureBlobStorageManager(
-                    container_name=os.environ.get("AZURE_STORAGE_ASSISTANT_FILE_CONTAINER")
-                )        
-                icon_id = azure_blob_storage_manager.upload_file(file=icon)
+                icon_id = await self.async_blob_storage_manager.upload_file(file=icon)
                 assistant_obj.icon_id = icon_id
+                await self.async_blob_storage_manager.close()   
             
             self.session.commit()
-            return AssistantMapper.map_to_assistant_response(
-                assistant=assistant_obj, knowledge_file_objs=assistant_obj.knowledge_files
-            )
+            return AssistantMapper.map_to_assistant_response(assistant=assistant_obj)
         raise HTTPException(status_code=404, detail="Assistant not found")
             
             
@@ -277,4 +241,49 @@ class AssistantService:
             self.session.commit()     
             return Response(status_code=204)
         raise HTTPException(status_code=404, detail="Assistant not found")   
+             
+
+    def get_assistants(self):
+        assistants = self.session.query(Assistant).filter(
+            Assistant.created_by==self.user.user_id, Assistant.is_deleted == False
+        ).all()
+        return [
+            AssistantMapper.map_to_assistant_response(assistant=assistant) 
+            for assistant in assistants
+        ]
         
+    def get_assistant(self, assistant_id: str):
+        assistant = self.session.query(Assistant).filter(
+            Assistant.assistant_id==assistant_id, Assistant.is_deleted == False
+        ).first()
+        if assistant:
+            if assistant.created_by != self.user.user_id:
+                raise HTTPException(status_code=403, detail="You are not authorized to view this assistant")
+            return AssistantMapper.map_to_assistant_response(assistant=assistant)
+        raise HTTPException(status_code=404, content="Assistant not found") 
+    
+    
+    async def download_icon(self, icon_id: str):
+        stream, media_type = await self.async_blob_storage_manager.download_file(file_id=icon_id)
+        await self.async_blob_storage_manager.close()   
+        return stream, media_type
+        
+    async def download_knowledge_file(self, assistant_id: str, knowledge_blob_name: str):
+        assistant = self.session.query(Assistant).filter(
+            Assistant.assistant_id==assistant_id, Assistant.is_deleted == False
+        ).first()
+        if assistant:
+            if assistant.created_by != self.user.user_id:
+                raise HTTPException(status_code=403, detail="You are not authorized to view this assistant")
+            knowledge_file = self.session.query(AssistantFile).filter(
+                AssistantFile.blob_name==knowledge_blob_name
+            ).first()
+            if knowledge_file is None:
+                raise HTTPException(status_code=404, detail="Knowledge file not found")
+            if "." in knowledge_blob_name:
+                knowledge_blob_name = knowledge_blob_name.split(".")[0]
+            stream, media_type = await self.async_blob_storage_manager.download_file(file_id=knowledge_blob_name)
+            await self.async_blob_storage_manager.close()
+            return stream, media_type
+        raise HTTPException(status_code=404, detail="Assistant not found")
+            

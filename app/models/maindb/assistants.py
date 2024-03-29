@@ -24,6 +24,7 @@ class AssistantFile(BaseDelete):
     
     name = Column(String)
     type = Column(String)
-    # is_deleted = Column(Boolean, default=False)
+    blob_name = Column(String, nullable=True)
     assistant_id = Column(UUID(as_uuid=True), ForeignKey("assistants.id"))
+    
     assistant = relationship("Assistant", back_populates="knowledge_files")
