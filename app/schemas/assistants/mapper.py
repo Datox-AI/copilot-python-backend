@@ -12,6 +12,7 @@ class AssistantMapper:
         knowledge_file_objs: List[AssistantFile]
     ):
         knowledge_file_objs.sort(key=lambda file_obj: file_obj.created_at)
+        knowledge_file_objs = [file_obj for file_obj in knowledge_file_objs if not file_obj.is_deleted]
         
         knowledge_file_responses = [
             AssistantMapper.map_to_assistant_file_response(knowledge_file=knowledge_file) 
@@ -45,9 +46,8 @@ class AssistantMapper:
     ):
         knowledge_file_objs = assistant.knowledge_files
         knowledge_file_objs.sort(key=lambda file_obj: file_obj.created_at)
-        for knowledge_file in knowledge_file_objs:
-            print(knowledge_file.created_at, " -- created_at")
-        
+        knowledge_file_objs = [file_obj for file_obj in knowledge_file_objs if not file_obj.is_deleted]
+         
         knowledge_files = [AssistantMapper.map_to_assistant_file_response(knowledge_file) for knowledge_file in knowledge_file_objs]
         return AssistantResponseSchema(
             id=assistant.id,

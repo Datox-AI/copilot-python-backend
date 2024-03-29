@@ -101,7 +101,6 @@ async def update_assistant_files(
         new_files=new_files
     )  
 
-    
 
 @router.delete("/delete-assistant/{assistant_id}")
 def delete_assistant(
