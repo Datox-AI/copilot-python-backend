@@ -1,6 +1,13 @@
 name: Deploy Copilot Python Backend to Azure App Service Action
 
 on:
+  workflow_dispatch:
+    inputs:
+      skipprod:
+        description: 'Skip production deployment (true/false)'
+        type: boolean
+        required: false
+        default: true
   push:
     branches:
       - main  
@@ -8,13 +15,6 @@ on:
     types: [closed]
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      skipprod:
-        description: 'Skip production deployment (true/false)'
-        type: boolean
-        required: true
-        default: true
 
 jobs:
   # build:
@@ -86,7 +86,7 @@ jobs:
 
   production:
     runs-on: ubuntu-latest
-    if: github.event.inputs.skipprod != true && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ inputs.skipprod != true }} && github.event_name == 'push' && github.ref == 'refs/heads/main'
     # needs: staging
     # environment: prod 
     name: "[PROD] Pull and Deploy App Service"
