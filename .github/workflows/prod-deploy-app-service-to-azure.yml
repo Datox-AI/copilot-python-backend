@@ -13,7 +13,7 @@ on:
       skipProd:
         description: 'Skip production deployment (true/false)'
         required: false
-        default: 'false'
+        default: 'true'
 
 jobs:
   build:
