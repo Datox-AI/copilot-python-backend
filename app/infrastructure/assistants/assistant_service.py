@@ -1,4 +1,3 @@
-
 import os, json
 from typing import List
 from uuid import UUID
@@ -14,6 +13,7 @@ from app.infrastructure.ChatGPT_assistant.prompt import FOLLOWUP_QUESTIONS_PROMP
 
 
 load_dotenv(override=True)
+
 
 class AssistantAgent:
     def __init__(self, assistant_id, thread_id):
@@ -34,7 +34,7 @@ class AssistantAgent:
         print(assistant_id, " -eeee")
         try:
             self.client.beta.assistants.retrieve(assistant_id=assistant_id)
-        except  Exception as e:
+        except Exception as e:
             print(f"Assistant not found in azure: {e}")
             raise HTTPException(detail=f"Assistant (id={assistant_id}) not found in azure", status_code=404)
         try:
@@ -42,7 +42,7 @@ class AssistantAgent:
         except Exception as e:
             print(f"Thread not found: {e}")
             raise HTTPException(detail=f"Thread (id={thread_id}) not found", status_code=404)
-        
+
         self.thread_id = thread_id
         self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=self.client, as_agent=True)
 
@@ -52,10 +52,7 @@ class AssistantAgent:
         knowledge_files_ids: List[UUID],
     ):
         tool_map = {tool.name: tool for tool in self.tools}
-        response = self.agent.invoke(input={
-            "content": user_input, 
-            "thread_id": self.thread_id
-        })
+        response = self.agent.invoke(input={"content": user_input, "thread_id": self.thread_id})
         relevant_docs = []
         while not isinstance(response, AgentFinish):
             tool_outputs = []
@@ -82,14 +79,14 @@ class AssistantAgent:
                     print("nahh")
                     pass
                 finally:
-                    return f"Agent failed: {e}"
+                    raise HTTPException(status_code=500, detail=f"Agent failed: {e}")
 
         # followup_questions = self.generate_followup_questions(
         #     question=input,
         #     answer=response.return_values["output"]
         # )
         followup_questions = []
-        
+
         return {
             "output": response.return_values["output"],
             "thread_id": response.return_values["thread_id"],

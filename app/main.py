@@ -7,14 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi_pagination import add_pagination
 
 from app.routers import (
-    analytics_agent, 
-    application_users, 
-    chats, 
-    files, 
-    rag_agent, 
-    snow_router, 
+    analytics_agent,
+    application_users,
+    chats,
+    files,
+    rag_agent,
+    snow_router,
     user_messages,
-    assistants
+    assistants,
 )
 from app.shared.auth import AZURE_AD_FRONTEND_CLIENT_ID, azure_scheme
 

@@ -25,8 +25,7 @@ class CreateChatRequest(BaseSchema):
         if chat_type == ChatType.DataAnalytics and not snowflake_data:
             raise ValueError("snowflake_data is required for DataAnalytics chat type")
         return self
-    
-    
+
     @model_validator(mode="after")
     def check_assistant_id(self):
         chat_type = self.type

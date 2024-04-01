@@ -21,9 +21,9 @@ class TokenCounter:
             self.current_left_token = self.current_left_token - len(tokens)
             print(self.current_left_token, " left token number")
             return True
-        
+
     def over_limit(self, input: str):
         tokens = self.enc.encode(input)
         if len(tokens) > 500:
-            return True 
+            return True
         return False

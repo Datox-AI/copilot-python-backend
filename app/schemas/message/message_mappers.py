@@ -6,6 +6,7 @@ from app.schemas.message.message_response import (
     RAGAgentMessageResponse,
     SharePointFilesResponse,
     UserMessageResponse,
+    AssistantMessageDocument,
 )
 
 
@@ -55,7 +56,7 @@ class MessageMapper:
                     "file_id": file.file_id,
                     "fileName": file.file.file_name,
                     "fileType": file.file.file_extension,
-                    "blob_name": file.file.blob_name
+                    "blob_name": file.file.blob_name,
                 }
                 for file in message.message_files
             ]
@@ -71,7 +72,47 @@ class MessageMapper:
             questions=message.follow_up_questions,
             created_at=message.created_at,
             prompt_id=message.prompt_id,
-            files=files_info
+            files=files_info,
+            searched_files=[],
         )
-        
-        
+
+    @staticmethod
+    def map_to_assistant_message_response(message: Message):
+        assistant_message_documents = []
+        print(message)
+        if message.message_assistant_documents:
+            for asst_msg_doc in message.message_assistant_documents:
+                # Check if the document with the same blob name already exists
+                existing_doc = next(
+                    (
+                        doc
+                        for doc in assistant_message_documents
+                        if doc.blob_name == asst_msg_doc.assistant_file.blob_name
+                    ),
+                    None,
+                )
+                if existing_doc:
+                    # If the document already exists, skip adding it again
+                    continue
+                assistant_message_documents.append(
+                    AssistantMessageDocument(
+                        name=asst_msg_doc.assistant_file.name,
+                        type=asst_msg_doc.assistant_file.type,
+                        blob_name=asst_msg_doc.assistant_file.blob_name,
+                    )
+                )
+        return UserMessageResponse(
+            id=message.id.hex,
+            chat_id=message.chat_id,
+            text=message.text,
+            role=message.role,
+            pinned=message.pinned,
+            pinned_date=message.pinned_date,
+            status=message.status,
+            reply_to=message.reply_to_id,
+            questions=message.follow_up_questions,
+            created_at=message.created_at,
+            prompt_id=message.prompt_id,
+            searched_files=assistant_message_documents,
+            files=[],
+        )

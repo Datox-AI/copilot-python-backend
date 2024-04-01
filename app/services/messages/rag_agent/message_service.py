@@ -38,7 +38,7 @@ class RAGAgentMessageService:
             raise HTTPException(
                 status_code=400, detail=f"Chat object under {chat_id} id does not have FileSearch as its chat type"
             )
-    
+
     def create_user_message(
         self,
         message_text: str,
@@ -51,15 +51,15 @@ class RAGAgentMessageService:
             status=MessageStatus.Success,
             role=MessageRole.User,
         )
-        
+
         # rag_agent_service
         thread_id = self.chat_obj.assistant_thread_id
         rag_agent_service = RAGAssistantAgent(thread_id=thread_id)
         result = rag_agent_service.execute_agent(message_text)
-        output = result['output']
-        thread_id = result['thread_id']
-        relevant_docs = result['relevant_docs']
-        
+        output = result["output"]
+        thread_id = result["thread_id"]
+        relevant_docs = result["relevant_docs"]
+
         self.chat_obj.assistant_thread_id = thread_id
 
         new_agent_message = Message(

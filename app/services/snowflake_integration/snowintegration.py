@@ -117,7 +117,6 @@ class SnowflakeIntegrationService:
         )
         if existing_snowflake_identifier_obj:
             raise HTTPException(status_code=400, detail="User has already snowflake identifier object")
-         
 
         config.account_identifier = config.account_identifier.replace(".", "-")
         snowflake_identifier_obj = SnowflakeIdentifier(
@@ -137,7 +136,7 @@ class SnowflakeIntegrationService:
         self.session.add(warehouse_obj)
         self.session.commit()
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
-        
+
         params = {
             "response_type": "code",
             "client_id": config.client_id,
@@ -155,7 +154,7 @@ class SnowflakeIntegrationService:
 
         authorization_endpoint = existing_snowflake_identifier_obj.token_endpoint.replace("token-request", "authorize")
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
-        
+
         params = {
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
@@ -170,9 +169,8 @@ class SnowflakeIntegrationService:
         )
 
     def update_oauth_logic(self, config: OAuthConfig, request: Request):
-
         config.account_identifier = config.account_identifier.replace(".", "-")
-        
+
         if len(config.client_id) != 28:
             raise HTTPException(status_code=400, detail="Please review Client ID for typos")
         if len(config.client_secret) != 44:
@@ -192,7 +190,7 @@ class SnowflakeIntegrationService:
             snowflake_identifier_obj=existing_snowflake_identifier_obj, warehouse_name=config.warehouse
         )
         self.session.commit()
-        
+
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         params = {
             "response_type": "code",
@@ -363,7 +361,7 @@ class SnowflakeIntegrationService:
             schemas = cursor.fetchall()
             return {"schemas": [schema[1] for schema in schemas]}
         except HTTPException as e:
-        # Re-raise the exception if it's already an HTTPException
+            # Re-raise the exception if it's already an HTTPException
             raise e
         except Exception as e:
             self.handle_common_errors(e)
@@ -372,6 +370,7 @@ class SnowflakeIntegrationService:
             ctx.close()
 
         # Endpoint to select a schema and check separately for the existence of tables and views
+
     def select_schema_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
@@ -396,7 +395,6 @@ class SnowflakeIntegrationService:
             cursor.close()
             ctx.close()
 
-
     # Endpoint to list tables of a specific schema in a Snowflake database
     def get_tables_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -416,7 +414,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             ctx.close()
-
 
     # Endpoint to change the user role in snowflake
     def change_default_role_logic(self, new_role_request: SnowflakeRole, token: str):
@@ -442,13 +439,13 @@ class SnowflakeIntegrationService:
             return {"detail": f"Default role for user '{current_username}' changed to '{new_role}' successfully"}
         except Exception as e:
             error_message = str(e).lower()
-            if 'role does not exist' in error_message:
+            if "role does not exist" in error_message:
                 detail_msg = f"The role '{new_role}' does not exist."
                 raise HTTPException(status_code=400, detail=detail_msg)
-            elif 'insufficient privilege' in error_message:
+            elif "insufficient privilege" in error_message:
                 detail_msg = "Insufficient privileges to change the role."
                 raise HTTPException(status_code=403, detail=detail_msg)
-            elif 'default role' in error_message:
+            elif "default role" in error_message:
                 detail_msg = f"Failed to change default role due to a configuration or permission issue."
                 raise HTTPException(status_code=400, detail=detail_msg)
             else:
@@ -457,8 +454,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             conn.close()
-
-
 
     def get_views_logic(self, token: str, db_name: str, schema_name: str):
         snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
@@ -475,7 +470,7 @@ class SnowflakeIntegrationService:
             raise e
         except Exception as e:
             error_message = str(e).lower()
-            if 'insufficient privilege' in error_message:
+            if "insufficient privilege" in error_message:
                 detail_msg = "Insufficient privileges to access views."
                 raise HTTPException(status_code=403, detail=detail_msg)
             else:
@@ -484,7 +479,6 @@ class SnowflakeIntegrationService:
         finally:
             cursor.close()
             ctx.close()
-
 
     # Endpoint to list columns of a specific table or view in a Snowflake database, including name and type
 
@@ -527,8 +521,7 @@ class SnowflakeIntegrationService:
             data_preview = []
             for row in cursor.fetchall():
                 formatted_row = {
-                    col_name: (value if value is not None else "{none}")
-                    for col_name, value in zip(column_names, row)
+                    col_name: (value if value is not None else "{none}") for col_name, value in zip(column_names, row)
                 }
                 data_preview.append(formatted_row)
 
@@ -560,9 +553,7 @@ class SnowflakeIntegrationService:
             finally:
                 cursor.close()
                 conn.close()
-        except HTTPException as http_exc:      
-            raise http_exc 
+        except HTTPException as http_exc:
+            raise http_exc
         except Exception as e:
             self.handle_common_errors(e)
-
-

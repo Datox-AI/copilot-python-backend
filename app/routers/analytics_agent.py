@@ -2,7 +2,7 @@ import uuid, io
 import asyncio
 from typing import Annotated
 from uuid import UUID
-import urllib 
+import urllib
 
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.engine import create_engine
@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from json.decoder import JSONDecodeError
 from app.backend.session import create_maindb_session
 from app.infrastructure.analytics_agent.agent_service import AgentSnowflakeEngineManager, DataAnalyticAgent
-from app.infrastructure.sql_analytics_agent_with_assistant.agent_service import DataAnalyticAssistant 
+from app.infrastructure.sql_analytics_agent_with_assistant.agent_service import DataAnalyticAssistant
 from app.mysocket.connection import ConnectionManager
 from app.services.identity import CheckUpdateUser
 from app.services.messages.analytics_agent.message_service import AnalyticsAgentMessageCreateService
@@ -26,18 +26,18 @@ from app.enums.error_enums import SnowflakeTokenErrorEnum
 from app.models.maindb.chat import Chat
 
 
-        # try:
-        # except NotFoundError as e:
-        #     self.agent = OpenAIAssistantRunnable(
-        #         name="sql assistant with langchain",
-        #         client=client,
-        #         instructions=SQL_ASSISTANT_INSTRUCTIONS,
-        #         tools=self.sql_tools,
-        #         model="gpt-4",
-        #         as_agent=True,
-        #     )
-        #     print(f"NEW ASSISTANT CREATED, ID - {self.agent.assistant_id}")
-        # else:
+# try:
+# except NotFoundError as e:
+#     self.agent = OpenAIAssistantRunnable(
+#         name="sql assistant with langchain",
+#         client=client,
+#         instructions=SQL_ASSISTANT_INSTRUCTIONS,
+#         tools=self.sql_tools,
+#         model="gpt-4",
+#         as_agent=True,
+#     )
+#     print(f"NEW ASSISTANT CREATED, ID - {self.agent.assistant_id}")
+# else:
 
 load_dotenv(override=True)
 
@@ -62,63 +62,62 @@ async def listen_for_stop_signal(websocket: WebSocket, stop_event):
 
 class TokenManager:
     def __init__(self, azure_token, snowflake_token, check_update_user, chat_obj):
-        self.azure_token = azure_token 
+        self.azure_token = azure_token
         self.snowflake_token = snowflake_token
         self.check_update_user = check_update_user
         self.chat_obj = chat_obj
         self.engine = None
-    
+
     def set_values(self, snowflake_token, azure_token):
         self.azure_token = azure_token
         self.snowflake_token = snowflake_token
-        
-    async def check_tokens(self, snowflake_token=None, azure_token=None):
 
+    async def check_tokens(self, snowflake_token=None, azure_token=None):
         if snowflake_token:
             self.snowflake_token = snowflake_token
         if azure_token:
             self.azure_token = azure_token
-            
+
         azure_token_is_valid = False
         azure_token_error_message = ""
         snowflake_token_is_valid = False
         snowflake_token_error_message = ""
         if self.snowflake_token is not None and self.azure_token is not None:
-            #checking azure token
+            # checking azure token
             validated_user, azure_token_error_message = await validate_azure_token(
                 access_token=self.azure_token, check_update_user=self.check_update_user
             )
             if validated_user:
                 print("azure token is valid")
                 azure_token_is_valid = True
-                # TODO checking chat object 
+                # TODO checking chat object
             else:
                 print("azure token is not valid")
             # validating snowflake token
             if self.engine:
                 print("have engine")
-                
+
                 try:
                     # This is a simple way to check if the connection is alive
                     with self.engine.connect():
                         print("trying connecting")
                         return True
                 except SQLAlchemyError:
-                    snowflake_token_is_valid = False 
+                    snowflake_token_is_valid = False
                     snowflake_token_error_message = "Snowflake token is expired"
             else:
                 print("createing engine")
                 snowflake_token_is_valid, snowflake_token_error_message = self.create_engine()
         else:
             snowflake_token_error_message = "Engine is not connected"
-            
+
         if not snowflake_token_is_valid:
             return snowflake_token_is_valid, snowflake_token_error_message
         elif not azure_token_is_valid:
-            return azure_token_is_valid, azure_token_error_message 
-     
+            return azure_token_is_valid, azure_token_error_message
+
         return True, ""
-                
+
     def create_engine(self):
         chat_snowflake_data_obj = self.chat_obj.snowflake_data
 
@@ -147,8 +146,7 @@ class TokenManager:
             else:
                 error_message = str(e.orig)
             return False, error_message
-    
-    
+
 
 # @router.websocket("/ws_new/{chat_id}")
 # async def agent_endpoint(
@@ -168,8 +166,8 @@ class TokenManager:
 #     )
 #     while True:
 #         are_tokens_valid, error_message = await token_manager.check_tokens()
-#         if not are_tokens_valid: 
-#             await manager.send_error_message(websocket=websocket, message=error_message)    
+#         if not are_tokens_valid:
+#             await manager.send_error_message(websocket=websocket, message=error_message)
 #             result = await manager.receive_token_values(websocket=websocket)
 #             if result == 'disconnected':
 #                 break
@@ -180,17 +178,16 @@ class TokenManager:
 #                 result = await manager.receive_token_values(websocket=websocket)
 #                 if result == 'disconnected':
 #                     break
-                    
+
 #                 token_manager.set_values(snowflake_token=result["snowflake_token"], azure_token=result["azure_token"])
 #                 continue
 
 #             else:
 #                 await manager.send_connection_success_message(websocket=websocket)
-                
+
 #         received = await websocket.receive_json()
 #         await websocket.send_text(str(received))
-            
-    
+
 
 @router.websocket("/ws/{chat_id}")
 async def agent_endpoint(
@@ -200,7 +197,7 @@ async def agent_endpoint(
     maindb_session: Annotated[Session, Depends(create_maindb_session)],
     token: str = Query(...),
 ):
-    await manager.connect(websocket=websocket)    
+    await manager.connect(websocket=websocket)
     # validating token, and chat_id
     validator = DataAnalyticAgentWebsocketValidator(
         chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
@@ -261,7 +258,7 @@ async def agent_endpoint(
                     await manager.send_connection_success_message(websocket=websocket)
                     # changing connection error message to default in case engine needs to reconnect
                     connection_error_message = "Engine is not connected"
-                    
+
                 # chatting process
                 try:
                     user_input_data = await websocket.receive_json()
@@ -330,7 +327,6 @@ async def agent_endpoint(
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
 
-
 @router.websocket("/ws_assistant/{chat_id}")
 async def assistant_agent_endpoint(
     chat_id: UUID,
@@ -339,8 +335,7 @@ async def assistant_agent_endpoint(
     maindb_session: Annotated[Session, Depends(create_maindb_session)],
     token: str = Query(...),
 ):
-    
-    await manager.connect(websocket=websocket)    
+    await manager.connect(websocket=websocket)
     validator = DataAnalyticAgentWebsocketValidator(
         chat_id=chat_id, token=token, maindb_session=maindb_session, check_update_user=check_update_user
     )
@@ -351,13 +346,9 @@ async def assistant_agent_endpoint(
         chat_obj = validator.chat_obj
         thread_id = chat_obj.assistant_thread_id
         agent_engine_manager = AgentSnowflakeEngineManager()
-        message_service = AnalyticsAgentMessageCreateService(
-            user=user, 
-            chat_id=chat_id, 
-            session=maindb_session
-        )
+        message_service = AnalyticsAgentMessageCreateService(user=user, chat_id=chat_id, session=maindb_session)
         connection_error_message = "Engine is not connected"
-        
+
         try:
             while True:
                 if not agent_engine_manager.is_engine_alive():
@@ -418,17 +409,13 @@ async def assistant_agent_endpoint(
                 agent_message_id = uuid.uuid4()
                 agent_response = agent.execute_agent(input=user_input, message_id=agent_message_id)
                 if type(agent_response) == dict:
-                    agent_response.update({
-                        "choices": []
-                    })
+                    agent_response.update({"choices": []})
                     # saving the message
-                    message_service.create_agent_response(
-                        message_id=agent_message_id, agent_response=agent_response
-                    )
+                    message_service.create_agent_response(message_id=agent_message_id, agent_response=agent_response)
                     # saving thread id
                     chat_obj.assistant_thread_id = agent_response["thread_id"]
                     maindb_session.commit()
-                    # sending agent response 
+                    # sending agent response
                     await manager.send_agent_response(websocket=websocket, response=agent_response, chat_id=chat_id)
                 else:
                     await manager.send_error_message(websocket=websocket, message=agent_response)
@@ -437,9 +424,7 @@ async def assistant_agent_endpoint(
     else:
         await manager.disconnect(websocket=websocket, code=1007, reason=validator.error_message)
 
-        
-        
-        
+
 @router.get("/{chat_id}/messages")
 async def get_messages(
     chat_id: UUID,

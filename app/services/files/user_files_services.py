@@ -43,7 +43,7 @@ class UserFileService:
         return FileMapper.map_to_file_response(file_obj)
 
     def upload_file_callback(self, file_path: str, file_id: UUID, file_extension: str, callback=None):
-        with open(file_path, 'rb') as file:
+        with open(file_path, "rb") as file:
             metadata = {"media_type": file_extension}
             blob_name = self.blob_service.blob_upload_file(file, metadata=metadata)
             file_name = os.path.basename(file_path)

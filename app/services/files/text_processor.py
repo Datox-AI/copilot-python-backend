@@ -26,7 +26,7 @@ class TextProcessor:
         output = []
         i = 0
         while i < len(tokens):
-            chunk_tokens = tokens[i: i + max_tokens]
+            chunk_tokens = tokens[i : i + max_tokens]
             chunk = self.tokenizer.decode(chunk_tokens)
             last_punctuation = max([chunk.rfind(p) for p in self.PUNCTUATION], default=-1)
             if last_punctuation != -1 and last_punctuation > self.CHARS_PER_TOKEN * min_tokens:
@@ -48,8 +48,8 @@ class TextProcessor:
                 elements = partition(file=file_like)
                 texts = [element.text for element in elements]
             elif file_type in ["csv", "xlsx"]:
-                df = pd.read_csv(file_like, engine='python') if file_type == "csv" else pd.read_excel(file_like)
-                texts = df.map(str).apply(lambda x: ' '.join(x), axis=1).tolist()
+                df = pd.read_csv(file_like, engine="python") if file_type == "csv" else pd.read_excel(file_like)
+                texts = df.map(str).apply(lambda x: " ".join(x), axis=1).tolist()
             elif file_type == "txt":
                 file_like.seek(0)
                 texts = file_like.read().decode("utf-8").splitlines()

@@ -22,22 +22,18 @@ load_dotenv(override=True)
 THRESHOLD = 0.3
 TOP_K = 5
 
+
 @tool
 def get_documents(prompt):
     """This tool for get relevant documents from sharepoint"""
     print(prompt, "---prompt")
-    relevant_docs = get_documents_from_azure_search(
-        user_query=prompt,
-        search_type="hybrid"
-    )
+    relevant_docs = get_documents_from_azure_search(user_query=prompt, search_type="hybrid")
     final_docs_content = ""
     for doc in relevant_docs:
         final_docs_content = (
-            final_docs_content
-            + f"FILE NAME: {doc['metadata_spo_item_name']}\nFILE CONTENT: {doc['content']}\n\n"
+            final_docs_content + f"FILE NAME: {doc['metadata_spo_item_name']}\nFILE CONTENT: {doc['content']}\n\n"
         )
     return final_docs_content, relevant_docs
-
 
 
 def filter_data_by_reranker_score(data, difference_threshold=0.5):
@@ -62,6 +58,7 @@ def filter_data_by_reranker_score(data, difference_threshold=0.5):
         return filtered_data[:TOP_K]
     return filtered_data
 
+
 def get_embeddings(text: str):
     # There are a few ways to get embeddings. This is just one example.
     import openai
@@ -74,10 +71,7 @@ def get_embeddings(text: str):
         api_key=open_ai_key,
         api_version="2023-08-01-preview",
     )
-    embedding = client.embeddings.create(
-        input=[text], 
-        model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
-    )
+    embedding = client.embeddings.create(input=[text], model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"))
     return embedding.data[0].embedding
 
 
@@ -90,33 +84,30 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
     )
     if search_type == "hybrid":
         vector_query = VectorizedQuery(
-            vector=get_embeddings(user_query), 
-            k_nearest_neighbors=TOP_K, 
-            fields="contentVector",            
+            vector=get_embeddings(user_query),
+            k_nearest_neighbors=TOP_K,
+            fields="contentVector",
         )
 
         search_result = azure_client.search(
             vector_queries=[vector_query],
             select=[
                 "id",
-                "content", 
+                "content",
                 "metadata_spo_item_name",
                 "metadata_spo_item_path",
                 "metadata_spo_item_content_type",
                 "metadata_spo_item_last_modified",
                 "metadata_spo_item_size",
-                "metadata_spo_item_weburi"
+                "metadata_spo_item_weburi",
             ],
-            top=TOP_K
+            top=TOP_K,
         )
         return [doc for doc in search_result]
-    
+
     elif search_type == "semantic":
         search_result = azure_client.search(
-            search_text=user_query, 
-            query_type="semantic", 
-            semantic_configuration_name="semantic_search",
-            top=TOP_K
+            search_text=user_query, query_type="semantic", semantic_configuration_name="semantic_search", top=TOP_K
         )
 
         results = [doc for doc in search_result]
@@ -124,9 +115,7 @@ def get_documents_from_azure_search(user_query: str, search_type: str):
         return filtered_results
 
 
-
 class RAGAssistantAgent:
-
     def __init__(self, thread_id: Union[str, None]):
         # setting up retriever
         client = AzureOpenAI(
@@ -145,7 +134,6 @@ class RAGAssistantAgent:
 
         self.agent = OpenAIAssistantRunnable(assistant_id=assistant_id, client=client, as_agent=True)
 
-
     def unique_relevant_docs(self, docs):
         unique_file_paths = set()
         filtered_docs = []
@@ -154,7 +142,6 @@ class RAGAssistantAgent:
                 filtered_docs.append(doc)
                 unique_file_paths.add(doc["metadata_spo_item_weburi"])
         return filtered_docs
-
 
     def execute_agent(self, input: str):
         response = self.agent.invoke(input={"content": input, "thread_id": self.thread_id})

@@ -30,14 +30,13 @@ from .user_files_services import UserFileService
 
 class AzureSearchIndexManager:
     MAX_UPLOAD_DOCUMENT_LENGTH = 1000
-    
+
     def __init__(
         self,
         session: Annotated[Session, Depends(create_maindb_session)],
         user: Annotated[CurrentUser, Depends(current_user)],
         index_name: str,
-        chat_id: Union[uuid.UUID, None]  = None,
-        
+        chat_id: Union[uuid.UUID, None] = None,
     ):
         # Load environment variables from a .env file if present
         load_dotenv(override=True)
@@ -48,7 +47,7 @@ class AzureSearchIndexManager:
         self.openai_client = AzureOpenAI(
             azure_endpoint=os.environ.get("GPT4_TURBO_AZURE_OPENAI_ENDPOINT"),
             api_key=os.environ.get("GPT4_TURBO_AZURE_OPENAI_API_KEY"),
-            api_version=os.environ.get("GPT4_TURBO_OPENAI_API_VERSION")
+            api_version=os.environ.get("GPT4_TURBO_OPENAI_API_VERSION"),
         )
 
         # Setup Azure Search Index Client
@@ -58,59 +57,57 @@ class AzureSearchIndexManager:
         )
         self.text_processor = TextProcessor()
 
-        self.index_name = index_name 
-        self.search_client = SearchClient(os.environ.get("AZURE_COGNITIVE_SEARCH_INDEX_URL"),
-                                          index_name=self.index_name,
-                                          credential=self.credential)
-        
+        self.index_name = index_name
+        self.search_client = SearchClient(
+            os.environ.get("AZURE_COGNITIVE_SEARCH_INDEX_URL"), index_name=self.index_name, credential=self.credential
+        )
+
         self.user_file_service = UserFileService(session=session, user=user)
 
     def create_search_index(self):
         fields = [
-            SimpleField(name="id", type=SearchFieldDataType.String, key=True, sortable=True, filterable=True,
-                        facetable=True),
+            SimpleField(
+                name="id", type=SearchFieldDataType.String, key=True, sortable=True, filterable=True, facetable=True
+            ),
             SearchableField(name="content", type=SearchFieldDataType.String, filterable=True),
             SearchableField(name="file_type", type=SearchFieldDataType.String, filterable=True),
             SearchableField(name="userId", type=SearchFieldDataType.String, filterable=True),
             SearchableField(name="chatId", type=SearchFieldDataType.String, filterable=True),
             SearchableField(name="fileId", type=SearchFieldDataType.String, filterable=True),
-            SearchField(name="contentVector", type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
-                        searchable=True, vector_search_dimensions=1536, vector_search_profile_name="myHnswProfile")
+            SearchField(
+                name="contentVector",
+                type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
+                searchable=True,
+                vector_search_dimensions=1536,
+                vector_search_profile_name="myHnswProfile",
+            ),
         ]
 
         vector_search = VectorSearch(
             algorithms=[
-                HnswAlgorithmConfiguration(name="hello1", kind="hnsw",
-                                           parameters={"m": 4,
-                                                       "efConstruction": 400,
-                                                       "efSearch": 500,
-                                                       "metric": "cosine"
-                                                       })
+                HnswAlgorithmConfiguration(
+                    name="hello1",
+                    kind="hnsw",
+                    parameters={"m": 4, "efConstruction": 400, "efSearch": 500, "metric": "cosine"},
+                )
             ],
-            profiles=[
-                VectorSearchProfile(name="myHnswProfile", algorithm_configuration_name="hello1")
-            ]
+            profiles=[VectorSearchProfile(name="myHnswProfile", algorithm_configuration_name="hello1")],
         )
 
         index = SearchIndex(name=self.index_name, fields=fields, vector_search=vector_search)
         result = self.index_client.create_or_update_index(index)
-        print(f'Index {result.name} created')
+        print(f"Index {result.name} created")
 
     def generate_embeddings(self, text):
-        response = self.openai_client.embeddings.create(input=text, model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"))
+        response = self.openai_client.embeddings.create(
+            input=text, model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
+        )
         return response.data[0].embedding
 
     def add_or_update_documents(self, documents):
         self.search_client.merge_or_upload_documents(documents=documents)
 
-    def process_and_store_texts_for_chatgpt_index(
-        self, 
-        file_id, 
-        file_content, 
-        file_type, 
-        file_extension, 
-        file_name
-    ):
+    def process_and_store_texts_for_chatgpt_index(self, file_id, file_content, file_type, file_extension, file_name):
         print(self.index_name, "   ----- azure ai index name")
         extracted_texts = self.text_processor.extract_texts(file_content, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
@@ -121,7 +118,7 @@ class AzureSearchIndexManager:
         print(file_id, " file_id")
         print(chat_id, " chat_id")
         print(user_id, " user_id")
-        
+
         chunk_documents = []
         for chunk_text in chunked_texts:
             chunk_embeddings = self.generate_embeddings(chunk_text)
@@ -134,16 +131,14 @@ class AzureSearchIndexManager:
                 "chatId": chat_id,
                 "fileId": file_id,
                 "content": chunk_text,
-                "contentVector": chunk_embeddings
+                "contentVector": chunk_embeddings,
             }
             chunk_documents.append(chunk_document)
         # Call add_or_update_documents only once after processing all chunks
         self.add_or_update_documents(chunk_documents)
         return chunk_documents
 
-    def process_and_store_texts_for_assistant_index(
-        self, file_id, file_content, file_type, file_name, assistant_id
-    ):
+    def process_and_store_texts_for_assistant_index(self, file_id, file_content, file_type, file_name, assistant_id):
         extracted_texts = self.text_processor.extract_texts(file_content, file_type)
         chunked_texts = self.text_processor.chunk_texts(extracted_texts)
         print(len(chunked_texts), "   ----- chunked_texts")
@@ -169,34 +164,28 @@ class AzureSearchIndexManager:
                     "fileName": file_name,
                     "fileId": str(file_id),
                     "content": chunk_text,
-                    "contentVector": chunk_embeddings
+                    "contentVector": chunk_embeddings,
                 }
                 chunk_documents.append(chunk_document)
             self.add_or_update_documents(chunk_documents)
-    
-            
+
     @staticmethod
     def get_longest_content_document(docs):
-        max_length = -1 
+        max_length = -1
         doc_with_longest_content = None
         for doc in docs:
             if len(doc["content"]) > max_length:
                 doc_with_longest_content = doc
                 max_length = len(doc["content"])
         return doc_with_longest_content
-    
-    
+
     def search_documents(self, prompt, chat_id, file_ids, chunks):
         embedding = self.generate_embeddings(prompt)
-        vector_query = VectorizedQuery(
-            vector=embedding, 
-            k_nearest_neighbors=3,
-            fields="contentVector"
-        )
+        vector_query = VectorizedQuery(vector=embedding, k_nearest_neighbors=3, fields="contentVector")
         # files_ids_str = None
         # if file_ids:
         #     files_ids_str = ",".join(file_ids)
-            
+
         # if files_ids_str:
         #     filter = f"chatId eq '{chat_id}' and search.in(fileId, '{files_ids_str}', ',')"
         # else:
@@ -209,18 +198,18 @@ class AzureSearchIndexManager:
                 vector_filter_mode=VectorFilterMode.PRE_FILTER,
                 filter=filter,
                 select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-                top=2
+                top=2,
             )
 
-            results = [x for x in result]    
-            print(len(results), ' found in 1')
+            results = [x for x in result]
+            print(len(results), " found in 1")
             if results == []:
                 doc_with_longest_content = self.get_longest_content_document(chunks)
                 if doc_with_longest_content:
                     docs.append(doc_with_longest_content)
-            else:                
+            else:
                 docs.append(results[0])
-                
+
         text_content = ""
         content_dict = {}
         for doc in docs:
@@ -230,13 +219,9 @@ class AzureSearchIndexManager:
             else:
                 content_dict[file_id] += f"\n{doc['content']}"
 
-
         for key, value in content_dict.items():
             text_content += f"FILE NAME: {key}\nFILE CONTENT:\n{value}\n\n\n"
-         
-        print(len(docs), "   ----- len results")
-        
-        return text_content
-    
-    
 
+        print(len(docs), "   ----- len results")
+
+        return text_content

@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, clear_mappers
 
 from app.backend.session import create_admindb_session, create_maindb_session
 from app.models.admindb import ApplicationUser, Role, Tenant, UserRole

@@ -14,7 +14,7 @@ class AzureTokenErrorMessagesEnum(Enum):
 class SnowflakeTokenErrorEnum(Enum):
     invalid = "Snowflake token is invalid"
     expired = "Snowflake token is expired"
-    
+
     @classmethod
     def list(cls):
         return list(map(lambda c: c.value, cls))

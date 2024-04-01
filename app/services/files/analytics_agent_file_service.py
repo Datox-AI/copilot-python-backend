@@ -27,7 +27,7 @@ class AnalyticsAgentFileService:
         self.session = session
         self.blob_service = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_AGENT_CONTAINER"])
         self.blob_service = AzureBlobStorageManager(os.environ["AZURE_STORAGE_DA_ASSISTANT_AGENT_CONTAINER"])
-        
+
         self._check_chat_id()
 
     def _check_chat_id(self):
@@ -60,7 +60,7 @@ class AnalyticsAgentFileService:
         if chat_message_with_store_id:
             downloaded_stream = self.blob_service.download_csv_file(stored_file_id=stored_file_id)[0]
             df = pd.read_csv(downloaded_stream)
-            df = df.fillna('')
+            df = df.fillna("")
             df_data = df.to_dict(orient="records")
             if len(df_data) > 10:
                 return {"data_status": "incomplete", "data": df_data[:10]}

@@ -12,22 +12,21 @@ router = APIRouter(prefix="/api/snowflake_integration", tags=["Snowflake Integra
 
 # Endpoint to initialize OAuth configuration
 @router.post("/init_oauth")
-def init_oauth(config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+def init_oauth(
+    config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
     return snow_integration_service.init_oauth_logic(config=config, request=request)
 
 
 @router.get("/get_oauth")
-def get_oauth(
-    request: Request,
-    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
-):
-    
-    
+def get_oauth(request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
     return snow_integration_service.get_oauth_logic(request=request)
 
 
 @router.put("/update_oauth")
-def update_oauth(config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+def update_oauth(
+    config: OAuthConfig, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
     return snow_integration_service.update_oauth_logic(config=config, request=request)
 
 
@@ -39,15 +38,15 @@ def delete_oauth(snow_integration_service: Annotated[SnowflakeIntegrationService
 
 @router.put("/change_role")
 def change_role(
-    request: SnowflakeRole,
-    token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    request: SnowflakeRole, token: str = Header(...), snow_integration_service: SnowflakeIntegrationService = Depends()
 ):
     return snow_integration_service.change_default_role_logic(new_role_request=request, token=token)
 
 
 @router.get("/callback")
-async def oauth_callback(code: str, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]):
+async def oauth_callback(
+    code: str, request: Request, snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()]
+):
     return await snow_integration_service.oauth_callback_logic(code=code, request=request)
 
 
@@ -61,7 +60,9 @@ async def refresh_access_token(
 
 # Endpoint to list data warehouses
 @router.get("/data_warehouses")
-def list_data_warehouses(snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()], token: str = Header(...)):
+def list_data_warehouses(
+    snow_integration_service: Annotated[SnowflakeIntegrationService, Depends()], token: str = Header(...)
+):
     return snow_integration_service.list_data_warehouses_logic(token)
 
 
@@ -74,9 +75,7 @@ def list_databases(token: str = Header(...), snow_integration_service: Snowflake
 # Endpoint to list schemas of a specific database in Snowflake
 @router.get("/schemas/{db_name}")
 def get_schemas(
-    db_name: str,
-    token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    db_name: str, token: str = Header(...), snow_integration_service: SnowflakeIntegrationService = Depends()
 ):
     return snow_integration_service.get_schemas_logic(token, db_name)
 
@@ -87,7 +86,7 @@ def select_schema(
     db_name: str,
     schema_name: str,
     token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
 ):
     return snow_integration_service.select_schema_logic(token, db_name, schema_name)
 
@@ -98,7 +97,7 @@ def get_tables(
     db_name: str,
     schema_name: str,
     token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
 ):
     return snow_integration_service.get_tables_logic(token, db_name, schema_name)
 
@@ -109,7 +108,7 @@ def get_views(
     db_name: str,
     schema_name: str,
     token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
 ):
     return snow_integration_service.get_views_logic(token, db_name, schema_name)
 
@@ -121,7 +120,7 @@ def get_columns(
     schema_name: str,
     table_or_view_name: str,
     token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
 ):
     return snow_integration_service.get_columns_logic(token, db_name, schema_name, table_or_view_name)
 
@@ -132,15 +131,13 @@ def preview_data(
     schema_name: str,
     table_or_view_name: str,
     token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
+    snow_integration_service: SnowflakeIntegrationService = Depends(),
 ):
     return {
         "data_preview": snow_integration_service.preview_data_logic(token, db_name, schema_name, table_or_view_name)
     }
 
+
 @router.get("/available_roles")
-def get_available_roles(
-    token: str = Header(...),
-    snow_integration_service: SnowflakeIntegrationService = Depends()
-):
+def get_available_roles(token: str = Header(...), snow_integration_service: SnowflakeIntegrationService = Depends()):
     return snow_integration_service.get_available_roles_logic(token)

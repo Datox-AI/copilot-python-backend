@@ -119,7 +119,6 @@ class DataAnalyticAgent:
 
         return agent_response, is_agent_response_valid
 
-
     def _delete_extra_csv_files(self, agent_response: dict, message_id: UUID):
         if agent_response["stored_file_id"]:
             self.azure_blob_storage_manager.delete_extra_csv_files(
@@ -149,12 +148,12 @@ class AgentSnowflakeEngineManager:
         #     password='newSecure1',
         #     account='CIPLNUD-YM27169',
         #     database="THREAD_SAMPLE",
-        #     schema="PUBLIC", 
+        #     schema="PUBLIC",
         #     warehouse='COMPUTE_WH',
         #     role = 'ACCOUNTADMIN'
         # )
         # engine = create_engine(url)
-        
+
         snowflake_connection_url = "snowflake://{}/{}/{}?warehouse={}&authenticator=oauth&token={}".format(
             chat_snowflake_data_obj.snowflake_account,
             chat_snowflake_data_obj.database_name,
@@ -174,7 +173,7 @@ class AgentSnowflakeEngineManager:
                 error_message = SnowflakeTokenErrorEnum.invalid.value
             elif "OAuth access token expired" in str(e.orig):
                 error_message = SnowflakeTokenErrorEnum.expired.value
-                
+
             else:
                 error_message = str(e.orig)
             return False, error_message

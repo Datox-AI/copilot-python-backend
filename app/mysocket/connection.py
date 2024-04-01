@@ -25,17 +25,12 @@ class ConnectionManager:
         print(f"closing....   reason: {reason}")
         if not closed:
             try:
-                await websocket.send_json(
-                    {
-                        "status": "closed",
-                        "message": reason
-                    }
-                )
+                await websocket.send_json({"status": "closed", "message": reason})
                 await websocket.close(code=code)
             except Exception as e:
                 print(f"closing socket raised an error: {e}")
                 pass
-        self.active_connections.remove(websocket) 
+        self.active_connections.remove(websocket)
 
     async def receive_token_values(self, websocket: WebSocket):
         try:
@@ -47,15 +42,14 @@ class ConnectionManager:
             if "snowflake_token" not in received_json.keys():
                 await self.disconnect(websocket=websocket, reason="snowflake_token key not found")
                 return "disconnected"
-                
+
             elif "azure_token" not in received_json.keys():
                 await self.disconnect(websocket=websocket, reason="azure_token key not found")
                 return "disconnected"
-                
+
             else:
                 return received_json
-            
-    
+
     async def send_error_message(self, message: str, websocket: WebSocket):
         await websocket.send_json({"status": "error", "message": message})
 
