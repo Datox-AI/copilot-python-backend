@@ -1,31 +1,26 @@
-import uuid
-import os
 import asyncio
+import os
 import shutil
+import uuid
 from datetime import datetime
-from typing import Annotated, List
-from uuid import UUID
+from typing import Annotated
 
-from fastapi import Depends, HTTPException, UploadFile, Response
-from sqlalchemy.orm import Session
 from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, Response, UploadFile
 from openai import AzureOpenAI
-from langchain.agents.openai_assistant import OpenAIAssistantRunnable
+from sqlalchemy.orm import Session
 
-from app.const import STATIC_FILES_DESTINATION
 from app.backend.session import create_maindb_session
+from app.const import STATIC_FILES_DESTINATION
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureAsyncBlobStorageManager
+from app.infrastructure.assistants.prompt import ASSISTANT_INSTRUCTION_TEMPLATE
 from app.models.maindb import Assistant, AssistantFile
-from app.shared.auth.azure_scheme import current_user
+from app.schemas.assistants import AssistantMapper, CreateAssistantSchema, UpdateAssistantSchema
+from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
-from app.schemas.assistants import CreateAssistantSchema, AssistantMapper, UpdateAssistantSchema
 from app.services.files.azure_index_manager import AzureSearchIndexManager
 from app.services.messages.user_message_services import MIME_TYPE_MAP
-from app.infrastructure.analytics_agent.azure_storage_manager import (
-    AzureBlobStorageManager,
-    AzureAsyncBlobStorageManager,
-)
-from app.infrastructure.assistants.prompt import ASSISTANT_INSTRUCTION_TEMPLATE
-
+from app.shared.auth.azure_scheme import current_user
 
 load_dotenv(override=True)
 
@@ -53,7 +48,7 @@ class AssistantService:
         self,
         download_icon_api_url: str,
         request_schema: CreateAssistantSchema,
-        knowledge_files: List[UploadFile],
+        knowledge_files: list[UploadFile],
         icon_file: UploadFile = None,
     ):
         try:
@@ -137,7 +132,7 @@ class AssistantService:
             raise HTTPException(detail=f"Assistant creation failed: {e}", status_code=500)
 
     async def update_assistant_files(
-        self, assistant_id: str, files_to_delete: List[str], new_files: List[UploadFile], download_icon_api_url: str
+        self, assistant_id: str, files_to_delete: list[str], new_files: list[UploadFile], download_icon_api_url: str
     ):
         assistant_obj = (
             self.session.query(Assistant)
@@ -248,8 +243,8 @@ class AssistantService:
         if assistant_obj:
             try:
                 self.openai_client.beta.assistants.delete(assistant_id=assistant_id)
-            except:
-                pass
+            except Exception as e:
+                print(e)
 
             # Mark the assistant and its chats as deleted
             chat_objs = assistant_obj.chats
@@ -286,7 +281,7 @@ class AssistantService:
             if assistant.created_by != self.user.user_id:
                 raise HTTPException(status_code=403, detail="You are not authorized to view this assistant")
             return AssistantMapper.map_to_assistant_response(assistant=assistant, request_url=download_icon_api_url)
-        raise HTTPException(status_code=404, content="Assistant not found")
+        raise HTTPException(status_code=404, detail="Assistant not found")
 
     def get_assistant_chats(self, assistant_id: str):
         assistant = (
@@ -297,7 +292,9 @@ class AssistantService:
         if assistant:
             if assistant.created_by != self.user.user_id:
                 raise HTTPException(status_code=403, detail="You are not authorized to view this assistant's chats")
-            return [AssistantMapper.map_to_chat_response(chat=chat) for chat in assistant.chats]
+            return [
+                ChatMapper.map_to_chat_response(chat=chat, messages_count=0, files_count=0) for chat in assistant.chats
+            ]
         raise HTTPException(status_code=404, detail="Assistant not found")
 
     async def download_icon(self, icon_id: str):
@@ -335,7 +332,8 @@ class AssistantService:
             file_location = f"{image_directory}/{icon_file_name}"
             with open(file_location, "wb") as buffer:
                 shutil.copyfileobj(icon_file.file, buffer)
-        except:
+        except Exception as e:
+            print(f"Image failed to copy: {e}")
             return None
         finally:
             icon_file.file.close()
