@@ -67,8 +67,6 @@ class AnalyticsAgentMessageCreateService:
         self.session.add(new_agent_message)
         self.session.commit()
 
-    
-
     def create_cancelled_agent_response(self, message_id: UUID):
         new_cancelled_agent_message = Message(
             id=message_id,

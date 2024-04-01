@@ -61,7 +61,6 @@ class AzureBlobStorageManager:
         blob_client.upload_blob(file.file, metadata=metadata)
         return file_id
 
-    
     def blob_upload_file(self, file: UploadFile, metadata=None) -> str:
         file_id = str(uuid.uuid4())
         blob_client = self.container_client.get_blob_client(blob=file_id)
@@ -93,7 +92,7 @@ class AzureAsyncBlobStorageManager:
 
     async def save_and_upload_file(self, session: Session, file: UploadFile, file_id: str):
         file_name = file.filename
-        file_extension = file_name.split('.')[-1]
+        file_extension = file_name.split(".")[-1]
         blob_name = f"{file_id}.{file_extension}"
         try:
             metadata = {"media_type": file.content_type}
@@ -108,19 +107,14 @@ class AzureAsyncBlobStorageManager:
         session.commit()
 
         return file_id
-    
+
     async def save_and_upload_assistant_file(
-        self, 
-        file_id: str, 
-        file_content: bytes,
-        session: Session, 
-        uploaded_file: UploadFile, 
-        assistant_obj: Assistant
+        self, file_id: str, file_content: bytes, session: Session, uploaded_file: UploadFile, assistant_obj: Assistant
     ):
         file_name = uploaded_file.filename
         if "." not in file_name:
             raise ValueError("Uploaded file has no extension")
-        file_extension = file_name.split('.')[-1]
+        file_extension = file_name.split(".")[-1]
         blob_name = f"{file_id}.{file_extension}"
         print(blob_name, " blob_name")
         # try:
@@ -128,7 +122,7 @@ class AzureAsyncBlobStorageManager:
         blob_client = self.container_client.get_blob_client(blob=file_id)
         await blob_client.upload_blob(data=file_content, metadata=metadata, overwrite=True)
         # except Exception as e:
-            # raise ValueError(f"Error during file upload: {e}")
+        # raise ValueError(f"Error during file upload: {e}")
 
         knowledge_file_obj = AssistantFile(
             id=file_id,
@@ -145,7 +139,6 @@ class AzureAsyncBlobStorageManager:
 
         return file_id
 
-
     async def upload_file(self, file: UploadFile) -> str:
         file_id = str(uuid.uuid4())
         blob_client = self.container_client.get_blob_client(blob=file_id)
@@ -154,7 +147,7 @@ class AzureAsyncBlobStorageManager:
         metadata = {"media_type": file.content_type}
         await blob_client.upload_blob(file.file, metadata=metadata)
         return file_id
-    
+
     async def download_file(self, file_id: uuid.UUID):
         try:
             blob_client = self.container_client.get_blob_client(blob=str(file_id))

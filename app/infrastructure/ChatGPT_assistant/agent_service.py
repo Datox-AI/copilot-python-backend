@@ -48,7 +48,7 @@ def get_documents(query: str, user_id: str, chat_id: str, file_id: str = None):
         vector_filter_mode=VectorFilterMode.PRE_FILTER,
         filter=filter,
         select=["content", "file_name", "file_type", "file_extension", "fileId", "chatId"],
-        top=5
+        top=5,
     )
     text_content = ""
     content_dict = {}
@@ -61,7 +61,7 @@ def get_documents(query: str, user_id: str, chat_id: str, file_id: str = None):
 
     for key, value in content_dict.items():
         text_content += f"FILE NAME: {key}\nFILE_CONTENT:\n{value}\n\n\n"
-        
+
     return text_content
 
 
@@ -101,12 +101,9 @@ class ChatGPTAssistant:
         file_context: str = None,
     ):
         if file_context:
-            user_input = f"{user_input}\n\n{file_context}" 
+            user_input = f"{user_input}\n\n{file_context}"
         tool_map = {tool.name: tool for tool in self.tools}
-        response = self.agent.invoke(input={
-            "content": user_input, 
-            "thread_id": self.thread_id
-        })
+        response = self.agent.invoke(input={"content": user_input, "thread_id": self.thread_id})
         while not isinstance(response, AgentFinish):
             tool_outputs = []
             run_id = response[0].run_id

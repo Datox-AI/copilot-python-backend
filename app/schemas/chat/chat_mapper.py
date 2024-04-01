@@ -55,7 +55,7 @@ class ChatMapper:
             )
         else:
             snowflake_data_response = None
-            
+
         return ChatHistoryResponse(
             id=chat.id,
             name=chat.name,
@@ -78,7 +78,6 @@ class ChatMapper:
             type=chat.type,
             messages=message_responses,
         )
-
 
     @staticmethod
     def map_to_assistant_chat_history_response(chat: Chat, messages: List[Message]):

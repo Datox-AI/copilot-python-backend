@@ -14,7 +14,6 @@ class ChatType(Enum):
             ChatType.FileSearch: "Used for file search-based chats",
             ChatType.DataAnalytics: "Used for data analytics chats",
             ChatType.Assistant: "Used for Assistants chats",
-            
         }
         return descriptions[self]
 

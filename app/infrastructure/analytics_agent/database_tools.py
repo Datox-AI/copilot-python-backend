@@ -47,7 +47,6 @@ class CustomSQLDatabase(SQLDatabase):
 
             return f"Data: {res}\nStored ID: {stored_file_id}"
 
-
     def run_and_save_no_throw(
         self,
         command: str,
@@ -66,7 +65,6 @@ class CustomSQLDatabase(SQLDatabase):
         except SQLAlchemyError as e:
             """Format the error message"""
             return f"Error: {e}"
-
 
     def run(
         self,
@@ -101,8 +99,6 @@ class CustomSQLDatabase(SQLDatabase):
 
             return str(res)
 
-
-    
     def run_for_assistant(
         self,
         command: str,
@@ -110,7 +106,7 @@ class CustomSQLDatabase(SQLDatabase):
         fetch: Literal["all", "one", "cursor"] = "all",
     ):
         result = self._execute(command, fetch)
-        # saving the data 
+        # saving the data
         df = pd.DataFrame(result)
         stored_file_id = self.blob_manager.upload_csv(df=df, message_id=message_id)
         res = [
@@ -127,19 +123,14 @@ class CustomSQLDatabase(SQLDatabase):
                 res = f"Over the limit.\nFirst {res_length} rows of data: {first_5_res}"
             else:
                 res = str(res)
-            return {
-                "res": res, 
-                "stored_file_id": f"{message_id}_{stored_file_id}.csv"
-            }
-        
+            return {"res": res, "stored_file_id": f"{message_id}_{stored_file_id}.csv"}
+
     def run_and_no_throw_for_assistant(
         self,
-        command: str, 
+        command: str,
         message_id: str,
         fetch: Literal["all", "one", "cursor"] = "all",
-        
     ):
-    
         try:
             return self.run_for_assistant(command, message_id, fetch)
         except SQLAlchemyError as e:
@@ -162,9 +153,8 @@ class QuerySaveSQLDataBaseTool(QuerySQLDataBaseTool):
         return self.db.run_and_save_no_throw(query, message_id)
 
 
-
-
 forbidden_keywords = ["alter", "drop", "modify", "create", "insert", "delete", "update", "truncate", "rename"]
+
 
 def is_query_allowed(sql_query):
     parsed = sqlparse.parse(sql_query)[0]

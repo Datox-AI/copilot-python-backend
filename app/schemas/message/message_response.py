@@ -25,6 +25,7 @@ class SharePointFilesResponse(BaseSchema):
     last_modified: datetime.datetime
     item_size: Union[int, None]
 
+
 class AssistantMessageDocument(BaseSchema):
     name: str
     type: str

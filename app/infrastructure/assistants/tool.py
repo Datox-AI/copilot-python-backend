@@ -1,4 +1,4 @@
-import os 
+import os
 from typing import List
 from uuid import UUID
 from langchain.tools import tool
@@ -10,24 +10,19 @@ from azure.search.documents.models import VectorizedQuery
 THRESHOLD = 0.3
 TOP_K = 5
 
+
 @tool
 def get_documents(prompt: str, knowledge_files_ids: List[UUID]):
     """This tool is for getting relevant documents"""
     print(prompt, "---prompt")
     relevant_docs = get_documents_from_azure_search(
-        user_query=prompt,
-        search_type="vector",
-        knowledge_files_ids=knowledge_files_ids
+        user_query=prompt, search_type="vector", knowledge_files_ids=knowledge_files_ids
     )
     final_docs_content = ""
     for doc in relevant_docs:
-        final_docs_content = (
-            final_docs_content
-            + f"FILE NAME: {doc['fileName']}\nFILE CONTENT: {doc['content']}\n\n"
-        )
+        final_docs_content = final_docs_content + f"FILE NAME: {doc['fileName']}\nFILE CONTENT: {doc['content']}\n\n"
     print(final_docs_content, "---final docs content")
     return final_docs_content, relevant_docs
-
 
 
 def filter_data_by_reranker_score(data, difference_threshold=0.5):
@@ -52,6 +47,7 @@ def filter_data_by_reranker_score(data, difference_threshold=0.5):
         return filtered_data[:TOP_K]
     return filtered_data
 
+
 def get_embeddings(text: str):
     # There are a few ways to get embeddings. This is just one example.
     import openai
@@ -64,10 +60,7 @@ def get_embeddings(text: str):
         api_key=open_ai_key,
         api_version="2023-08-01-preview",
     )
-    embedding = client.embeddings.create(
-        input=[text], 
-        model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME")
-    )
+    embedding = client.embeddings.create(input=[text], model=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME"))
     return embedding.data[0].embedding
 
 
@@ -83,33 +76,33 @@ def get_documents_from_azure_search(user_query: str, search_type: str, knowledge
     search_filter = f"search.in(fileId, '{file_ids_str}', ',')"
     if search_type == "vector":
         vector_query = VectorizedQuery(
-            vector=get_embeddings(user_query), 
-            k_nearest_neighbors=TOP_K, 
-            fields="contentVector", 
+            vector=get_embeddings(user_query),
+            k_nearest_neighbors=TOP_K,
+            fields="contentVector",
         )
 
         search_result = azure_client.search(
             vector_queries=[vector_query],
             select=[
                 "id",
-                "content", 
+                "content",
                 "fileId",
                 "fileType",
                 "fileName",
                 "assistantId",
             ],
             top=TOP_K,
-            filter=search_filter           
+            filter=search_filter,
         )
         return [doc for doc in search_result]
-    
+
     elif search_type == "semantic":
         search_result = azure_client.search(
-            search_text=user_query, 
-            query_type="semantic", 
+            search_text=user_query,
+            query_type="semantic",
             semantic_configuration_name="semantic_search",
             top=TOP_K,
-            filter=search_filter           
+            filter=search_filter,
         )
 
         results = [doc for doc in search_result]

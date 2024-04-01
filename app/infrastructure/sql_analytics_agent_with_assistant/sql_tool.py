@@ -6,7 +6,19 @@ from app.infrastructure.sql_analytics_agent_with_assistant.prompts import db_que
 from app.infrastructure.analytics_agent.agent_service import CustomSQLDatabase
 
 
-forbidden_keywords = ["alter", "drop", "modify", "create",  "create or replace", "insert", "delete", "update", "truncate", "rename"]
+forbidden_keywords = [
+    "alter",
+    "drop",
+    "modify",
+    "create",
+    "create or replace",
+    "insert",
+    "delete",
+    "update",
+    "truncate",
+    "rename",
+]
+
 
 def is_query_allowed(sql_query):
     parsed = sqlparse.parse(sql_query)[0]
@@ -38,5 +50,3 @@ class CustomQuerySQLDataBaseTool(QuerySQLDataBaseTool):
         else:
             print("IT is nott")
             return "This query cannot be runned since it contains DML or DDL statement"
-
-

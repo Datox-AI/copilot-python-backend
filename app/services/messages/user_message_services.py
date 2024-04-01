@@ -27,17 +27,18 @@ from app.shared.auth.azure_scheme import current_user
 from .message_create_stream import OpenAIChatStream
 
 MIME_TYPE_MAP = {
-    'application/pdf': 'pdf',
-    'text/csv': 'csv',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
-    'application/vnd.ms-powerpoint': 'ppt',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation': 'pptx',
-    'text/plain': 'txt',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
-    'application/msword': 'doc',
+    "application/pdf": "pdf",
+    "text/csv": "csv",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-powerpoint": "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+    "text/plain": "txt",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/msword": "doc",
 }
 
 load_dotenv(override=True)
+
 
 class UserMessageService:
     def __init__(
@@ -54,10 +55,7 @@ class UserMessageService:
         self.async_blob_service = AzureAsyncBlobStorageManager(os.environ["AZURE_STORAGE_FILE_CONTAINER"])
         chat_gpt_azure_index_name = os.getenv("AZURE_COGNITIVE_SEARCH_CHATGPT_INDEX_NAME")
         self.azure_indexer = AzureSearchIndexManager(
-            user=user, 
-            session=session, 
-            chat_id=self.chat_id,
-            index_name=chat_gpt_azure_index_name
+            user=user, session=session, chat_id=self.chat_id, index_name=chat_gpt_azure_index_name
         )
         thread_id = self._get_thread_id()
         self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
@@ -76,7 +74,6 @@ class UserMessageService:
             self.session.commit()
 
     async def create_message(self, request: CreateMessageRequest):
-        
         self._check_chat_exists(chat_id=self.chat_id)
         reply_message = None
         if request.replyTo:
@@ -112,48 +109,40 @@ class UserMessageService:
                     file_content=content,
                     file_type=file_type,
                     file_extension=file_extension,
-                    file_name=file_name
+                    file_name=file_name,
                 )
                 all_chunks += chunk_docs
-                new_file = File(
-                    id=uuid.uuid4(),
-                    file_name=file_name,
-                    blob_name=file_id,
-                    file_extension=file_type
-                )
+                new_file = File(id=uuid.uuid4(), file_name=file_name, blob_name=file_id, file_extension=file_type)
                 self.session.add(new_file)
                 self.session.commit()
 
                 new_message_file = MessageFile(
-                    message_id=new_user_message.id,
-                    file_id=new_file.id,
-                    content=None,
-                    token=None 
+                    message_id=new_user_message.id, file_id=new_file.id, content=None, token=None
                 )
-                
+
                 message_files_to_add.append(new_message_file)
                 await upload_file.seek(0)
             print(datetime.now(), " ----after index")
-            
+
             new_user_message.message_files.extend(message_files_to_add)
             self.session.commit()
-            upload_tasks = [self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id) for upload_file, file_id in zip(request.files, uploaded_file_ids)]
+            upload_tasks = [
+                self.async_blob_service.save_and_upload_file(self.session, upload_file, file_id)
+                for upload_file, file_id in zip(request.files, uploaded_file_ids)
+            ]
             await asyncio.gather(*upload_tasks)
             await self.async_blob_service.close()
             file_context = self.azure_indexer.search_documents(
-                prompt=request.prompt, 
+                prompt=request.prompt,
                 file_ids=uploaded_file_ids,
                 chunks=all_chunks,
                 chat_id=self.chat_id,
             )
-            
+
             print(file_context, " ----context")
-    
+
         assistant_response = self.chatgpt_assistant.execute_agent(
-            user_input=request.prompt, 
-            user_id=self.user.user_id, 
-            chat_id=self.chat_id,
-            file_context=file_context
+            user_input=request.prompt, user_id=self.user.user_id, chat_id=self.chat_id, file_context=file_context
         )
         if type(assistant_response) == dict:
             thread_id = assistant_response["thread_id"]

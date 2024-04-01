@@ -24,7 +24,7 @@ class ChatResponse(BaseSchema):
     messages_count: int
     assistant_thread_id: str | None = None
     assistant_id: str | None = None
-    
+
     files_count: int
     last_message: datetime | None = None
     snowflake_data: ChatSnowflakeData | None = None

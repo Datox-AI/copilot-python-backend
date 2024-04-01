@@ -34,5 +34,3 @@ class ChatSnowflakeData(BaseDelete):
     warehouse = Column(String)
 
     chat = relationship("Chat", back_populates="snowflake_data", uselist=False)
-
-

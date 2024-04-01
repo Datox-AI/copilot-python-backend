@@ -11,7 +11,6 @@ from app.services.messages import UserMessageService
 router = APIRouter(prefix="/api/chats", tags=["User messages"])
 
 
-
 @router.post("/{chat_id}/messages")
 async def create_message(
     chat_id: UUID,
@@ -25,6 +24,7 @@ async def create_message(
             raise HTTPException(status_code=400, detail="Max number of files must be 5")
     request = CreateMessageRequest(prompt=prompt, replyTo=replyTo, files=files)
     return await message_service.create_message(request)
+
 
 @router.get("/{chat_id}/messages", response_model=List[UserMessageResponse])
 async def get_messages(chat_id: UUID, message_service: UserMessageService = Depends(UserMessageService)):
