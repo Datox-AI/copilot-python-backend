@@ -213,13 +213,17 @@ class AssistantService:
             assistant_obj.description = (
                 request_schema.description if request_schema.description is not None else assistant_obj.description
             )
-            assistant_obj.instructions = (
-                request_schema.instruction if request_schema.instruction is not None else assistant_obj.instructions
-            )
-            res = self.openai_client.beta.assistants.update(
-                assistant_id=assistant_id, instructions=assistant_obj.instructions, name=assistant_obj.name
-            )
-            print(res)
+            users_instructions_for_assistant = request_schema.instruction
+            if users_instructions_for_assistant is not None:
+                new_instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(
+                    user_instruction=users_instructions_for_assistant
+                )
+                self.openai_client.beta.assistants.update(
+                    assistant_id=assistant_id, instructions=new_instructions, name=assistant_obj.name
+                )
+
+                assistant_obj.instructions = users_instructions_for_assistant
+
             if icon_file:
                 icon_file_name = self._upload_icon_image(icon_file=icon_file)
                 assistant_obj.icon_file_name = icon_file_name
