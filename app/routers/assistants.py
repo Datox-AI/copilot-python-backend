@@ -1,17 +1,14 @@
-import io, os
-from uuid import UUID
-from typing import Annotated, List
+import io
+import os
+from typing import Annotated
 
-from dotenv import load_dotenv
-from fastapi.responses import FileResponse
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, Request
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 
-from app.schemas.assistants import CreateAssistantSchema, CreateAssistantMessageSchema, UpdateAssistantSchema
-from app.services.messages import AssistantMessageService
-from app.services.assistant import AssistantService
 from app.const import ICON_API_PATH, STATIC_FILES_DESTINATION
-
+from app.schemas.assistants import CreateAssistantMessageSchema, CreateAssistantSchema, UpdateAssistantSchema
+from app.services.assistant import AssistantService
+from app.services.messages import AssistantMessageService
 
 router = APIRouter(prefix="/api/assistants", tags=["Assistants"])
 
@@ -66,7 +63,7 @@ async def create_assistant(
     assistant_description: str = Form(...),
     assistant_instruction: str = Form(...),
     icon_file: UploadFile = File(None),
-    knowledge_files: List[UploadFile] = File(None),
+    knowledge_files: list[UploadFile] = File(None),
 ):
     download_icon_api_url = _get_icon_path(request=request)
     if knowledge_files is not None and len(knowledge_files) > 40:
@@ -92,17 +89,16 @@ async def update_assistant(
     assistant_name: str = Form(None),
     assistant_description: str = Form(None),
     assistant_instruction: str = Form(None),
-    icon: UploadFile = File(None),
+    icon_file: UploadFile = File(None),
 ):
     download_icon_api_url = _get_icon_path(request=request)
-
     request_schema = UpdateAssistantSchema(
         name=assistant_name, description=assistant_description, instruction=assistant_instruction
     )
     return await assistant_service.update_assistant(
         assistant_id=assistant_id,
         request_schema=request_schema,
-        icon=icon,
+        icon_file=icon_file,
         download_icon_api_url=download_icon_api_url,
     )
 
@@ -112,8 +108,8 @@ async def update_assistant_files(
     request: Request,
     assistant_id: str,
     assistant_service: Annotated[AssistantService, Depends()],
-    files_to_delete: List[str] = Form(None),
-    new_files: List[UploadFile] = File(None),
+    files_to_delete: list[str] = Form(None),
+    new_files: list[UploadFile] = File(None),
 ):
     print(files_to_delete, " files to delete")
     if files_to_delete == [""] or files_to_delete is None:
