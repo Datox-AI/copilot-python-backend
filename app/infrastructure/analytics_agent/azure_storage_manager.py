@@ -92,7 +92,7 @@ class AzureAsyncBlobStorageManager:
     ):
         file_name = file.filename
         file_extension = file_name.split(".")[-1]
-        blob_name = f"{file_id}.{file_extension}"
+        blob_name = f"{file_id}"
         print(blob_name, " blob_name")
         try:
             metadata = {"media_type": file.content_type}
@@ -117,8 +117,7 @@ class AzureAsyncBlobStorageManager:
         file_name = uploaded_file.filename
         if "." not in file_name:
             raise ValueError("Uploaded file has no extension")
-        file_extension = file_name.split(".")[-1]
-        blob_name = f"{file_id}.{file_extension}"
+        blob_name = f"{file_id}"
         print(blob_name, " blob_name")
         # try:
         metadata = {"media_type": uploaded_file.content_type}
