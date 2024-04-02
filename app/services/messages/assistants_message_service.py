@@ -125,6 +125,8 @@ class AssistantMessageService:
                 message_id=new_user_message.id, file_id=file_id, content=None, token=token_of_file
             )
             self.session.add(new_message_file)
+        else:
+            user_input = prompt
         # assistant servicev
         knowledge_files_ids = [obj.id for obj in self.assistant_obj.knowledge_files]
         thread_id = self.chat_obj.assistant_thread_id
