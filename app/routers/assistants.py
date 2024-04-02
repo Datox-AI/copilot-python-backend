@@ -133,15 +133,20 @@ def delete_assistant(assistant_service: Annotated[AssistantService, Depends()], 
 
 # Assistant message routes
 @router.post("/{assistant_id}/chats/{chat_id}/messages")
-async def create(
+async def create_assistant_message(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],
-    request: CreateAssistantMessageSchema,
+    prompt: str = Form(...),
+    file: UploadFile = File(None),
 ):
-    return assistant_message_service.create_user_message(request=request)
+    print(prompt, " prompt")
+    print(file, " file")
+    request = CreateAssistantMessageSchema(prompt=prompt, file=file)
+
+    return await assistant_message_service.create_user_message(request=request)
 
 
 @router.get("/{assistant_id}/chats/{chat_id}/messages")
-async def get(
+async def get_assistant_messages(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],
 ):
     return assistant_message_service.get_messages()
@@ -149,3 +154,8 @@ async def get(
 
 def _get_icon_path(request: Request):
     return f"{request.url.scheme}://{request.url.netloc}/{ICON_API_PATH}"
+
+
+# asst_NV0CnmTFpcpHDhkVjAJXJPOZ
+
+# 9b74a37b-0c59-496d-a666-46606e452c78
