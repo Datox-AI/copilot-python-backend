@@ -136,11 +136,11 @@ def delete_assistant(assistant_service: Annotated[AssistantService, Depends()], 
 async def create_assistant_message(
     assistant_message_service: Annotated[AssistantMessageService, Depends()],
     prompt: str = Form(...),
-    file: UploadFile = File(None),
+    files: UploadFile = File(None), # I made it files instead of file since Front end asked
 ):
     print(prompt, " prompt")
-    print(file, " file")
-    request = CreateAssistantMessageSchema(prompt=prompt, file=file)
+    print(files, " file")
+    request = CreateAssistantMessageSchema(prompt=prompt, file=files)
 
     return await assistant_message_service.create_user_message(request=request)
 
