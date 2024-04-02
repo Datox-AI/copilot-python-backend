@@ -297,8 +297,9 @@ class AssistantService:
         if assistant:
             if assistant.created_by != self.user.user_id:
                 raise HTTPException(status_code=403, detail="You are not authorized to view this assistant's chats")
+            
             return [
-                ChatMapper.map_to_chat_response(chat=chat, messages_count=0, files_count=0) for chat in assistant.chats
+                ChatMapper.map_to_chat_response(chat=chat, messages_count=0, files_count=0) for chat in assistant.chats if chat.is_deleted == False
             ]
         raise HTTPException(status_code=404, detail="Assistant not found")
 
