@@ -1,24 +1,34 @@
+import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
-from fastapi import Depends, HTTPException, Response
-from fastapi.responses import StreamingResponse
+
+import tiktoken
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.backend.session import create_maindb_session
 from app.enums.chat_enums import ChatType
 from app.enums.message_enums import MessageRole, MessageStatus
+from app.infrastructure.analytics_agent.azure_storage_manager import AzureAsyncBlobStorageManager
 from app.infrastructure.assistants.assistant_service import AssistantAgent
-from app.models.maindb import Chat, Assistant, Message, AssistantFile, MessageAssistantDocument
-from app.schemas.chat import ChatMapper
+from app.infrastructure.assistants.prompt import ASSISTANT_MESSAGE_WITH_FILE_TEMPLATE
+from app.models.maindb import Assistant, AssistantFile, Chat, Message, MessageAssistantDocument, MessageFile
 from app.schemas.assistants import CreateAssistantMessageSchema
+from app.schemas.chat import ChatMapper
 from app.schemas.identity.current_user import CurrentUser
-from app.shared.auth.azure_scheme import current_user
 from app.schemas.message import MessageMapper
+from app.services.files.text_processor import TextProcessor
+from app.services.messages.user_message_services import MIME_TYPE_MAP
+from app.shared.auth.azure_scheme import current_user
+
+enc = tiktoken.get_encoding("cl100k_base")
 
 
 class AssistantMessageService:
+    MAX_TOKEN_LIMIT_FOR_UPLOADED_FILE = 10000
+
     def __init__(
         self,
         assistant_id: str,
@@ -39,11 +49,13 @@ class AssistantMessageService:
 
     def _check_chat_id(self, chat_id):
         self.chat_obj = (
-            self.session.query(Chat).filter(Chat.id == chat_id, Chat.created_by == self.user.user_id).first()
+            self.session.query(Chat)
+            .filter(Chat.id == chat_id, Chat.created_by == self.user.user_id, Chat.is_deleted == False)
+            .first()
         )
         if not self.chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
-        if self.chat_obj.type != ChatType.Assistant:
+        elif self.chat_obj.type != ChatType.Assistant:
             raise HTTPException(
                 status_code=400, detail=f"Chat object under {chat_id} id does not have Assistant as its chat type"
             )
@@ -64,7 +76,7 @@ class AssistantMessageService:
         if not self.assistant_obj:
             raise HTTPException(status_code=404, detail=f"Assistant object under {assistant_id} id does not exist")
 
-    def create_user_message(
+    async def create_user_message(
         self,
         request: CreateAssistantMessageSchema,
     ):
@@ -77,13 +89,49 @@ class AssistantMessageService:
             status=MessageStatus.Success,
             role=MessageRole.User,
         )
+        if request.file:
+            file_id = str(uuid.uuid4())
+            file_content_in_bytes = await request.file.read()
+            file_extension = request.file.content_type
+            file_name = request.file.filename
+            file_type = MIME_TYPE_MAP.get(file_extension, "unknown")
+            # extracting file content to text
+            text_processor = TextProcessor()
+            try:
+                extracted_texts = text_processor.extract_texts(data=file_content_in_bytes, file_type=file_type)
+            except ValueError as ve:
+                print(f"Error while extracting text from file: {ve}")
+                raise HTTPException(status_code=400, detail=ve.args[0])
+            print(len(extracted_texts), " len of extracted texts")
+            extracted_added_text = "".join(extracted_texts)
+            token_of_file = len(enc.encode(extracted_added_text))
+            if token_of_file > self.MAX_TOKEN_LIMIT_FOR_UPLOADED_FILE:
+                raise HTTPException(status_code=400, detail="Uploaded file is too large")
+            # changing the user input with file context
+            user_input = ASSISTANT_MESSAGE_WITH_FILE_TEMPLATE.format(
+                user_message=prompt, file_name=file_name, file_content=extracted_added_text
+            )
+            print(user_input, " user input ")
+            print(token_of_file, " ---tokenss")
+            # uploading file to azure storage
+            async_azure_blob_storage_client = AzureAsyncBlobStorageManager(
+                container_name=os.environ["AZURE_STORAGE_FILE_CONTAINER"]
+            )
+            await async_azure_blob_storage_client.save_and_upload_file(
+                session=self.session, file=request.file, file_id=str(file_id), file_content=file_content_in_bytes
+            )
+            # saving to model object
+            new_message_file = MessageFile(
+                message_id=new_user_message.id, file_id=file_id, content=None, token=token_of_file
+            )
+            self.session.add(new_message_file)
+        # assistant servicev
         knowledge_files_ids = [obj.id for obj in self.assistant_obj.knowledge_files]
-        # assistant service
         thread_id = self.chat_obj.assistant_thread_id
         assistant_agent_service = AssistantAgent(assistant_id=self.assistant_id, thread_id=thread_id)
 
         assistant_result = assistant_agent_service.execute_agent(
-            user_input=prompt, knowledge_files_ids=knowledge_files_ids
+            user_input=user_input, knowledge_files_ids=knowledge_files_ids
         )
         new_agent_message = Message(
             id=uuid.uuid4(),

@@ -1,12 +1,10 @@
-import json
-
 from app.models.maindb import Message
 from app.schemas.message.message_response import (
     AnalyticAgentMessageResponse,
+    AssistantMessageDocument,
     RAGAgentMessageResponse,
     SharePointFilesResponse,
     UserMessageResponse,
-    AssistantMessageDocument,
 )
 
 
@@ -101,6 +99,18 @@ class MessageMapper:
                         blob_name=asst_msg_doc.assistant_file.blob_name,
                     )
                 )
+        if message.message_files:
+            files_info = [
+                {
+                    "file_id": file.file_id,
+                    "fileName": file.file.file_name,
+                    "fileType": file.file.file_extension,
+                    "blob_name": file.file.blob_name,
+                }
+                for file in message.message_files
+            ]
+        else:
+            files_info = []
         return UserMessageResponse(
             id=message.id.hex,
             chat_id=message.chat_id,
@@ -114,5 +124,5 @@ class MessageMapper:
             created_at=message.created_at,
             prompt_id=message.prompt_id,
             searched_files=assistant_message_documents,
-            files=[],
+            files=files_info,
         )

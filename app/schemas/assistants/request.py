@@ -1,3 +1,5 @@
+from fastapi import UploadFile
+
 from app.schemas.base import BaseSchema
 
 
@@ -15,3 +17,4 @@ class UpdateAssistantSchema(BaseSchema):
 
 class CreateAssistantMessageSchema(BaseSchema):
     prompt: str
+    file: UploadFile | None = None

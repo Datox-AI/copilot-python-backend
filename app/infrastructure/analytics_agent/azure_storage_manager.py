@@ -1,19 +1,17 @@
 import os
 import uuid
-import pandas as pd
 from datetime import datetime
 
+import pandas as pd
 from azure.core.exceptions import ResourceNotFoundError
 from azure.storage.blob import BlobServiceClient
 from azure.storage.blob.aio import BlobServiceClient as AsyncBlobServiceClient
 from dotenv import load_dotenv
 from fastapi import HTTPException, UploadFile
-from app.models.maindb.file import File
-from app.models.maindb.assistants import AssistantFile, Assistant
 from sqlalchemy.orm import Session
-from typing import List
-from tempfile import NamedTemporaryFile
-import aiofiles
+
+from app.models.maindb.assistants import Assistant, AssistantFile
+from app.models.maindb.file import File
 
 load_dotenv(override=True)
 
@@ -44,7 +42,6 @@ class AzureBlobStorageManager:
     def download_csv_file(self, stored_file_id: str):
         try:
             blob_client = self.container_client.get_blob_client(blob=str(stored_file_id))
-            properties = blob_client.get_blob_properties()
             media_type = "text/csv"
             downloaded_stream_file = blob_client.download_blob()
             return downloaded_stream_file, media_type
@@ -90,14 +87,20 @@ class AzureAsyncBlobStorageManager:
     async def close(self):
         await self.blob_service_client.close()
 
-    async def save_and_upload_file(self, session: Session, file: UploadFile, file_id: str):
+    async def save_and_upload_file(
+        self, session: Session, file: UploadFile, file_id: str, file_content: bytes | None = None
+    ):
         file_name = file.filename
         file_extension = file_name.split(".")[-1]
         blob_name = f"{file_id}.{file_extension}"
+        print(blob_name, " blob_name")
         try:
             metadata = {"media_type": file.content_type}
             blob_client = self.container_client.get_blob_client(blob=file_id)
-            data = await file.read()
+            if file_content is None:
+                data = await file.read()
+            else:
+                data = file_content
             await blob_client.upload_blob(data=data, metadata=metadata, overwrite=True)
         except Exception as e:
             raise ValueError(f"Ошибка при загрузке файла: {e}")

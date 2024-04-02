@@ -49,7 +49,7 @@ class AssistantService:
         download_icon_api_url: str,
         request_schema: CreateAssistantSchema,
         knowledge_files: list[UploadFile],
-        icon_file: UploadFile = None,
+        icon_file: UploadFile | None = None,
     ):
         try:
             instructions = ASSISTANT_INSTRUCTION_TEMPLATE.format(user_instruction=request_schema.instruction)
@@ -74,6 +74,7 @@ class AssistantService:
 
         # uploading icon
         if icon_file:
+            print("icon file uploading")
             icon_file_name = self._upload_icon_image(icon_file=icon_file)
         else:
             icon_file_name = None
@@ -195,9 +196,9 @@ class AssistantService:
     async def update_assistant(
         self,
         assistant_id: str,
-        download_icon_api_url: str,
         request_schema: UpdateAssistantSchema,
-        icon_file: UploadFile = None,
+        icon_file: UploadFile | None,
+        download_icon_api_url: str,
     ):
         assistant_obj = (
             self.session.query(Assistant)
@@ -223,7 +224,6 @@ class AssistantService:
                 )
 
                 assistant_obj.instructions = users_instructions_for_assistant
-
             if icon_file:
                 icon_file_name = self._upload_icon_image(icon_file=icon_file)
                 assistant_obj.icon_file_name = icon_file_name
@@ -232,6 +232,7 @@ class AssistantService:
             return AssistantMapper.map_to_assistant_response(
                 assistant=assistant_obj, request_url=download_icon_api_url
             )
+
         raise HTTPException(status_code=404, detail="Assistant not found")
 
     def delete_assistant(self, assistant_id):

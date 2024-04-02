@@ -3,7 +3,6 @@ import uuid
 from sqlalchemy import Column
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.sql import func
 
 DeclarativeBase = declarative_base()
 
@@ -14,4 +13,4 @@ class Base(DeclarativeBase):
     """
 
     __abstract__ = True
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Column[str] = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -8,6 +8,7 @@ __pycache__/
 
 #zed editor
 .zed/
+pyrightconfig.json
 
 # C extensions
 *.so
