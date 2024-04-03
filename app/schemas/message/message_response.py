@@ -26,9 +26,11 @@ class SharePointFilesResponse(BaseSchema):
     item_size: Union[int, None]
 
 
+
 class AssistantMessageDocument(BaseSchema):
-    name: str
-    type: str
+    id: UUID
+    item_name: str
+    content_type: str
     blob_name: str
 
 
