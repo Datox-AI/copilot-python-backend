@@ -94,8 +94,9 @@ class MessageMapper:
                     continue
                 assistant_message_documents.append(
                     AssistantMessageDocument(
-                        name=asst_msg_doc.assistant_file.name,
-                        type=asst_msg_doc.assistant_file.type,
+                        id=asst_msg_doc.id,
+                        item_name=asst_msg_doc.assistant_file.name,
+                        content_type=asst_msg_doc.assistant_file.type,
                         blob_name=asst_msg_doc.assistant_file.blob_name,
                     )
                 )
@@ -126,3 +127,5 @@ class MessageMapper:
             searched_files=assistant_message_documents,
             files=files_info,
         )
+
+
