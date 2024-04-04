@@ -36,6 +36,7 @@ class AssistantMessageService:
         user: Annotated[CurrentUser, Depends(current_user)],
         session: Annotated[Session, Depends(create_maindb_session)],
     ) -> None:
+            
         self.session = session
         self.user = user
         # checking IDs
@@ -174,3 +175,5 @@ class AssistantMessageService:
         )
 
         return ChatMapper.map_to_assistant_chat_history_response(chat=self.chat_obj, messages=message_objs)
+
+

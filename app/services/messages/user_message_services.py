@@ -57,6 +57,7 @@ class UserMessageService:
         self.azure_indexer = AzureSearchIndexManager(
             user=user, session=session, chat_id=self.chat_id, index_name=chat_gpt_azure_index_name
         )
+        self._check_chat_exists(chat_id=self.chat_id)
         thread_id = self._get_thread_id()
         self.chatgpt_assistant = ChatGPTAssistant(thread_id=thread_id)
 
@@ -200,7 +201,7 @@ class UserMessageService:
         self.session.commit()
 
     def _check_chat_exists(self, chat_id: UUID) -> bool:
-        self.chat_obj = self.session.query(Chat).filter(Chat.id == chat_id).first()
+        self.chat_obj = self.session.query(Chat).filter(Chat.id == chat_id, Chat.is_deleted == False).first()
         if not self.chat_obj:
             raise HTTPException(status_code=404, detail=f"Chat object under {chat_id} id does not exist")
         if self.chat_obj.type != ChatType.Analytics:
