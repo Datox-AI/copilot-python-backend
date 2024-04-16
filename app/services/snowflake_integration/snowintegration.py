@@ -137,6 +137,8 @@ class SnowflakeIntegrationService:
         self.session.commit()
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         print(redirect_url, " ----redirect url")
+        redirect_url = "https://ashy-wave-0c6d0ea0f-staging.eastus2.4.azurestaticapps.net/callback/snowflake"
+        
         params = {
             "response_type": "code",
             "client_id": config.client_id,
@@ -153,9 +155,10 @@ class SnowflakeIntegrationService:
         existing_snowflake_identifier_obj, selected_warehouse_obj = self._get_snowflake_identifier_obj()
 
         authorization_endpoint = existing_snowflake_identifier_obj.token_endpoint.replace("token-request", "authorize")
-        redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        redirect_url = f"{request.url.scheme}s://{request.url.netloc}/callback/snowflake"
         print(redirect_url, " ----redirect url")
-
+        redirect_url = "https://ashy-wave-0c6d0ea0f-staging.eastus2.4.azurestaticapps.net/callback/snowflake"
+        
         params = {
             "response_type": "code",
             "client_id": existing_snowflake_identifier_obj.client_id,
@@ -194,6 +197,7 @@ class SnowflakeIntegrationService:
 
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         print(redirect_url, " ----redirect url")
+        redirect_url = "https://ashy-wave-0c6d0ea0f-staging.eastus2.4.azurestaticapps.net/callback/snowflake"
         
         params = {
             "response_type": "code",
@@ -240,6 +244,7 @@ class SnowflakeIntegrationService:
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
         print(redirect_url, " ----redirect url")
+        redirect_url = "https://ashy-wave-0c6d0ea0f-staging.eastus2.4.azurestaticapps.net/callback/snowflake"
         
         try:
             async with httpx.AsyncClient() as client:
