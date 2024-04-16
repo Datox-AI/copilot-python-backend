@@ -136,7 +136,7 @@ class SnowflakeIntegrationService:
         self.session.add(warehouse_obj)
         self.session.commit()
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
-
+        print(redirect_url, " ----redirect url")
         params = {
             "response_type": "code",
             "client_id": config.client_id,
@@ -154,6 +154,7 @@ class SnowflakeIntegrationService:
 
         authorization_endpoint = existing_snowflake_identifier_obj.token_endpoint.replace("token-request", "authorize")
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        print(redirect_url, " ----redirect url")
 
         params = {
             "response_type": "code",
@@ -192,6 +193,8 @@ class SnowflakeIntegrationService:
         self.session.commit()
 
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        print(redirect_url, " ----redirect url")
+        
         params = {
             "response_type": "code",
             "client_id": config.client_id,
@@ -236,6 +239,8 @@ class SnowflakeIntegrationService:
     async def exchange_code_for_token(self, code: str, request: Request):
         snowflake_identifier_obj = self._get_snowflake_identifier_obj()[0]
         redirect_url = f"{request.url.scheme}://{request.url.netloc}/callback/snowflake"
+        print(redirect_url, " ----redirect url")
+        
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
